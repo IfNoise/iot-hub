@@ -72,5 +72,17 @@ export const CreateDeviceSchema = z
   .object({
     deviceId: z.string().describe('Уникальный ID устройства'),
     csrPem: z.string().describe('CSR PEM для подписи сертификата'),
+    model: z.string().default('').describe('Модель устройства'),
+    firmwareVersion: z
+      .string()
+      .optional()
+      .describe('Версия прошивки устройства'),
+  })
+  .strict();
+
+export const BindDeviceSchema = z
+  .object({
+    deviceId: z.string().describe('Уникальный ID устройства'),
+    ownerId: z.string().uuid().describe('ID владельца устройства'),
   })
   .strict();

@@ -25,14 +25,14 @@ export class DevicesService {
     // Создаем устройство
     const device = this.deviceRepo.create({
       // Используем deviceId как уникальный идентификатор
-      model: '',
+      model: dto.model || '',
       publicKey: publicKeyPem,
       fingerprint,
       deviceId: dto.deviceId,
       ownerId: null,
       status: 'unbound',
       lastSeenAt: new Date(),
-      firmwareVersion: null,
+      firmwareVersion: dto.firmwareVersion || null,
     });
 
     // Сохраняем устройство
@@ -58,10 +58,86 @@ export class DevicesService {
     };
   }
 
-  async getDevices() {
+  /**
+   * Привязывает устройство к владельцу.
+   * @param deviceId - Идентификатор устройства.
+   * @param ownerId - Идентификатор владельца.
+   * @returns Обновленное устройство с сертификатом.
+   * @throws Ошибка, если устройство не найдено или уже привязано к другому владельцу.
+   */
+
+  async bindDevice(deviceId: string, ownerId: string) {
+    // Находим устройство по deviceId
+    const device = await this.deviceRepo.findOne({
+      where: { deviceId },
+      relations: ['certificate'],
+    });
+    if (!device) {
+      throw new Error(`Device with ID ${deviceId} not found`);
+    }
+    // Проверяем, что устройство не привязано к другому владельцу
+    if (device.ownerId) {
+      throw new Error(
+        `Device with ID ${deviceId} is already bound to another owner`
+      );
+    }
+    // Обновляем владельца устройства
+    device.ownerId = ownerId;
+    device.status = 'bound';
+    device.lastSeenAt = new Date();
+    // Сохраняем обновленное устройство
+    const updatedDevice = await this.deviceRepo.save(device);
+    return {
+      device: updatedDevice,
+      certificate: device.certificate,
+    };
+  }
+
+  /**
+   * Отвязывает устройство от владельца.
+   * @param deviceId - Идентификатор устройства.
+   * @returns Обновленное устройство с сертификатом.
+   * @throws Ошибка, если устройство не найдено или уже отвязано.
+   */
+
+  async unbindDevice(deviceId: string) {
+    // Находим устройство по deviceId
+    const device = await this.deviceRepo.findOne({
+      where: { deviceId },
+      relations: ['certificate'],
+    });
+    if (!device) {
+      throw new Error(`Device with ID ${deviceId} not found`);
+    }
+    // Проверяем, что устройство привязано к владельцу
+    if (!device.ownerId) {
+      throw new Error(`Device with ID ${deviceId} is already unbound`);
+    }
+    // Отвязываем устройство от владельца
+    device.ownerId = undefined;
+    device.status = 'unbound';
+    device.lastSeenAt = new Date();
+    // Сохраняем обновленное устройство
+    const updatedDevice = await this.deviceRepo.save(device);
+    return {
+      device: updatedDevice,
+      certificate: device.certificate,
+    };
+  }
+
+  /**
+   * Получает список устройств с их сертификатами.
+   * с пагинацией и фильтрацией.
+   * @returns Список устройств с сертификатами.
+   *
+   */
+
+  async getDevices({ page = 1, limit = 10 } = {}) {
     return this.deviceRepo.find({
       relations: ['certificate'],
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
   }
 }
