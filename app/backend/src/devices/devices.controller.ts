@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { type BindDeviceDto, type CreateDeviceDto } from 'iot-core';
 
@@ -18,8 +18,14 @@ export class DevicesController {
   async unbindDevice(@Body() dto: BindDeviceDto) {
     return this.devicesService.unbindDevice(dto.deviceId);
   }
+  /**
+   * Получение списка всех устройств с пагинацией
+   * @param {number} [page=1] - Номер страницы (по умолчанию 1)
+   * @param {number} [limit=10] - Количество устройств на странице (по умолчанию 10)
+   * @returns
+   */
   @Get()
-  async getDevices() {
-    return this.devicesService.getDevices();
+  async getDevices(@Query() query: { page?: number; limit?: number }) {
+    return this.devicesService.getDevices(query);
   }
 }

@@ -140,4 +140,77 @@ export class DevicesService {
       take: limit,
     });
   }
+  /**
+   * Получает устройство по его идентификатору.
+   * @param deviceId - Идентификатор устройства.
+   * @returns Устройство с сертификатом.
+   * @throws Ошибка, если устройство не найдено.
+   */
+  async getDeviceById(deviceId: string) {
+    const device = await this.deviceRepo.findOne({
+      where: { deviceId },
+      relations: ['certificate'],
+    });
+    if (!device) {
+      throw new Error(`Device with ID ${deviceId} not found`);
+    }
+    return device;
+  }
+
+  /**
+   * Получает список устройств пользователя по его идентификатору.
+   * @param ownerId - Идентификатор владельца.
+   * @returns Список устройств пользователя с сертификатами.
+   */
+  async getUserDevices(ownerId: string) {
+    return this.deviceRepo.find({
+      where: { ownerId },
+      relations: ['certificate'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Обновляет устройство по его идентификатору.
+   * @param deviceId - Идентификатор устройства.
+   * @param updateData - Данные для обновления устройства.
+   * @returns Обновленное устройство с сертификатом.
+   * @throws Ошибка, если устройство не найдено.
+   */
+  async updateDevice(deviceId: string, updateData: Partial<Device>) {
+    const device = await this.deviceRepo.findOne({
+      where: { deviceId },
+      relations: ['certificate'],
+    });
+    if (!device) {
+      throw new Error(`Device with ID ${deviceId} not found`);
+    }
+    // Обновляем устройство
+    Object.assign(device, updateData);
+    const updatedDevice = await this.deviceRepo.save(device);
+    return {
+      device: updatedDevice,
+      certificate: updatedDevice.certificate,
+    };
+  }
+
+  /**
+   * Удаляет устройство по его идентификатору.
+   * @param deviceId - Идентификатор устройства.
+   * @returns Удаленное устройство.
+   * @throws Ошибка, если устройство не найдено.
+   */
+  async deleteDevice(deviceId: string) {
+    const device = await this.deviceRepo.findOne({
+      where: { deviceId },
+      relations: ['certificate'],
+    });
+    if (!device) {
+      throw new Error(`Device with ID ${deviceId} not found`);
+    }
+    // Удаляем устройство и его сертификат
+    //await this.certRepo.delete({ deviceId });
+    await this.deviceRepo.delete({ deviceId });
+    return device;
+  }
 }
