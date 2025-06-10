@@ -1,25 +1,35 @@
 {
   "name": "iot-core",
   "version": "0.0.3",
-  "type": "commonjs",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    "./package.json": "./package.json",
     ".": {
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./schemas": {
+      "development": "./src/schemas/index.ts",
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js",
+      "default": "./dist/schemas/index.js"
+    },
+    "./types": {
+      "development": "./src/types/index.ts",
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js",
+      "default": "./dist/types/index.js"
     }
   },
   "dependencies": {
+    "@jest/globals": "^29.0.0",
     "mqtt": "^5.13.0",
     "zod": "^3.25.23"
   },
   "devDependencies": {
-    "@jest/globals": "^29.0.0",
     "@types/jest": "^29.0.0"
   },
   "nx": {
@@ -27,8 +37,8 @@
       "build": {
         "executor": "@nx/js:tsc",
         "options": {
-          "outputPath": "dist",
           "main": "src/index.ts",
+          "outputPath": "dist",
           "tsConfig": "tsconfig.lib.json",
           "assets": [
             "src/**/*.json"

@@ -1,6 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { envConfigSchema } from './config.schema';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+
+// Импортируем ваши сущности
+import { Device } from '../devices/entities/device.entity';
+import { Certificate } from '../devices/entities/certificate.entity';
+import { User } from '../users/entities/user.entity';
+
+// Импортируем enum из database-config.schema для согласованности типов БД
+import { DatabaseTypeEnum as AppDatabaseTypeEnumZod } from '../database/config/database-config.schema';
+
+// Создаем тип на основе Zod enum для использования в TypeORM
+type AppDatabaseType = z.infer<typeof AppDatabaseTypeEnumZod>;
+
+// Определяем возможные строковые значения для TypeORM logging
+type TypeOrmLoggingOption =
+  | 'query'
+  | 'error'
+  | 'schema'
+  | 'warn'
+  | 'info'
+  | 'log'
+  | 'migration';
 
 @Injectable()
 export class ConfigService {
@@ -36,18 +58,26 @@ export class ConfigService {
   }
 
   // Database configuration with environment-specific overrides
-  getDatabaseConfig(): any {
-    const baseConfig = {
-      type: this.env.DB_TYPE,
+  getDatabaseConfig(): TypeOrmModuleOptions {
+    const dbTypeFromEnv = this.env.DB_TYPE;
+    const isValidDbType = (AppDatabaseTypeEnumZod.options as string[]).includes(
+      dbTypeFromEnv
+    );
+    const validatedDbType: AppDatabaseType = isValidDbType
+      ? (dbTypeFromEnv as AppDatabaseType)
+      : 'postgres';
+
+    const baseConfig: Partial<TypeOrmModuleOptions> = {
+      type: validatedDbType,
       host: this.env.DATABASE_HOST,
       port: this.env.DATABASE_PORT,
       username: this.env.DATABASE_USER,
       password: this.env.DATABASE_PASSWORD,
       database: this.env.DATABASE_NAME,
-      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+      entities: [Device, Certificate, User],
+      autoLoadEntities: false,
     };
 
-    // Environment-specific overrides
     if (this.isDevelopment()) {
       return {
         ...baseConfig,
@@ -60,27 +90,26 @@ export class ConfigService {
           connectionTimeoutMillis: 60000,
           idleTimeoutMillis: 60000,
         },
-      };
+      } as TypeOrmModuleOptions;
     }
 
     if (this.isProduction()) {
       return {
         ...baseConfig,
-        synchronize: false, // НИКОГДА в продакшне
-        logging: ['error', 'warn'] as any,
+        synchronize: false,
+        logging: ['error', 'warn'] as TypeOrmLoggingOption[],
         ssl: this.env.DB_SSL,
-        poolSize: this.env.DB_POOL_SIZE,
         extra: {
           ssl: this.env.DB_SSL ? { rejectUnauthorized: false } : undefined,
           connectionTimeoutMillis: 30000,
           idleTimeoutMillis: 30000,
-          max: 20,
+          max: this.env.DB_POOL_SIZE || 20,
           min: 5,
         },
         cache: {
           duration: 30000,
         },
-      };
+      } as TypeOrmModuleOptions;
     }
 
     if (this.isTest()) {
@@ -91,18 +120,19 @@ export class ConfigService {
         dropSchema: true,
         cache: false,
         ssl: false,
-      };
+      } as TypeOrmModuleOptions;
     }
 
-    // Fallback - использовать значения из .env
     return {
       ...baseConfig,
       synchronize: this.env.DB_SYNCHRONIZE,
       logging: this.parseLogging(this.env.DB_LOGGING),
       dropSchema: this.env.DB_DROP_SCHEMA,
       ssl: this.env.DB_SSL,
-      poolSize: this.env.DB_POOL_SIZE,
-    };
+      extra: {
+        max: this.env.DB_POOL_SIZE,
+      },
+    } as TypeOrmModuleOptions;
   }
 
   // CORS configuration
@@ -115,14 +145,21 @@ export class ConfigService {
     }
 
     if (this.isProduction()) {
+      const allowedOrigins = this.env.ALLOWED_ORIGINS?.split(',') || [];
       return {
-        origin: this.env.ALLOWED_ORIGINS?.split(',') || false,
-        credentials: false,
-        methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
+        origin: (
+          origin: string | undefined,
+          callback: (err: Error | null, allow?: boolean) => void
+        ) => {
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
+        credentials: this.env.CORS_CREDENTIALS,
       };
     }
-
     return {
       origin: this.env.CORS_ORIGIN === '*' ? true : this.env.CORS_ORIGIN,
       credentials: this.env.CORS_CREDENTIALS,
@@ -140,7 +177,7 @@ export class ConfigService {
   // Redis configuration
   getRedisConfig() {
     if (this.isTest()) {
-      return { enabled: false };
+      return { enabled: false }; // Отключить Redis для тестов, если не мокается
     }
 
     return {
@@ -155,7 +192,7 @@ export class ConfigService {
   // Rate limiting configuration
   getRateLimitConfig() {
     if (this.isDevelopment() || this.isTest()) {
-      return undefined; // Отключить для dev/test
+      return { windowMs: 60000, max: 1000 }; // Мягкие лимиты для разработки/тестирования
     }
 
     return {
@@ -164,9 +201,24 @@ export class ConfigService {
     };
   }
 
-  private parseLogging(logging: string): boolean | string[] {
+  private parseLogging(logging: string): TypeOrmModuleOptions['logging'] {
     if (logging === 'true') return true;
     if (logging === 'false') return false;
-    return logging.split(',');
+    if (logging === 'all') return 'all';
+
+    const validLoggingOptions: TypeOrmLoggingOption[] = [
+      'query',
+      'error',
+      'schema',
+      'warn',
+      'info',
+      'log',
+      'migration',
+    ];
+    const options = logging
+      .split(',')
+      .map((opt) => opt.trim()) as TypeOrmLoggingOption[];
+    // Фильтруем, чтобы оставить только валидные опции
+    return options.filter((opt) => validLoggingOptions.includes(opt));
   }
 }

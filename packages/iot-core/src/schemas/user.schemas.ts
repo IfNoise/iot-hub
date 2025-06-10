@@ -12,6 +12,7 @@ export const PlanTypeEnum = z.enum(['free', 'pro']);
 export const UserBaseSchema = z
   .object({
     id: z.string().uuid().describe('Уникальный ID пользователя'),
+    userId: z.string().uuid().optional().describe('Keycloak ID пользователя'),
     email: z.string().email().describe('Электронная почта'),
     name: z
       .string()

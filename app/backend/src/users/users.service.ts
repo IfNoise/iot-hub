@@ -66,7 +66,7 @@ export class UsersService {
    */
   async updateBalance(id: string, amount: number): Promise<User> {
     const user = await this.findOne(id);
-    user.ballance = amount;
+    user.balance = amount;
     return await this.userRepository.save(user);
   }
 

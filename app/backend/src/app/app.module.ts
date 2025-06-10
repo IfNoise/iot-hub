@@ -10,15 +10,34 @@ import { DevicesModule } from '../devices/devices.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Device } from '../devices/entities/device.entity';
 import { Certificate } from '../devices/entities/certificate.entity';
+import { UsersModule } from '../users/users.module';
+import { UsersService } from '../users/users.service';
+import { User } from '../users/entities/user.entity';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
     DatabaseModule,
     CryptoModule,
     DevicesModule,
-    TypeOrmModule.forFeature([Device, Certificate]),
+    UsersModule,
+    TypeOrmModule.forFeature([Device, Certificate, User]),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+            colorize: true,
+          },
+        },
+        autoLogging: true,
+        redact: ['req.headers.authorization'],
+      },
+    }),
   ],
   controllers: [AppController, DevicesController],
-  providers: [AppService, CryptoService, DevicesService],
+  providers: [AppService, CryptoService, DevicesService, UsersService],
 })
 export class AppModule {}

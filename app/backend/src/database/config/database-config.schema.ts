@@ -1,19 +1,32 @@
 import { z } from 'zod';
-import { DatabaseType } from 'typeorm';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Device } from '../../devices/entities/device.entity';
 import { Certificate } from '../../devices/entities/certificate.entity';
+import { User } from '../../users/entities/user.entity';
 
-const DatabaseTypeEnum = z.enum([
-  'mysql',
+// Define a more specific enum for database types compatible with TypeOrmModuleOptions
+export const DatabaseTypeEnum = z.enum([
   'postgres',
-  'cockroachdb',
+  'mysql',
   'mariadb',
-  'sqlite',
-  'better-sqlite3',
-  'oracle',
-  'mssql',
+  // 'sqlite', // sqlite is not directly in the narrowed TypeOrmModuleOptions type, handle if needed
+  // 'mssql', // mssql is not directly in the narrowed TypeOrmModuleOptions type
+  // 'oracle', // oracle is not directly in the narrowed TypeOrmModuleOptions type
+  'cockroachdb',
+  // 'better-sqlite3', // better-sqlite3 is not directly in the narrowed TypeOrmModuleOptions type
   'mongodb',
+  // Add other types if they are compatible and needed, for example:
+  // 'aurora-mysql',
+  // 'sap',
+  // 'cordova',
+  // 'nativescript',
+  // 'react-native',
+  // 'sqljs',
+  // 'expo',
+  // 'aurora-data-api',
+  // 'aurora-data-api-pg',
+  // 'capacitor',
+  // 'spanner'
 ]);
 
 export const databaseConfigSchema = z.object({
@@ -23,9 +36,6 @@ export const databaseConfigSchema = z.object({
   username: z.string().default('postgres'),
   password: z.string().default('postgres'),
   database: z.string().default('iot_core'),
-  entities: z
-    .array(z.string())
-    .default(['src/**/*.entity{.ts,.js}', 'dist/**/*.entity{.ts,.js}']),
   synchronize: z.boolean().default(true), // ❗️Использовать только в разработке
   logging: z.boolean().default(false),
   dropSchema: z.boolean().default(false),
@@ -46,63 +56,45 @@ export const databaseConfigSchema = z.object({
     }),
 });
 export type DatabaseConfig = z.infer<typeof databaseConfigSchema>;
-export const databaseConfigDefault: DatabaseConfig = databaseConfigSchema.parse(
-  {
-    type: 'postgres',
-    host: 'localhost',
-    port: 5432,
-    username: 'postgres',
-    password: 'postgres',
-    database: 'iot_core',
-    entities: [Device, Certificate],
-    synchronize: true,
-    logging: false,
-    dropSchema: false,
-    cache: false,
-    ssl: false,
-    extra: {
-      connectionTimeoutMillis: 60000,
-      max: 10,
-      min: 1,
-      idleTimeoutMillis: 30000,
-    },
-  }
-);
-export const databaseConfigSchemaWithDefaults = databaseConfigSchema.merge(
-  z.object({
-    type: DatabaseTypeEnum.default(databaseConfigDefault.type),
-    host: z.string().default(databaseConfigDefault.host),
-    port: z.number().default(databaseConfigDefault.port),
-    username: z.string().default(databaseConfigDefault.username),
-    password: z.string().default(databaseConfigDefault.password),
-    database: z.string().default(databaseConfigDefault.database),
-    entities: z.array(z.string()).default(databaseConfigDefault.entities),
-    synchronize: z.boolean().default(databaseConfigDefault.synchronize),
-    logging: z.boolean().default(databaseConfigDefault.logging),
-    dropSchema: z.boolean().default(databaseConfigDefault.dropSchema),
-    cache: z.boolean().default(databaseConfigDefault.cache),
-    ssl: z.boolean().default(databaseConfigDefault.ssl),
-    extra: z
-      .object({
-        connectionTimeoutMillis: z
-          .number()
-          .default(databaseConfigDefault.extra.connectionTimeoutMillis),
-        max: z.number().default(databaseConfigDefault.extra.max),
-        min: z.number().default(databaseConfigDefault.extra.min),
-        idleTimeoutMillis: z
-          .number()
-          .default(databaseConfigDefault.extra.idleTimeoutMillis),
-      })
-      .default(databaseConfigDefault.extra),
-  })
-);
 
-export const createTypeOrmConfig = (
+export const createTypeOrmOptionsFromConfig = (
   config: DatabaseConfig
 ): TypeOrmModuleOptions => {
   return {
-    ...config,
-    entities: [], // Будет заполнено через autoLoadEntities или явно
-    autoLoadEntities: true, // Автоматическая загрузка сущностей
+    // No cast needed now if DatabaseTypeEnum is a subset of TypeOrmModuleOptions['type']
+    type: config.type,
+    host: config.host,
+    port: config.port,
+    username: config.username,
+    password: config.password,
+    database: config.database,
+    synchronize: config.synchronize,
+    logging: config.logging,
+    dropSchema: config.dropSchema,
+    cache: config.cache,
+    ssl: config.ssl,
+    extra: config.extra,
+    entities: [Device, Certificate, User],
+    autoLoadEntities: false, // Явно отключаем, так как предоставляем entities
   };
+};
+
+export const databaseConfigDefaultValues: DatabaseConfig = {
+  type: 'postgres',
+  host: 'localhost',
+  port: 5432,
+  username: 'postgres',
+  password: 'postgres',
+  database: 'iot_core',
+  synchronize: true,
+  logging: false,
+  dropSchema: false,
+  cache: false,
+  ssl: false,
+  extra: {
+    connectionTimeoutMillis: 60000,
+    max: 10,
+    min: 1,
+    idleTimeoutMillis: 30000,
+  },
 };

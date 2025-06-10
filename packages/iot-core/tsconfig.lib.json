@@ -1,14 +1,19 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
+    "module": "commonjs", // Явно CommonJS
+    "moduleResolution": "node", // Соответствует CommonJS
     "rootDir": "src",
     "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": false,
     "forceConsistentCasingInFileNames": true,
-    "module": "CommonJS",
-    "types": ["node"]
+    "esModuleInterop": true,
+    "types": ["node"],
+    "paths": {} // Очищаем paths mapping для избежания конфликтов
   },
   "include": ["src/**/*.ts"],
   "references": [],
