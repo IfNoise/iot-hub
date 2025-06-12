@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { AuthenticatedUser } from '../types/keycloak-user.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -19,16 +20,18 @@ export class RolesGuard implements CanActivate {
 
     if (!requiredRoles) return true;
 
-    const { user } = ctx.switchToHttp().getRequest();
-    if (!user || !user.roles) {
-      throw new ForbiddenException('No roles found');
+    const request = ctx.switchToHttp().getRequest();
+    const user: AuthenticatedUser = request.user;
+
+    if (!user) {
+      throw new ForbiddenException('Пользователь не аутентифицирован');
     }
 
-    const hasRole = user.roles.some((role: string) =>
-      requiredRoles.includes(role)
-    );
+    const hasRole = requiredRoles.includes(user.role);
     if (!hasRole) {
-      throw new ForbiddenException('Insufficient role');
+      throw new ForbiddenException(
+        `Требуется роль: ${requiredRoles.join(' или ')}`
+      );
     }
 
     return true;

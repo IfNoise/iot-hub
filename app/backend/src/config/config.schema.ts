@@ -28,6 +28,59 @@ export const envConfigSchema = z.object({
   JWT_SECRET: z.string().min(32).max(64),
   JWT_EXPIRATION: z.string().default('1h'),
 
+  // Keycloak & OAuth2 Proxy Configuration
+  KEYCLOAK_URL: z.string().url().optional().describe('Keycloak server URL'),
+  KEYCLOAK_REALM: z.string().min(1).optional().describe('Keycloak realm name'),
+  KEYCLOAK_CLIENT_ID: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('Keycloak client ID'),
+  OAUTH2_PROXY_USER_HEADER: z
+    .string()
+    .default('X-Auth-Request-User')
+    .describe('OAuth2 proxy user header'),
+  OAUTH2_PROXY_EMAIL_HEADER: z
+    .string()
+    .default('X-Auth-Request-Email')
+    .describe('OAuth2 proxy email header'),
+  OAUTH2_PROXY_PREFERRED_USERNAME_HEADER: z
+    .string()
+    .default('X-Auth-Request-Preferred-Username')
+    .describe('OAuth2 proxy preferred username header'),
+  OAUTH2_PROXY_ACCESS_TOKEN_HEADER: z
+    .string()
+    .default('X-Auth-Request-Access-Token')
+    .describe('OAuth2 proxy access token header'),
+
+  // Development User Configuration (только для разработки когда Keycloak отключен)
+  DEV_USER_ID: z
+    .string()
+    .default('dev-user-id')
+    .describe('Development user ID'),
+  DEV_USER_EMAIL: z
+    .string()
+    .email()
+    .default('dev@example.com')
+    .describe('Development user email'),
+  DEV_USER_NAME: z
+    .string()
+    .default('Dev User')
+    .describe('Development user name'),
+  DEV_USER_ROLE: z
+    .enum(['admin', 'user'])
+    .default('admin')
+    .describe('Development user role'),
+  DEV_USER_AVATAR: z
+    .string()
+    .url()
+    .optional()
+    .describe('Development user avatar URL'),
+  DEV_USER_EMAIL_VERIFIED: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Development user email verification status'),
+
   // Redis Configuration
   REDIS_URL: z.string().url().optional(),
   REDIS_ENABLED: z.coerce.boolean().default(true),
@@ -45,6 +98,41 @@ export const envConfigSchema = z.object({
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+
+  // File Logging Configuration
+  LOG_TO_FILE: z.coerce.boolean().default(true).describe('Enable file logging'),
+  LOG_FILE_PATH: z
+    .string()
+    .default('./logs/app.log')
+    .describe('Path to log file'),
+  LOG_FILE_MAX_SIZE: z
+    .string()
+    .default('10M')
+    .describe('Maximum log file size before rotation'),
+  LOG_FILE_MAX_FILES: z.coerce
+    .number()
+    .default(5)
+    .describe('Maximum number of rotated log files'),
+
+  // Logging Enhancement Options
+  LOG_FORMAT: z
+    .enum(['json', 'pretty'])
+    .default('json')
+    .describe('Log output format'),
+  LOG_ENABLE_METADATA: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Include metadata in logs (requestId, userId, etc.)'),
+  LOG_ENABLE_REQUEST_LOGGING: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Enable HTTP request/response logging'),
+
+  // Development specific
+  ENABLE_FILE_LOGGING_IN_DEV: z.coerce
+    .boolean()
+    .default(false)
+    .describe('Enable file logging in development mode'),
 });
 
 export type EnvConfig = z.infer<typeof envConfigSchema>;

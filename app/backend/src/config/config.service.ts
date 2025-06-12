@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { envConfigSchema } from './config.schema';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import type {
+  LogRequest,
+  LogResponse,
+} from '../common/types/logging.types';
 
 // Импортируем ваши сущности
 import { Device } from '../devices/entities/device.entity';
@@ -191,14 +195,143 @@ export class ConfigService {
 
   // Rate limiting configuration
   getRateLimitConfig() {
-    if (this.isDevelopment() || this.isTest()) {
-      return { windowMs: 60000, max: 1000 }; // Мягкие лимиты для разработки/тестирования
-    }
-
     return {
       windowMs: this.env.RATE_LIMIT_WINDOW_MS,
       max: this.env.RATE_LIMIT_MAX,
     };
+  }
+
+  // Enhanced Logging configuration with error handling
+  getLoggingConfig() {
+    try {
+      // Development configuration
+      if (this.isDevelopment()) {
+        if (this.env.ENABLE_FILE_LOGGING_IN_DEV) {
+          return {
+            level: this.env.LOG_LEVEL,
+            transport: {
+              targets: [
+                {
+                  target: 'pino-pretty',
+                  level: this.env.LOG_LEVEL,
+                  options: {
+                    translateTime: 'SYS:standard',
+                    ignore: 'pid,hostname',
+                    colorize: true,
+                  },
+                },
+                {
+                  target: 'pino/file',
+                  level: this.env.LOG_LEVEL,
+                  options: {
+                    destination: this.env.LOG_FILE_PATH,
+                    mkdir: true,
+                    sync: false, // Async for better performance
+                  },
+                },
+              ],
+            },
+          };
+        }
+
+        return {
+          level: this.env.LOG_LEVEL,
+          transport: {
+            target: 'pino-pretty',
+            options: {
+              translateTime: 'SYS:standard',
+              ignore: 'pid,hostname',
+              colorize: true,
+            },
+          },
+        };
+      }
+
+      // Production configuration with enhanced rotation
+      if (this.isProduction()) {
+        return {
+          level: this.env.LOG_LEVEL || 'info',
+          serializers: {
+            req: (req: LogRequest) => ({
+              method: req.method,
+              url: req.url,
+              headers: {
+                host: req.headers?.host,
+                'user-agent': req.headers?.['user-agent'],
+                accept: req.headers?.accept,
+              },
+              remoteAddress: req.remoteAddress,
+              remotePort: req.remotePort,
+            }),
+            res: (res: LogResponse) => ({
+              statusCode: res.statusCode,
+              headers: {
+                'content-type': res.headers?.['content-type'],
+                'content-length': res.headers?.['content-length'],
+              },
+            }),
+          },
+          transport: {
+            target: 'pino-roll',
+            options: {
+              file: this.env.LOG_FILE_PATH || './logs/production.log',
+              frequency: 'daily',
+              size: this.env.LOG_FILE_MAX_SIZE || '50M',
+              limit: {
+                count: this.env.LOG_FILE_MAX_FILES || 10,
+              },
+              mkdir: true,
+            },
+          },
+        };
+      }
+
+      // Test environment - minimal logging
+      if (this.isTest()) {
+        return {
+          level: 'error',
+          transport: {
+            target: 'pino/file',
+            options: {
+              destination: './logs/test.log',
+              mkdir: true,
+            },
+          },
+        };
+      }
+
+      // Fallback configuration
+      return {
+        level: this.env.LOG_LEVEL,
+        transport: {
+          target: 'pino/file',
+          options: {
+            destination: this.env.LOG_FILE_PATH,
+            mkdir: true,
+          },
+        },
+      };
+    } catch (error: unknown) {
+      // Fallback to console logging if file logging fails
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      console.error(
+        '❌ Failed to configure file logging, falling back to console:',
+        errorMessage
+      );
+
+      return {
+        level: this.env.LOG_LEVEL || 'info',
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+            colorize: !this.isProduction(),
+          },
+        },
+      };
+    }
   }
 
   private parseLogging(logging: string): TypeOrmModuleOptions['logging'] {

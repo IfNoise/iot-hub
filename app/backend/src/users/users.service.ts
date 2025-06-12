@@ -45,6 +45,13 @@ export class UsersService {
   }
 
   /**
+   * Получение пользователя по Keycloak ID (userId)
+   */
+  async findByKeycloakId(userId: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { userId } });
+  }
+
+  /**
    * Обновление пользователя
    */
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
