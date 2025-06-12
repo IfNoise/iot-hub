@@ -2,10 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { envConfigSchema } from './config.schema';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import type {
-  LogRequest,
-  LogResponse,
-} from '../common/types/logging.types';
+import type { LogRequest, LogResponse } from '../common/types/logging.types';
 
 // Импортируем ваши сущности
 import { Device } from '../devices/entities/device.entity';
