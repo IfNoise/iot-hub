@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { DevicesService } from './devices.service';
-import { type BindDeviceDto, type CreateDeviceDto } from 'iot-core';
+import { CreateDeviceDto } from './dto/create-device.dto';
+import { BindDeviceDto } from './dto/bind-device.dto';
 
 @Controller('devices')
 export class DevicesController {
@@ -12,7 +13,7 @@ export class DevicesController {
   }
   @Post('bind-device')
   async bindDevice(@Body() dto: BindDeviceDto) {
-    return this.devicesService.bindDevice(dto.deviceId, dto.ownerId);
+    return this.devicesService.bindDevice(dto);
   }
   @Post('unbind-device')
   async unbindDevice(@Body() dto: BindDeviceDto) {

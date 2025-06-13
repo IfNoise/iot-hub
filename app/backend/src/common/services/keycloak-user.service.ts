@@ -15,39 +15,18 @@ export class KeycloakUserService {
    */
   async syncUser(keycloakUser: AuthenticatedUser): Promise<User> {
     try {
-      // Ищем пользователя по Keycloak ID
-      let user = await this.usersService.findByKeycloakId(keycloakUser.id);
+      // Используем новый метод createOrUpdate для атомарной операции
+      const user = await this.usersService.createOrUpdate(keycloakUser.id, {
+        userId: keycloakUser.id,
+        email: keycloakUser.email,
+        name: keycloakUser.name,
+        avatar: keycloakUser.avatar,
+        role: keycloakUser.role,
+      });
 
-      if (!user) {
-        // Если пользователь не найден, создаем нового
-        user = await this.usersService.create({
-          userId: keycloakUser.id,
-          email: keycloakUser.email,
-          name: keycloakUser.name,
-          avatar: keycloakUser.avatar,
-          role: keycloakUser.role,
-          balance: 0, // Начальный баланс
-          plan: 'free', // Начальный план
-        });
-
-        this.logger.log(
-          `Создан новый пользователь: ${user.email} (${user.id})`
-        );
-      } else {
-        // Обновляем существующего пользователя, если данные изменились
-        const needsUpdate = this.shouldUpdateUser(user, keycloakUser);
-
-        if (needsUpdate) {
-          user = await this.usersService.update(user.id, {
-            email: keycloakUser.email,
-            name: keycloakUser.name,
-            avatar: keycloakUser.avatar,
-            role: keycloakUser.role,
-          });
-
-          this.logger.log(`Обновлен пользователь: ${user.email} (${user.id})`);
-        }
-      }
+      this.logger.log(
+        `Пользователь синхронизирован: ${user.email} (${user.id})`
+      );
 
       return user;
     } catch (error) {
@@ -57,21 +36,6 @@ export class KeycloakUserService {
       );
       throw error;
     }
-  }
-
-  /**
-   * Проверяет, нужно ли обновлять данные пользователя
-   */
-  private shouldUpdateUser(
-    dbUser: User,
-    keycloakUser: AuthenticatedUser
-  ): boolean {
-    return (
-      dbUser.email !== keycloakUser.email ||
-      dbUser.name !== keycloakUser.name ||
-      dbUser.avatar !== keycloakUser.avatar ||
-      dbUser.role !== keycloakUser.role
-    );
   }
 
   /**

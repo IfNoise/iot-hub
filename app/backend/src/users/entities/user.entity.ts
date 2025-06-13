@@ -48,7 +48,7 @@ export class User {
   planExpiresAt?: Date;
 
   @Column({ type: 'jsonb', nullable: true })
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;

@@ -17,6 +17,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from '../auth/auth.module';
 import { MiddlewareModule } from '../common/middleware/middleware.module';
 import { KeycloakOAuth2Middleware } from '../common/middleware/keycloak-oauth2.middleware';
+import { AutoUserSyncMiddleware } from '../common/middleware/auto-user-sync.middleware';
 import { ConfigService } from '../config/config.service';
 import { ConfigModule } from '../config/config.module';
 import { CommonServicesModule } from '../common/services/common-services.module';
@@ -52,6 +53,13 @@ export class AppModule implements NestModule {
     // Включаем middleware Keycloak с исключениями для публичных маршрутов
     consumer
       .apply(KeycloakOAuth2Middleware)
+      .exclude('/api', '/api/health', '/api/health/*', '/api/status')
+      .forRoutes('*');
+
+    // Включаем middleware автоматической синхронизации пользователей
+    // Применяется после Keycloak middleware для всех защищенных маршрутов
+    consumer
+      .apply(AutoUserSyncMiddleware)
       .exclude('/api', '/api/health', '/api/health/*', '/api/status')
       .forRoutes('*');
   }

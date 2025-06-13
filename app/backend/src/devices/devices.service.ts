@@ -3,8 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Device } from './entities/device.entity';
 import { Certificate } from './entities/certificate.entity';
-import { type CreateDeviceDto } from 'iot-core';
+import { CreateDeviceDto } from './dto/create-device.dto';
 import { CryptoService } from '../crypto/crypto.service';
+import { BindDeviceDto } from './dto/bind-device.dto';
 
 @Injectable()
 export class DevicesService {
@@ -66,23 +67,23 @@ export class DevicesService {
    * @throws Ошибка, если устройство не найдено или уже привязано к другому владельцу.
    */
 
-  async bindDevice(deviceId: string, ownerId: string) {
+  async bindDevice(dto: BindDeviceDto) {
     // Находим устройство по deviceId
     const device = await this.deviceRepo.findOne({
-      where: { deviceId },
+      where: { deviceId: dto.deviceId },
       relations: ['certificate'],
     });
     if (!device) {
-      throw new Error(`Device with ID ${deviceId} not found`);
+      throw new Error(`Device with ID ${dto.deviceId} not found`);
     }
     // Проверяем, что устройство не привязано к другому владельцу
     if (device.ownerId) {
       throw new Error(
-        `Device with ID ${deviceId} is already bound to another owner`
+        `Device with ID ${dto.deviceId} is already bound to another owner`
       );
     }
     // Обновляем владельца устройства
-    device.ownerId = ownerId;
+    device.ownerId = dto.ownerId;
     device.status = 'bound';
     device.lastSeenAt = new Date();
     // Сохраняем обновленное устройство

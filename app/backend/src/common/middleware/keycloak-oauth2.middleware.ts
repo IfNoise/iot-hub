@@ -309,7 +309,8 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
    */
   private createDevUser(): AuthenticatedUser {
     // Возможность настройки через переменные окружения
-    const devUserId = process.env.DEV_USER_ID || 'dev-user-id';
+    const devUserId =
+      process.env.DEV_USER_ID || '550e8400-e29b-41d4-a716-446655440000';
     const devUserEmail = process.env.DEV_USER_EMAIL || 'dev@example.com';
     const devUserName = process.env.DEV_USER_NAME || 'Dev User';
     const devUserRole =

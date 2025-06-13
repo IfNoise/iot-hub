@@ -52,6 +52,54 @@ export class UsersService {
   }
 
   /**
+   * Создание нового пользователя или обновление существующего
+   * Использует upsert подход для атомарной операции
+   */
+  async createOrUpdate(
+    userId: string,
+    userData: Partial<CreateUserDto>
+  ): Promise<User> {
+    const existingUser = await this.findByKeycloakId(userId);
+
+    if (existingUser) {
+      // Обновляем существующего пользователя только если данные изменились
+      const needsUpdate = this.shouldUpdateUser(existingUser, userData);
+
+      if (needsUpdate) {
+        Object.assign(existingUser, userData);
+        return await this.userRepository.save(existingUser);
+      }
+
+      return existingUser;
+    }
+
+    // Создаем нового пользователя
+    const newUser = this.userRepository.create({
+      userId,
+      ...userData,
+      balance: userData.balance ?? 0,
+      plan: userData.plan ?? 'free',
+    });
+
+    return await this.userRepository.save(newUser);
+  }
+
+  /**
+   * Проверяет, нужно ли обновлять данные пользователя
+   */
+  private shouldUpdateUser(
+    dbUser: User,
+    updateData: Partial<CreateUserDto>
+  ): boolean {
+    return !!(
+      (updateData.email && dbUser.email !== updateData.email) ||
+      (updateData.name && dbUser.name !== updateData.name) ||
+      (updateData.avatar && dbUser.avatar !== updateData.avatar) ||
+      (updateData.role && dbUser.role !== updateData.role)
+    );
+  }
+
+  /**
    * Обновление пользователя
    */
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
