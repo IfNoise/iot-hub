@@ -21,6 +21,7 @@ import { AutoUserSyncMiddleware } from '../common/middleware/auto-user-sync.midd
 import { ConfigService } from '../config/config.service';
 import { ConfigModule } from '../config/config.module';
 import { CommonServicesModule } from '../common/services/common-services.module';
+import { MqttModule } from '../mqtt/mqtt.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CommonServicesModule } from '../common/services/common-services.module'
     MiddlewareModule,
     ConfigModule,
     CommonServicesModule,
+    MqttModule,
     TypeOrmModule.forFeature([Device, Certificate, User]),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],

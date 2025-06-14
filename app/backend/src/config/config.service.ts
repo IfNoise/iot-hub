@@ -331,6 +331,36 @@ export class ConfigService {
     }
   }
 
+  // MQTT Configuration
+  getMqttConfig() {
+    return {
+      host: this.env.MQTT_HOST,
+      port: this.env.MQTT_PORT,
+      username: this.env.MQTT_USERNAME,
+      password: this.env.MQTT_PASSWORD,
+      clientId: this.env.MQTT_CLIENT_ID,
+      keepalive: this.env.MQTT_KEEPALIVE,
+      clean: this.env.MQTT_CLEAN_SESSION,
+      reconnectPeriod: this.env.MQTT_RECONNECT_PERIOD,
+      connectTimeout: this.env.MQTT_CONNECT_TIMEOUT,
+      qos: this.env.MQTT_QOS as 0 | 1 | 2,
+      retain: this.env.MQTT_RETAIN,
+      will: this.env.MQTT_WILL_TOPIC
+        ? {
+            topic: this.env.MQTT_WILL_TOPIC,
+            payload: this.env.MQTT_WILL_PAYLOAD || '',
+            qos: this.env.MQTT_WILL_QOS as 0 | 1 | 2,
+            retain: this.env.MQTT_WILL_RETAIN,
+          }
+        : undefined,
+      maxReconnectAttempts: this.env.MQTT_MAX_RECONNECT_ATTEMPTS,
+    };
+  }
+
+  getMqttBrokerUrl(): string {
+    return `mqtt://${this.env.MQTT_HOST}:${this.env.MQTT_PORT}`;
+  }
+
   private parseLogging(logging: string): TypeOrmModuleOptions['logging'] {
     if (logging === 'true') return true;
     if (logging === 'false') return false;

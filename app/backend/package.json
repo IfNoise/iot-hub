@@ -2,16 +2,16 @@
   "name": "@iot-hub/backend",
   "version": "0.0.1",
   "private": true,
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./main.js",
+  "module": "./main.js",
+  "types": "./main.d.ts",
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "development": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "development": "./src/main.ts",
+      "types": "./main.d.ts",
+      "import": "./main.js",
+      "default": "./main.js"
     }
   },
   "scripts": {
@@ -39,21 +39,21 @@
       },
       "serve": {
         "continuous": true,
-        "executor": "@nx/js:node",
+        "executor": "nx:run-commands",
         "defaultConfiguration": "development",
         "dependsOn": [
           "build"
         ],
         "options": {
-          "buildTarget": "@iot-hub/backend:build",
-          "runBuildTargetDependencies": false
+          "cwd": "app/backend",
+          "command": "node dist/main.js"
         },
         "configurations": {
           "development": {
-            "buildTarget": "@iot-hub/backend:build:development"
+            "command": "node dist/main.js"
           },
           "production": {
-            "buildTarget": "@iot-hub/backend:build:production"
+            "command": "node dist/main.js"
           }
         }
       },
