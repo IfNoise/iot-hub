@@ -16,8 +16,8 @@ export class DevicesController {
     return this.devicesService.bindDevice(dto);
   }
   @Post('unbind-device')
-  async unbindDevice(@Body() dto: BindDeviceDto) {
-    return this.devicesService.unbindDevice(dto.deviceId);
+  async unbindDevice(@Body() dto: { id: string }) {
+    return this.devicesService.unbindDevice(dto.id);
   }
   /**
    * Получение списка всех устройств с пагинацией

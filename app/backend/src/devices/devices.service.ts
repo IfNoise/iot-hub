@@ -19,44 +19,33 @@ export class DevicesService {
     // Получаем сертификаты от CryptoService
     const { clientCert, caCert, fingerprint, publicKeyPem } =
       this.crypto.signCertificate({
-        deviceId: dto.deviceId,
+        deviceId: dto.id,
         csrPem: dto.csrPem,
       });
 
     // Создаем устройство
-    const device = this.deviceRepo.create({
-      // Используем deviceId как уникальный идентификатор
-      model: dto.model || '',
-      publicKey: publicKeyPem,
-      fingerprint,
-      deviceId: dto.deviceId,
-      ownerId: null,
-      status: 'unbound',
-      lastSeenAt: new Date(),
-      firmwareVersion: dto.firmwareVersion || null,
-    });
+    const device = new Device();
+    device.id = dto.id;
+    device.model = dto.model || '';
+    device.publicKey = publicKeyPem;
+    device.ownerId = null;
+    device.status = 'unbound';
+    device.lastSeenAt = new Date();
+    device.firmwareVersion = dto.firmwareVersion || null;
 
-    // Сохраняем устройство
+    // Создаем сертификат
+    const certificate = new Certificate();
+    certificate.clientCert = clientCert;
+    certificate.caCert = caCert;
+    certificate.fingerprint = fingerprint;
+
+    // Устанавливаем связь
+    device.certificate = certificate;
+
+    // Сохраняем устройство с каскадным сохранением сертификата
     const savedDevice = await this.deviceRepo.save(device);
 
-    // Создаем и сохраняем сертификат
-    const certificate = this.certRepo.create({
-      clientCert,
-      caCert,
-      fingerprint,
-      deviceId: dto.deviceId,
-    });
-
-    await this.certRepo.save(certificate);
-
-    return {
-      device: savedDevice,
-      certificate: {
-        clientCert,
-        caCert,
-        fingerprint,
-      },
-    };
+    return savedDevice;
   }
 
   /**
@@ -68,18 +57,18 @@ export class DevicesService {
    */
 
   async bindDevice(dto: BindDeviceDto) {
-    // Находим устройство по deviceId
+    // Находим устройство по id
     const device = await this.deviceRepo.findOne({
-      where: { deviceId: dto.deviceId },
+      where: { id: dto.id },
       relations: ['certificate'],
     });
     if (!device) {
-      throw new Error(`Device with ID ${dto.deviceId} not found`);
+      throw new Error(`Device with ID ${dto.id} not found`);
     }
     // Проверяем, что устройство не привязано к другому владельцу
     if (device.ownerId) {
       throw new Error(
-        `Device with ID ${dto.deviceId} is already bound to another owner`
+        `Device with ID ${dto.id} is already bound to another owner`
       );
     }
     // Обновляем владельца устройства
@@ -102,9 +91,9 @@ export class DevicesService {
    */
 
   async unbindDevice(deviceId: string) {
-    // Находим устройство по deviceId
+    // Находим устройство по id
     const device = await this.deviceRepo.findOne({
-      where: { deviceId },
+      where: { id: deviceId },
       relations: ['certificate'],
     });
     if (!device) {
@@ -149,7 +138,7 @@ export class DevicesService {
    */
   async getDeviceById(deviceId: string) {
     const device = await this.deviceRepo.findOne({
-      where: { deviceId },
+      where: { id: deviceId },
       relations: ['certificate'],
     });
     if (!device) {
@@ -180,7 +169,7 @@ export class DevicesService {
    */
   async updateDevice(deviceId: string, updateData: Partial<Device>) {
     const device = await this.deviceRepo.findOne({
-      where: { deviceId },
+      where: { id: deviceId },
       relations: ['certificate'],
     });
     if (!device) {
@@ -203,15 +192,14 @@ export class DevicesService {
    */
   async deleteDevice(deviceId: string) {
     const device = await this.deviceRepo.findOne({
-      where: { deviceId },
+      where: { id: deviceId },
       relations: ['certificate'],
     });
     if (!device) {
       throw new Error(`Device with ID ${deviceId} not found`);
     }
-    // Удаляем устройство и его сертификат
-    //await this.certRepo.delete({ deviceId });
-    await this.deviceRepo.delete({ deviceId });
+    // Удаляем устройство и его сертификат (каскадно)
+    await this.deviceRepo.delete({ id: deviceId });
     return device;
   }
 }

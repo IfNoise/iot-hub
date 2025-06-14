@@ -7,10 +7,10 @@ const fs = require('fs');
 (async () => {
   // Генерация RSA-ключа
   const keypair = forge.pki.rsa.generateKeyPair(2048);
-  const publicKeyPem = forge.pki.publicKeyToPem(keypair.publicKey);
 
-  // Генерация deviceId и данных
+  // Генерация id устройства и данных
   const deviceId = uuidv4();
+
   // Генерация CSR
   const csr = forge.pki.createCertificationRequest();
   csr.publicKey = keypair.publicKey;
@@ -24,19 +24,16 @@ const fs = require('fs');
   const csrPem = forge.pki.certificationRequestToPem(csr);
 
   const dto = {
-    deviceId,
-    // name: 'Simulated Device',
+    id: deviceId,
     model: 'Model-X',
-    // publicKeyPem: publicKeyPem,
-    // ownerId: null,
+    csrPem: csrPem,
     firmwareVersion: '1.0.0',
-    csrPem: csrPem, // Отправляем CSR
   };
 
   // Отправка запроса на сервер
   try {
     const response = await axios.post(
-      'http://localhost:3000/api/devices/sign-device',
+      'http://localhost:3000/devices/sign-device',
       dto,
       {
         headers: { 'Content-Type': 'application/json' },
@@ -45,10 +42,6 @@ const fs = require('fs');
 
     console.log('✅ Device registered');
     console.log(JSON.stringify(response.data, null, 2));
-    // Удаляем временные файлы
-    //fs.unlinkSync('device.key.pem');
-    //fs.unlinkSync('device.pub.pem');
-    //fs.unlinkSync('device.pub.der');
   } catch (error) {
     console.error('❌ Error registering device');
     if (error.response) {

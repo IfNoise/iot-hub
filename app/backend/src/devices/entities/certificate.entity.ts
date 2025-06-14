@@ -13,14 +13,17 @@ export class Certificate {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column('text')
   clientCert!: string;
 
-  @Column()
+  @Column('text')
   caCert!: string;
 
+  @Column({ unique: true })
+  fingerprint!: string;
+
   @OneToOne(() => Device, (device) => device.certificate)
-  @JoinColumn()
+  @JoinColumn({ name: 'deviceId', referencedColumnName: 'id' })
   device!: Device;
 
   @CreateDateColumn()

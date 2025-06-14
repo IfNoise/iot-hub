@@ -48,12 +48,10 @@ export const DeviceInternalStateSchema = z
  */
 export const DeviceSchema = z
   .object({
-    deviceId: z.string().describe('Уникальный ID устройства'),
+    id: z.string().describe('Уникальный ID устройства'),
     model: z.string().default('').describe('Модель устройства'),
-    fingerprint: z.string().length(64), // SHA-256 хеш
-    publicKey: z.string(),
-    certificatePem: z.string(),
-    ownerId: z.string().uuid().nullable(), // Связь с пользователем
+    publicKey: z.string().describe('Публичный ключ устройства'),
+    ownerId: z.string().uuid().nullable().describe('ID владельца устройства'),
     status: z
       .enum(['unbound', 'bound', 'revoked'])
       .default('unbound')
@@ -62,6 +60,24 @@ export const DeviceSchema = z
       .preprocess((v) => new Date(v as string), z.date())
       .describe('Время последней активности'),
     firmwareVersion: z.string().optional().describe('Версия прошивки'),
+    createdAt: z
+      .preprocess((v) => new Date(v as string), z.date())
+      .describe('Время создания'),
+  })
+  .strict();
+
+/**
+ * Схема сертификата устройства
+ */
+export const CertificateSchema = z
+  .object({
+    id: z.string().uuid().describe('ID сертификата'),
+    clientCert: z.string().describe('Клиентский сертификат'),
+    caCert: z.string().describe('Корневой CA сертификат'),
+    fingerprint: z.string().describe('Отпечаток сертификата'),
+    createdAt: z
+      .preprocess((v) => new Date(v as string), z.date())
+      .describe('Время создания'),
   })
   .strict();
 
@@ -70,7 +86,7 @@ export const DeviceSchema = z
  */
 export const CreateDeviceSchema = z
   .object({
-    deviceId: z.string().describe('Уникальный ID устройства'),
+    id: z.string().describe('Уникальный ID устройства'),
     csrPem: z.string().describe('CSR PEM для подписи сертификата'),
     model: z.string().default('').describe('Модель устройства'),
     firmwareVersion: z
@@ -82,7 +98,7 @@ export const CreateDeviceSchema = z
 
 export const BindDeviceSchema = z
   .object({
-    deviceId: z.string().describe('Уникальный ID устройства'),
+    id: z.string().describe('Уникальный ID устройства'),
     ownerId: z.string().uuid().describe('ID владельца устройства'),
   })
   .strict();

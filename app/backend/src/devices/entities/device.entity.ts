@@ -1,35 +1,28 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   CreateDateColumn,
   OneToOne,
-  JoinColumn,
 } from 'typeorm';
 import { Certificate } from './certificate.entity';
 
 @Entity()
 export class Device {
-  @PrimaryGeneratedColumn('uuid')
-  id?: string;
+  @PrimaryColumn()
+  id!: string; // Используем deviceId как первичный ключ
 
-  @Column({ nullable: true })
-  model?: string;
-
-  @Column({ unique: true })
-  deviceId!: string;
-
-  @Column({ unique: true })
-  fingerprint?: string;
+  @Column({ default: '' })
+  model!: string;
 
   @Column()
-  publicKey?: string;
+  publicKey!: string;
 
   @Column({ nullable: true })
   ownerId?: string;
 
   @Column({ default: 'unbound' })
-  status?: 'unbound' | 'bound' | 'revoked';
+  status!: 'unbound' | 'bound' | 'revoked';
 
   @Column()
   lastSeenAt!: Date;
@@ -38,7 +31,6 @@ export class Device {
   firmwareVersion?: string;
 
   @OneToOne(() => Certificate, (cert) => cert.device, { cascade: true })
-  @JoinColumn()
   certificate!: Certificate;
 
   @CreateDateColumn()
