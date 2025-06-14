@@ -33,7 +33,7 @@ const fs = require('fs');
   // Отправка запроса на сервер
   try {
     const response = await axios.post(
-      'http://localhost:3000/devices/sign-device',
+      'http://localhost:3000/api/devices/sign-device',
       dto,
       {
         headers: { 'Content-Type': 'application/json' },

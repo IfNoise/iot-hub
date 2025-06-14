@@ -17,7 +17,7 @@
   "scripts": {
     "build": "nx run @iot-hub/backend:build",
     "serve": "nx run @iot-hub/backend:serve",
-    "test": "nx run @iot-hub/backend:test"
+    "test": "jest"
   },
   "nx": {
     "targets": {

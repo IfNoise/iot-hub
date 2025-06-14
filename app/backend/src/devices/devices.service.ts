@@ -28,10 +28,10 @@ export class DevicesService {
     device.id = dto.id;
     device.model = dto.model || '';
     device.publicKey = publicKeyPem;
-    device.ownerId = null;
+    device.ownerId = undefined;
     device.status = 'unbound';
     device.lastSeenAt = new Date();
-    device.firmwareVersion = dto.firmwareVersion || null;
+    device.firmwareVersion = dto.firmwareVersion || undefined;
 
     // Создаем сертификат
     const certificate = new Certificate();
@@ -118,17 +118,25 @@ export class DevicesService {
   /**
    * Получает список устройств с их сертификатами.
    * с пагинацией и фильтрацией.
-   * @returns Список устройств с сертификатами.
-   *
+   * @returns Список устройств с сертификатами и мета-информацией.
    */
-
   async getDevices({ page = 1, limit = 10 } = {}) {
-    return this.deviceRepo.find({
+    const [devices, total] = await this.deviceRepo.findAndCount({
       relations: ['certificate'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
+
+    return {
+      devices,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
   /**
    * Получает устройство по его идентификатору.
@@ -150,14 +158,27 @@ export class DevicesService {
   /**
    * Получает список устройств пользователя по его идентификатору.
    * @param ownerId - Идентификатор владельца.
-   * @returns Список устройств пользователя с сертификатами.
+   * @param options - Параметры пагинации.
+   * @returns Список устройств пользователя с сертификатами и мета-информацией.
    */
-  async getUserDevices(ownerId: string) {
-    return this.deviceRepo.find({
+  async getUserDevices(ownerId: string, { page = 1, limit = 10 } = {}) {
+    const [devices, total] = await this.deviceRepo.findAndCount({
       where: { ownerId },
       relations: ['certificate'],
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return {
+      devices,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   /**
