@@ -30,7 +30,12 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
     const realm = this.configService.get('KEYCLOAK_REALM');
 
     // Если Keycloak не настроен, выводим предупреждение и отключаем middleware
-    if (!keycloakUrl || !realm || keycloakUrl.trim() === '' || realm.trim() === '') {
+    if (
+      !keycloakUrl ||
+      !realm ||
+      keycloakUrl.trim() === '' ||
+      realm.trim() === ''
+    ) {
       this.logger.warn(
         'Keycloak не настроен. Middleware отключен. Установите KEYCLOAK_URL и KEYCLOAK_REALM для включения.'
       );

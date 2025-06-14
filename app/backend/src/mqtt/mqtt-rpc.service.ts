@@ -2,11 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { ConfigService } from '../config/config.service';
 import { MqttRpcClient } from 'iot-core';
-import type {
-  RpcMethod,
-  RpcMethodParams,
-  RpcResponse,
-} from 'iot-core/types';
+import type { RpcMethod, RpcMethodParams, RpcResponse } from 'iot-core/types';
 import type { MqttClient } from 'mqtt';
 
 /**
@@ -349,15 +345,21 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
 
     // Подписываемся на все response topics: users/+/devices/+/rpc/response
     const wildcardTopic = 'users/+/devices/+/rpc/response';
-    
+
     // Получаем доступ к внутреннему MQTT клиенту
-    const internalClient = (this.mqttClient as unknown as { client: MqttClient }).client;
-    
+    const internalClient = (
+      this.mqttClient as unknown as { client: MqttClient }
+    ).client;
+
     internalClient.subscribe(wildcardTopic, { qos: 1 }, (err: Error | null) => {
       if (err) {
-        this.logger.error(`Ошибка подписки на wildcard topic ${wildcardTopic}: ${err.message}`);
+        this.logger.error(
+          `Ошибка подписки на wildcard topic ${wildcardTopic}: ${err.message}`
+        );
       } else {
-        this.logger.info(`Подписка на wildcard response topic: ${wildcardTopic}`);
+        this.logger.info(
+          `Подписка на wildcard response topic: ${wildcardTopic}`
+        );
       }
     });
 
@@ -367,15 +369,20 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
         try {
           const message = JSON.parse(payload.toString());
           this.logger.debug(`Получен ответ с topic ${topic}:`, message);
-          
+
           // Передаем сообщение в оригинальный обработчик MqttRpcClient
-          const clientWithListeners = this.mqttClient as unknown as { 
-            responseListeners: Map<string, (response: RpcResponse) => void> 
+          const clientWithListeners = this.mqttClient as unknown as {
+            responseListeners: Map<string, (response: RpcResponse) => void>;
           };
-          
-          if (clientWithListeners.responseListeners && message.id && 
-              clientWithListeners.responseListeners.has(message.id)) {
-            const callback = clientWithListeners.responseListeners.get(message.id);
+
+          if (
+            clientWithListeners.responseListeners &&
+            message.id &&
+            clientWithListeners.responseListeners.has(message.id)
+          ) {
+            const callback = clientWithListeners.responseListeners.get(
+              message.id
+            );
             if (callback) {
               callback(message);
             }

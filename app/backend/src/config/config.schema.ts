@@ -29,8 +29,18 @@ export const envConfigSchema = z.object({
   JWT_EXPIRATION: z.string().default('1h'),
 
   // Keycloak & OAuth2 Proxy Configuration
-  KEYCLOAK_URL: z.string().url().optional().or(z.literal('')).describe('Keycloak server URL'),
-  KEYCLOAK_REALM: z.string().min(1).optional().or(z.literal('')).describe('Keycloak realm name'),
+  KEYCLOAK_URL: z
+    .string()
+    .url()
+    .optional()
+    .or(z.literal(''))
+    .describe('Keycloak server URL'),
+  KEYCLOAK_REALM: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal(''))
+    .describe('Keycloak realm name'),
   KEYCLOAK_CLIENT_ID: z
     .string()
     .min(1)
