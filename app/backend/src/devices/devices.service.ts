@@ -22,7 +22,7 @@ export class DevicesService {
   async createDevice(dto: CreateDeviceDto) {
     // Проверяем, что устройство с таким ID еще не существует
     const existingDevice = await this.deviceRepo.findOne({
-      where: { id: dto.id }
+      where: { id: dto.id },
     });
 
     if (existingDevice) {

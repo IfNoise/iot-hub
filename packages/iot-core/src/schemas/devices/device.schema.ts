@@ -87,7 +87,9 @@ export const CertificateSchema = z
 export const CreateDeviceSchema = z
   .object({
     id: z.string().describe('Уникальный ID устройства'),
-    publicKey: z.string().describe('Публичный ключ устройства (временный, для совместимости)'),
+    publicKey: z
+      .string()
+      .describe('Публичный ключ устройства (временный, для совместимости)'),
     model: z.string().default('').describe('Модель устройства'),
     firmwareVersion: z
       .string()

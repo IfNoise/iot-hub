@@ -24,7 +24,10 @@ export class Certificate {
   @Column()
   deviceId!: string;
 
-  @OneToOne(() => require('./device.entity').Device, (device: any) => device.certificate)
+  @OneToOne(
+    () => require('./device.entity').Device,
+    (device: any) => device.certificate
+  )
   @JoinColumn({ name: 'deviceId', referencedColumnName: 'id' })
   device!: any;
 

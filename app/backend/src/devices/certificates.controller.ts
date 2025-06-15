@@ -357,7 +357,8 @@ export class CertificatesController {
   @Get('device/:deviceId/certificate')
   @ApiOperation({
     summary: 'Получить сертификат устройства',
-    description: 'Возвращает клиентский сертификат устройства для использования во внешних системах',
+    description:
+      'Возвращает клиентский сертификат устройства для использования во внешних системах',
   })
   @ApiParam({
     name: 'deviceId',

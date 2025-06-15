@@ -38,10 +38,10 @@ export interface CertificateValidationResult {
 
 /**
  * Сервис для управления mTLS сертификатами устройств с криптографическими чипами
- * 
+ *
  * Реализует правильный PKI флоу:
  * 1. Устройство генерирует ключевую пару на криптографическом чипе
- * 2. Устройство создает CSR (Certificate Signing Request) 
+ * 2. Устройство создает CSR (Certificate Signing Request)
  * 3. Backend подписывает CSR с помощью CA
  * 4. Устройство получает подписанный сертификат
  * 5. Устройство использует сертификат для mTLS подключения к EMQX
@@ -88,7 +88,9 @@ export class CertificateService {
         // Загружаем существующий CA
         this.persistentCAKey = fs.readFileSync(caKeyPath, 'utf8');
         this.persistentCACert = fs.readFileSync(caCertPath, 'utf8');
-        this.logger.log('Постоянный CA сертификат загружен из файловой системы');
+        this.logger.log(
+          'Постоянный CA сертификат загружен из файловой системы'
+        );
       } else {
         // Создаем новый постоянный CA
         this.generatePersistentCA();
@@ -105,17 +107,19 @@ export class CertificateService {
    */
   private generatePersistentCA(): void {
     const pki = forge.pki;
-    
+
     // Генерируем ключевую пару для CA
     const caKeyPair = pki.rsa.generateKeyPair(2048);
-    
+
     // Создаем CA сертификат
     const caCert = pki.createCertificate();
     caCert.publicKey = caKeyPair.publicKey;
     caCert.serialNumber = '01';
     caCert.validity.notBefore = new Date();
     caCert.validity.notAfter = new Date();
-    caCert.validity.notAfter.setFullYear(caCert.validity.notBefore.getFullYear() + 10);
+    caCert.validity.notAfter.setFullYear(
+      caCert.validity.notBefore.getFullYear() + 10
+    );
 
     const attrs = [
       { name: 'commonName', value: 'IoT Hub Root CA' },
@@ -123,7 +127,7 @@ export class CertificateService {
       { name: 'stateOrProvinceName', value: 'Moscow' },
       { name: 'localityName', value: 'Moscow' },
       { name: 'organizationName', value: 'IoT Hub' },
-      { name: 'organizationalUnitName', value: 'Certificate Authority' }
+      { name: 'organizationalUnitName', value: 'Certificate Authority' },
     ];
 
     caCert.setSubject(attrs);
@@ -134,17 +138,17 @@ export class CertificateService {
       {
         name: 'basicConstraints',
         cA: true,
-        critical: true
+        critical: true,
       },
       {
         name: 'keyUsage',
         keyCertSign: true,
         cRLSign: true,
-        critical: true
+        critical: true,
       },
       {
-        name: 'subjectKeyIdentifier'
-      }
+        name: 'subjectKeyIdentifier',
+      },
     ]);
 
     // Подписываем сертификат
@@ -155,9 +159,15 @@ export class CertificateService {
     this.persistentCACert = pki.certificateToPem(caCert);
 
     // Записываем в файлы
-    fs.writeFileSync(path.join(this.certsDir, 'ca-key.pem'), this.persistentCAKey);
-    fs.writeFileSync(path.join(this.certsDir, 'ca-cert.pem'), this.persistentCACert);
-    
+    fs.writeFileSync(
+      path.join(this.certsDir, 'ca-key.pem'),
+      this.persistentCAKey
+    );
+    fs.writeFileSync(
+      path.join(this.certsDir, 'ca-cert.pem'),
+      this.persistentCACert
+    );
+
     // Устанавливаем правильные права доступа
     fs.chmodSync(path.join(this.certsDir, 'ca-key.pem'), 0o600);
     fs.chmodSync(path.join(this.certsDir, 'ca-cert.pem'), 0o644);
@@ -166,15 +176,19 @@ export class CertificateService {
   /**
    * Подписывает CSR от устройства с помощью постоянного CA
    */
-  async signDeviceCSR(request: DeviceCertificateRequest): Promise<DeviceCertificateResponse> {
+  async signDeviceCSR(
+    request: DeviceCertificateRequest
+  ): Promise<DeviceCertificateResponse> {
     const { deviceId, csrPem, firmwareVersion } = request;
 
-    this.logger.log(`Получен запрос на подписание CSR для устройства: ${deviceId}`);
+    this.logger.log(
+      `Получен запрос на подписание CSR для устройства: ${deviceId}`
+    );
 
     // Проверяем, существует ли устройство
-    const device = await this.deviceRepository.findOne({ 
+    const device = await this.deviceRepository.findOne({
       where: { id: deviceId },
-      relations: ['certificate']
+      relations: ['certificate'],
     });
 
     if (!device) {
@@ -184,7 +198,9 @@ export class CertificateService {
     // Проверяем, есть ли уже сертификат
     if (device.certificate) {
       // Можно разрешить обновление сертификата или запретить
-      this.logger.warn(`Устройство ${deviceId} уже имеет сертификат. Обновляем...`);
+      this.logger.warn(
+        `Устройство ${deviceId} уже имеет сертификат. Обновляем...`
+      );
       await this.certificateRepository.remove(device.certificate);
     }
 
@@ -194,16 +210,18 @@ export class CertificateService {
 
       // Извлекаем информацию о сертификате
       const cert = forge.pki.certificateFromPem(signedResult.clientCert);
-      
+
       // Сохраняем сертификат в базу данных
       const certificate = this.certificateRepository.create({
         clientCert: signedResult.clientCert,
         caCert: signedResult.caCert,
         fingerprint: signedResult.fingerprint,
-        deviceId: device.id
+        deviceId: device.id,
       });
 
-      const savedCertificate = await this.certificateRepository.save(certificate);
+      const savedCertificate = await this.certificateRepository.save(
+        certificate
+      );
 
       // Обновляем информацию об устройстве
       if (firmwareVersion) {
@@ -213,7 +231,9 @@ export class CertificateService {
       device.certificate = savedCertificate;
       await this.deviceRepository.save(device);
 
-      this.logger.log(`Сертификат для устройства ${deviceId} подписан и сохранен в базе данных`);
+      this.logger.log(
+        `Сертификат для устройства ${deviceId} подписан и сохранен в базе данных`
+      );
 
       return {
         deviceId,
@@ -225,10 +245,13 @@ export class CertificateService {
         fingerprint: signedResult.fingerprint,
         serialNumber: cert.serialNumber,
         validFrom: cert.validity.notBefore.toISOString(),
-        validTo: cert.validity.notAfter.toISOString()
+        validTo: cert.validity.notAfter.toISOString(),
       };
     } catch (error: any) {
-      this.logger.error(`Ошибка подписания CSR для устройства ${deviceId}:`, error);
+      this.logger.error(
+        `Ошибка подписания CSR для устройства ${deviceId}:`,
+        error
+      );
       throw new Error(`Не удалось подписать CSR: ${error.message}`);
     }
   }
@@ -263,12 +286,14 @@ export class CertificateService {
     cert.serialNumber = this.generateSerialNumber();
     cert.validity.notBefore = new Date();
     cert.validity.notAfter = new Date();
-    cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);
+    cert.validity.notAfter.setFullYear(
+      cert.validity.notBefore.getFullYear() + 1
+    );
 
     // Устанавливаем subject из CSR, но переопределяем CN
     const subject = csr.subject.attributes.slice();
     // Находим и обновляем CN
-    const cnIndex = subject.findIndex(attr => attr.name === 'commonName');
+    const cnIndex = subject.findIndex((attr) => attr.name === 'commonName');
     if (cnIndex >= 0) {
       subject[cnIndex].value = `device-${deviceId}`;
     } else {
@@ -283,39 +308,39 @@ export class CertificateService {
       {
         name: 'basicConstraints',
         cA: false,
-        critical: true
+        critical: true,
       },
       {
         name: 'keyUsage',
         digitalSignature: true,
         keyEncipherment: true,
-        critical: true
+        critical: true,
       },
       {
         name: 'extKeyUsage',
         clientAuth: true,
-        critical: true
+        critical: true,
       },
       {
         name: 'subjectAltName',
         altNames: [
           {
             type: 2, // DNS
-            value: `device-${deviceId}.iot-hub.local`
+            value: `device-${deviceId}.iot-hub.local`,
           },
           {
             type: 2, // DNS
-            value: deviceId
-          }
-        ]
+            value: deviceId,
+          },
+        ],
       },
       {
-        name: 'subjectKeyIdentifier'
+        name: 'subjectKeyIdentifier',
       },
       {
         name: 'authorityKeyIdentifier',
-        keyIdentifier: caCert.generateSubjectKeyIdentifier().getBytes()
-      }
+        keyIdentifier: caCert.generateSubjectKeyIdentifier().getBytes(),
+      },
     ]);
 
     // Подписываем сертификат CA ключом
@@ -331,7 +356,7 @@ export class CertificateService {
     return {
       clientCert,
       caCert: caCertPem,
-      fingerprint
+      fingerprint,
     };
   }
 
@@ -341,7 +366,7 @@ export class CertificateService {
   async getDeviceCertificate(deviceId: string): Promise<any | null> {
     const device = await this.deviceRepository.findOne({
       where: { id: deviceId },
-      relations: ['certificate']
+      relations: ['certificate'],
     });
 
     return device?.certificate || null;
@@ -353,7 +378,7 @@ export class CertificateService {
   async revokeCertificate(deviceId: string): Promise<void> {
     const device = await this.deviceRepository.findOne({
       where: { id: deviceId },
-      relations: ['certificate']
+      relations: ['certificate'],
     });
 
     if (!device || !device.certificate) {
@@ -374,18 +399,20 @@ export class CertificateService {
   /**
    * Валидирует сертификат устройства по отпечатку
    */
-  async validateCertificate(fingerprint: string): Promise<CertificateValidationResult> {
+  async validateCertificate(
+    fingerprint: string
+  ): Promise<CertificateValidationResult> {
     try {
       const certificate = await this.certificateRepository.findOne({
         where: { fingerprint },
-        relations: ['device']
+        relations: ['device'],
       });
 
       if (!certificate) {
         return {
           valid: false,
           reason: 'Certificate not found',
-          fingerprint
+          fingerprint,
         };
       }
 
@@ -395,20 +422,20 @@ export class CertificateService {
           valid: false,
           reason: 'Certificate revoked',
           deviceId: certificate.device.id,
-          fingerprint
+          fingerprint,
         };
       }
 
       // Проверяем срок действия сертификата
       const cert = forge.pki.certificateFromPem(certificate.clientCert);
       const now = new Date();
-      
+
       if (now < cert.validity.notBefore) {
         return {
           valid: false,
           reason: 'Certificate not yet valid',
           deviceId: certificate.device.id,
-          fingerprint
+          fingerprint,
         };
       }
 
@@ -417,21 +444,21 @@ export class CertificateService {
           valid: false,
           reason: 'Certificate expired',
           deviceId: certificate.device.id,
-          fingerprint
+          fingerprint,
         };
       }
 
       return {
         valid: true,
         deviceId: certificate.device.id,
-        fingerprint
+        fingerprint,
       };
     } catch (error) {
       this.logger.error('Ошибка валидации сертификата:', error);
       return {
         valid: false,
         reason: 'Validation error',
-        fingerprint
+        fingerprint,
       };
     }
   }
