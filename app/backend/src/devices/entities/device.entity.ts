@@ -29,12 +29,8 @@ export class Device {
   @Column({ nullable: true })
   firmwareVersion?: string;
 
-  @OneToOne(
-    () => require('./certificate.entity').Certificate,
-    (cert) => cert.device,
-    { cascade: true }
-  )
-  certificate!: Certificate;
+  @OneToOne(() => require('./certificate.entity').Certificate, (cert: any) => cert.device, { cascade: true })
+  certificate?: any;
 
   @CreateDateColumn()
   createdAt!: Date;

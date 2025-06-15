@@ -22,10 +22,15 @@ const mqtt = require('mqtt');
 const defaultConfig = {
   mqttHost: 'localhost',
   mqttPort: 1883,
+  mqttSecurePort: 8883,
   userId: 'test-user',
   deviceId: 'test-device',
   keepalive: 60,
   qos: 1,
+  useTLS: false,
+  certPath: null,
+  keyPath: null,
+  caPath: null,
 };
 
 /**
@@ -42,8 +47,15 @@ function parseArgs() {
     const value = args[i + 1];
 
     if (key && value) {
-      if (key === 'mqttPort' || key === 'keepalive' || key === 'qos') {
+      if (
+        key === 'mqttPort' ||
+        key === 'mqttSecurePort' ||
+        key === 'keepalive' ||
+        key === 'qos'
+      ) {
         config[key] = Number(value);
+      } else if (key === 'useTLS') {
+        config[key] = value === 'true';
       } else {
         config[key] = value;
       }
@@ -150,15 +162,45 @@ class IoTDeviceSimulator {
    * Подключение к MQTT брокеру
    */
   async connect() {
-    const brokerUrl = `mqtt://${this.config.mqttHost}:${this.config.mqttPort}`;
+    const port = this.config.useTLS
+      ? this.config.mqttSecurePort
+      : this.config.mqttPort;
+    const protocol = this.config.useTLS ? 'mqtts' : 'mqtt';
+    const brokerUrl = `${protocol}://${this.config.mqttHost}:${port}`;
 
-    this.client = mqtt.connect(brokerUrl, {
+    const connectOptions = {
       clientId: `device-${this.config.deviceId}`,
       keepalive: this.config.keepalive,
       clean: true,
       reconnectPeriod: 2000,
       connectTimeout: 30000,
-    });
+    };
+
+    // Настройка mTLS если включено
+    if (this.config.useTLS) {
+      const fs = require('fs');
+
+      console.log(`🔐 Настройка mTLS с сертификатами:`);
+      console.log(`   📜 Client Cert: ${this.config.certPath}`);
+      console.log(`   🔑 Client Key: ${this.config.keyPath}`);
+      console.log(`   🏛️  CA Cert: ${this.config.caPath}`);
+
+      try {
+        if (this.config.certPath && this.config.keyPath && this.config.caPath) {
+          connectOptions.cert = fs.readFileSync(this.config.certPath);
+          connectOptions.key = fs.readFileSync(this.config.keyPath);
+          connectOptions.ca = fs.readFileSync(this.config.caPath);
+          connectOptions.rejectUnauthorized = true;
+        } else {
+          throw new Error('Не указаны пути к сертификатам для mTLS');
+        }
+      } catch (error) {
+        console.error('❌ Ошибка загрузки сертификатов:', error.message);
+        throw error;
+      }
+    }
+
+    this.client = mqtt.connect(brokerUrl, connectOptions);
 
     return new Promise((resolve, reject) => {
       this.client.on('connect', () => {

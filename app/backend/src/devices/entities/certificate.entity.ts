@@ -21,12 +21,12 @@ export class Certificate {
   @Column({ unique: true })
   fingerprint!: string;
 
-  @OneToOne(
-    () => require('./device.entity').Device,
-    (device) => device.certificate
-  )
+  @Column()
+  deviceId!: string;
+
+  @OneToOne(() => require('./device.entity').Device, (device: any) => device.certificate)
   @JoinColumn({ name: 'deviceId', referencedColumnName: 'id' })
-  device!: Device;
+  device!: any;
 
   @CreateDateColumn()
   createdAt!: Date;

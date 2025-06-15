@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  # EMQX MQTT Broker with mTLS support
+  emqx:
+    image: emqx/emqx:5.3.0
+    container_name: emqx-mtls
+    restart: unless-stopped
+
+    ports:
+      # Standard MQTT port (for non-TLS connections if needed)
+      - '1883:1883'
+      # MQTT over TLS/SSL port (mTLS)
+      - '8883:8883'
+      # EMQX Dashboard
+      - '18083:18083'
+      # MQTT over WebSocket
+      - '8083:8083'
+      # MQTT over WebSocket with SSL
+      - '8084:8084'
+
+    environment:
+      # Basic EMQX configuration
+      - EMQX_NAME=emqx-mtls
+      - EMQX_HOST=127.0.0.1
+
+      # Dashboard credentials
+      - EMQX_DASHBOARD__DEFAULT_USERNAME=admin
+      - EMQX_DASHBOARD__DEFAULT_PASSWORD=iot-hub-admin
+
+      # Enable SSL listener
+      - EMQX_LISTENERS__SSL__DEFAULT__BIND=0.0.0.0:8883
+      - EMQX_LISTENERS__SSL__DEFAULT__SSL_OPTIONS__VERIFY=verify_peer
+      - EMQX_LISTENERS__SSL__DEFAULT__SSL_OPTIONS__FAIL_IF_NO_PEER_CERT=true
+
+      # HTTP Auth settings
+      - EMQX_AUTHENTICATION__1__MECHANISM=http
+      - EMQX_AUTHENTICATION__1__METHOD=post
+      - EMQX_AUTHENTICATION__1__URL=http://host.docker.internal:3000/api/devices/certificates/validate
+
+      # Logging
+      - EMQX_LOG__LEVEL=info
+      - EMQX_LOG__CONSOLE__LEVEL=info
+
+    volumes:
+      # Mount certificates directory
+      - ./certs:/opt/emqx/etc/certs:ro
+      # Mount custom configuration
+      - ./emqx-mtls.conf:/opt/emqx/etc/emqx.conf:ro
+      # Persist EMQX data
+      - emqx-data:/opt/emqx/data
+      - emqx-log:/opt/emqx/log
+
+    healthcheck:
+      test: ['CMD', '/opt/emqx/bin/emqx_ctl', 'status']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    networks:
+      - iot-network
+
+    depends_on:
+      - iot-backend
+
+  # IoT Hub Backend
+  iot-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: iot-hub-backend
+    restart: unless-stopped
+
+    ports:
+      - '3000:3000'
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+
+      # Database
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=iot_user
+      - DATABASE_PASSWORD=iot_password
+      - DATABASE_NAME=iot_hub
+
+      # JWT
+      - JWT_SECRET=your-super-secret-jwt-key-for-production
+
+      # MQTT
+      - MQTT_HOST=emqx
+      - MQTT_PORT=1883
+      - MQTT_SECURE_PORT=8883
+
+      # Keycloak (disabled for this setup)
+      - KEYCLOAK_URL=
+      - KEYCLOAK_REALM=
+
+    volumes:
+      # Share certificates with backend
+      - ./certs:/app/certs:ro
+
+    depends_on:
+      - postgres
+      - redis
+
+    networks:
+      - iot-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: iot-postgres
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_DB=iot_hub
+      - POSTGRES_USER=iot_user
+      - POSTGRES_PASSWORD=iot_password
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    ports:
+      - '5432:5432'
+
+    networks:
+      - iot-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: iot-redis
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis-data:/data
+
+    ports:
+      - '6379:6379'
+
+    networks:
+      - iot-network
+
+  # Certificate Management Service (optional)
+  cert-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.cert-manager
+    container_name: iot-cert-manager
+    restart: unless-stopped
+
+    environment:
+      - BACKEND_URL=http://iot-backend:3000
+      - CERTS_DIR=/certs
+
+    volumes:
+      - ./certs:/certs
+      - ./scripts:/scripts:ro
+
+    depends_on:
+      - iot-backend
+
+    networks:
+      - iot-network
+
+volumes:
+  emqx-data:
+    driver: local
+  emqx-log:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  iot-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

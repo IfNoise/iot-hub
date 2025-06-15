@@ -148,6 +148,10 @@ export const envConfigSchema = z.object({
   // MQTT Configuration
   MQTT_HOST: z.string().default('localhost').describe('MQTT broker host'),
   MQTT_PORT: z.coerce.number().default(1883).describe('MQTT broker port'),
+  MQTT_SECURE_PORT: z.coerce
+    .number()
+    .default(8883)
+    .describe('MQTT secure broker port for mTLS'),
   MQTT_USERNAME: z.string().optional().describe('MQTT broker username'),
   MQTT_PASSWORD: z.string().optional().describe('MQTT broker password'),
   MQTT_CLIENT_ID: z

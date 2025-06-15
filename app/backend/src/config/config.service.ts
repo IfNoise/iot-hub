@@ -361,6 +361,22 @@ export class ConfigService {
     return `mqtt://${this.env.MQTT_HOST}:${this.env.MQTT_PORT}`;
   }
 
+  getMqttBrokerHost(): string {
+    return this.env.MQTT_HOST;
+  }
+
+  getMqttBrokerPort(): number {
+    return this.env.MQTT_PORT;
+  }
+
+  getMqttSecureBrokerPort(): number {
+    return this.env.MQTT_SECURE_PORT || 8883;
+  }
+
+  getMqttSecureBrokerUrl(): string {
+    return `mqtts://${this.env.MQTT_HOST}:${this.getMqttSecureBrokerPort()}`;
+  }
+
   private parseLogging(logging: string): TypeOrmModuleOptions['logging'] {
     if (logging === 'true') return true;
     if (logging === 'false') return false;

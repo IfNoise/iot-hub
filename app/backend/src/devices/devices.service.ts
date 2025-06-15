@@ -15,34 +15,31 @@ export class DevicesService {
     private crypto: CryptoService
   ) {}
 
+  /**
+   * Создает новое устройство БЕЗ сертификата
+   * Сертификат создается отдельно через CSR API
+   */
   async createDevice(dto: CreateDeviceDto) {
-    // Получаем сертификаты от CryptoService
-    const { clientCert, caCert, fingerprint, publicKeyPem } =
-      this.crypto.signCertificate({
-        deviceId: dto.id,
-        csrPem: dto.csrPem,
-      });
+    // Проверяем, что устройство с таким ID еще не существует
+    const existingDevice = await this.deviceRepo.findOne({
+      where: { id: dto.id }
+    });
 
-    // Создаем устройство
+    if (existingDevice) {
+      throw new Error(`Device with ID ${dto.id} already exists`);
+    }
+
+    // Создаем устройство БЕЗ сертификата
     const device = new Device();
     device.id = dto.id;
     device.model = dto.model || '';
-    device.publicKey = publicKeyPem;
+    device.publicKey = dto.publicKey; // Временно для совместимости
     device.ownerId = undefined;
     device.status = 'unbound';
     device.lastSeenAt = new Date();
     device.firmwareVersion = dto.firmwareVersion || undefined;
 
-    // Создаем сертификат
-    const certificate = new Certificate();
-    certificate.clientCert = clientCert;
-    certificate.caCert = caCert;
-    certificate.fingerprint = fingerprint;
-
-    // Устанавливаем связь
-    device.certificate = certificate;
-
-    // Сохраняем устройство с каскадным сохранением сертификата
+    // Сохраняем устройство (сертификат будет создан отдельно через CSR API)
     const savedDevice = await this.deviceRepo.save(device);
 
     return savedDevice;
