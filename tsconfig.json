@@ -17,6 +17,9 @@
     },
     {
       "path": "./app/iot-device-simulator"
+    },
+    {
+      "path": "./app/device-simulator"
     }
   ]
 }
