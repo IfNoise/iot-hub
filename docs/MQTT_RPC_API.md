@@ -32,34 +32,6 @@ MQTT_WILL_RETAIN=false
 MQTT_MAX_RECONNECT_ATTEMPTS=10
 ```
 
-## Конфигурация
-
-### Переменные окружения
-
-Добавьте следующие переменные в ваш `.env` файл:
-
-```env
-# MQTT Configuration
-MQTT_HOST=localhost
-MQTT_PORT=1883
-MQTT_USERNAME=your_mqtt_username
-MQTT_PASSWORD=your_mqtt_password
-MQTT_CLIENT_ID=iot-hub-backend
-MQTT_KEEPALIVE=60
-MQTT_CLEAN_SESSION=true
-MQTT_RECONNECT_PERIOD=2000
-MQTT_CONNECT_TIMEOUT=30000
-MQTT_QOS=1
-MQTT_RETAIN=false
-
-# Optional MQTT Will configuration
-MQTT_WILL_TOPIC=iot-hub/backend/status
-MQTT_WILL_PAYLOAD=offline
-MQTT_WILL_QOS=1
-MQTT_WILL_RETAIN=true
-MQTT_MAX_RECONNECT_ATTEMPTS=10
-```
-
 ## API Endpoints
 
 ### 1. Отправка команды с ожиданием ответа

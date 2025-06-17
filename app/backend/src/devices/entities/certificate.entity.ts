@@ -6,6 +6,7 @@ import {
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
+import type { Device } from './device.entity';
 
 @Entity()
 export class Certificate {
@@ -26,10 +27,10 @@ export class Certificate {
 
   @OneToOne(
     () => require('./device.entity').Device,
-    (device: any) => device.certificate
+    (device: Device) => device.certificate
   )
   @JoinColumn({ name: 'deviceId', referencedColumnName: 'id' })
-  device!: any;
+  device!: Device;
 
   @CreateDateColumn()
   createdAt!: Date;

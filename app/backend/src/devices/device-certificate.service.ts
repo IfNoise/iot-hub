@@ -242,7 +242,7 @@ export class DeviceCertificateService {
         return { caCertPem, caKeyPem, caKey, caCert };
       }
     } catch (error) {
-      this.logger.warn('Не удалось загрузить существующий CA, создаем новый');
+      this.logger.warn('Не удалось загрузить существующий CA, создаем новый', error);
     }
 
     // Создаем новый CA

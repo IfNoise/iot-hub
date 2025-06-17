@@ -1,9 +1,9 @@
 {
-  "name": "@iot-hub/device-simulator",
+  "name": "@iot-hub/iot-device-simulator",
   "version": "0.0.1",
   "private": true,
   "nx": {
-    "name": "device-simulator",
+    "name": "iot-device-simulator",
     "targets": {
       "build": {
         "executor": "@nx/esbuild:esbuild",
@@ -13,15 +13,15 @@
         "defaultConfiguration": "production",
         "options": {
           "platform": "node",
-          "outputPath": "tools/device-simulator/dist",
+          "outputPath": "app/iot-device-simulator/dist",
           "format": [
             "cjs"
           ],
           "bundle": false,
-          "main": "tools/device-simulator/src/main.ts",
-          "tsConfig": "tools/device-simulator/tsconfig.app.json",
+          "main": "app/iot-device-simulator/src/main.ts",
+          "tsConfig": "app/iot-device-simulator/tsconfig.app.json",
           "assets": [
-            "tools/device-simulator/src/assets"
+            "app/iot-device-simulator/src/assets"
           ],
           "esbuildOptions": {
             "sourcemap": true,
@@ -50,18 +50,27 @@
           "build"
         ],
         "options": {
-          "buildTarget": "device-simulator:build",
+          "buildTarget": "iot-device-simulator:build",
           "runBuildTargetDependencies": false
         },
         "configurations": {
           "development": {
-            "buildTarget": "device-simulator:build:development"
+            "buildTarget": "iot-device-simulator:build:development"
           },
           "production": {
-            "buildTarget": "device-simulator:build:production"
+            "buildTarget": "iot-device-simulator:build:production"
           }
         }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
       }
-    }
+    },
+    "tags": [
+      "type:app",
+      "scope:device"
+    ]
   }
 }

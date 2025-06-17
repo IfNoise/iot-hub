@@ -247,12 +247,14 @@ export class CertificateService {
         validFrom: cert.validity.notBefore.toISOString(),
         validTo: cert.validity.notAfter.toISOString(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
         `Ошибка подписания CSR для устройства ${deviceId}:`,
         error
       );
-      throw new Error(`Не удалось подписать CSR: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Не удалось подписать CSR: ${errorMessage}`);
     }
   }
 
@@ -363,7 +365,7 @@ export class CertificateService {
   /**
    * Получает сертификат устройства из базы данных
    */
-  async getDeviceCertificate(deviceId: string): Promise<any | null> {
+  async getDeviceCertificate(deviceId: string): Promise<Certificate | null> {
     const device = await this.deviceRepository.findOne({
       where: { id: deviceId },
       relations: ['certificate'],

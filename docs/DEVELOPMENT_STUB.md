@@ -143,7 +143,7 @@ export class AdminController {
 
 ## Swagger документация
 
-API документация доступна по адресу: http://localhost:3000/api/docs
+API документация доступна по адресу: <http://localhost:3000/api/docs>
 
 ## Отладка
 

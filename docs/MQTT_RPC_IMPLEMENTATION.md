@@ -6,21 +6,19 @@
 
 ## Файловая структура
 
-```
 app/backend/src/mqtt/
 ├── dto/
-│   └── device-command.dto.ts      # DTO с Zod валидацией
+│ └── device-command.dto.ts # DTO с Zod валидацией
 ├── config/
-│   └── mqtt-config.schema.ts      # Схема конфигурации MQTT
-├── mqtt-rpc.service.ts            # Основной сервис MQTT RPC
-├── mqtt-rpc.controller.ts         # REST контроллер
-└── mqtt.module.ts                 # NestJS модуль
+│ └── mqtt-config.schema.ts # Схема конфигурации MQTT
+├── mqtt-rpc.service.ts # Основной сервис MQTT RPC
+├── mqtt-rpc.controller.ts # REST контроллер
+└── mqtt.module.ts # NestJS модуль
 
 docs/
-└── MQTT_RPC_API.md               # Полная документация API
+└── MQTT_RPC_API.md # Полная документация API
 
-test-mqtt-rpc.js                  # Скрипт для тестирования
-```
+test-mqtt-rpc.js # Скрипт для тестирования
 
 ## Ключевые компоненты
 

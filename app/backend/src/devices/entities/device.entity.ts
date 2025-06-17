@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   OneToOne,
 } from 'typeorm';
+import type { Certificate } from './certificate.entity';
 
 @Entity()
 export class Device {
@@ -31,10 +32,10 @@ export class Device {
 
   @OneToOne(
     () => require('./certificate.entity').Certificate,
-    (cert: any) => cert.device,
+    (cert: Certificate) => cert.device,
     { cascade: true }
   )
-  certificate?: any;
+  certificate?: Certificate;
 
   @CreateDateColumn()
   createdAt!: Date;

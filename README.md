@@ -1,90 +1,205 @@
-# IotHub
+# IoT Hub
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Коммерческая платформа управления IoT-устройствами с производственной безопасностью.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+## 🚀 Обзор
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+IoT Hub - это масштабируемая платформа для управления IoT-устройствами, обеспечивающая:
 
-## Finish your CI setup
+- **Безопасность уровня производства**: mTLS-коммуникация через EMQX (MQTT v5)
+- **Управление пользователями**: Интеграция с Keycloak и OAuth2 Proxy
+- **Привязка устройств**: QR-коды для безопасного связывания устройств с аккаунтами
+- **Современный стек**: NestJS + PostgreSQL backend, Next.js frontend
+- **Криптографическая защита**: Поддержка крипточипов ATECC608A
+- **DevOps ready**: CI/CD, Docker, тесты и мониторинг
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/UMdFvbHwtZ)
+## 🏗️ Архитектура
 
-
-## Generate a library
-
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+```ascii
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   IoT Device    │    │   EMQX Broker   │    │   Backend API   │
+│   (ESP32/STM32) │◄──►│   (mTLS/MQTT)   │◄──►│   (NestJS)      │
+│   + ATECC608A   │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                                              │
+         │              ┌─────────────────┐             │
+         └──────────────►│   Frontend UI   │◄────────────┘
+                        │   (Next.js)     │
+                        └─────────────────┘
+                                 │
+                        ┌─────────────────┐
+                        │   Keycloak      │
+                        │   (Auth/Users)  │
+                        └─────────────────┘
 ```
 
-## Run tasks
+## 🛠️ Технологический стек
 
-To build the library use:
+### Backend
 
-```sh
-npx nx build pkg1
+- **Framework**: NestJS (Node.js)
+- **Database**: PostgreSQL + TypeORM
+- **MQTT**: EMQX с mTLS
+- **Auth**: Keycloak + OAuth2 Proxy
+- **Validation**: Zod + nestjs-zod
+- **Logging**: Pino
+- **Testing**: Jest
+
+### IoT Devices
+
+- **MCU**: ESP32 / STM32
+- **Security**: ATECC608A secure element
+- **Protocol**: MQTT v5 с mTLS
+- **OTA**: Secure firmware updates
+
+### DevOps
+
+- **Monorepo**: Nx workspace
+- **CI/CD**: GitHub Actions
+- **Containers**: Docker + Docker Compose
+- **Orchestration**: Kubernetes (production)
+- **Package Management**: Helm Charts
+
+## 🚦 Быстрый старт
+
+### Предварительные требования
+
+- Node.js 18+
+- Docker & Docker Compose
+- PostgreSQL (или используйте Docker)
+
+### Установка
+
+```bash
+# Клонирование репозитория
+git clone <repository-url>
+cd iot-hub
+
+# Установка зависимостей
+npm install
+
+# Сборка всех проектов
+npx nx run-many -t build
+
+# Запуск development окружения
+docker-compose up -d
 ```
 
-To run any task with Nx use:
+### Запуск разработки
 
-```sh
-npx nx <target> <project-name>
+```bash
+# Запуск backend в режиме разработки
+npx nx serve @iot-hub/backend
+
+# Запуск тестов
+npx nx test
+
+# Линтинг кода
+npx nx lint
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## 📋 Основные возможности
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+### Управление устройствами
 
-## Versioning and releasing
+- Автоматическая генерация сертификатов
+- Привязка устройств через QR-коды
+- Мониторинг состояния устройств
+- Удаленное управление и настройка
 
-To version and release the library use
+### Безопасность
 
+- Взаимная TLS аутентификация (mTLS)
+- Хранение ключей в secure element
+- Проверка сертификатов по fingerprint
+- ACL для MQTT топиков
+- Защита от CSRF/CORS атак
+
+### Масштабируемость
+
+- Microservices architecture
+- Horizontal scaling support
+- Load balancing ready
+- Monitoring & observability
+
+## 📚 Документация
+
+Подробная документация доступна в папке [`docs/`](./docs/):
+
+- [🔧 Конфигурация](./docs/CONFIGURATION.md)
+- [🔐 Настройка mTLS](./docs/MTLS_SETUP.md)
+- [🚀 Быстрый старт mTLS](./docs/MTLS_QUICK_START.md)
+- [📱 Симулятор устройства](./docs/DEVICE_SIMULATOR.md)
+- [🛠️ Примеры разработки](./docs/DEVELOPMENT_EXAMPLES.md)
+- [🌐 Инфраструктура](./docs/INFRASTRUCTURE.md)
+- [🔌 MQTT RPC API](./docs/MQTT_RPC_API.md)
+
+## 🤝 Разработка
+
+### Структура проекта
+
+```text
+iot-hub/
+├── app/
+│   ├── backend/           # NestJS API сервер
+│   └── backend-e2e/       # E2E тесты
+├── packages/
+│   └── iot-core/          # Общие типы и утилиты
+├── tools/
+│   └── device-simulator/  # Симулятор IoT устройства
+├── docs/                  # Документация
+└── certs/                 # Сертификаты для разработки
 ```
-npx nx release
+
+### Команды разработки
+
+```bash
+# Сборка всех проектов
+npx nx run-many -t build
+
+# Запуск тестов всех проектов
+npx nx run-many -t test
+
+# Линтинг всех проектов
+npx nx run-many -t lint
+
+# Запуск конкретного проекта
+npx nx serve @iot-hub/backend
+npx nx test iot-core
+npx nx lint device-simulator
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+## 🔒 Безопасность
 
-[Learn more about Nx release &raquo;](hhttps://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Система обеспечивает безопасность на нескольких уровнях:
 
-## Keep TypeScript project references up to date
+1. **Device Level**: Secure element (ATECC608A) для хранения ключей
+2. **Transport Level**: mTLS для всех MQTT соединений
+3. **Application Level**: JWT токены и RBAC
+4. **Infrastructure Level**: Network policies и secrets management
 
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
+## 📈 Мониторинг
 
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
+- **Logging**: Structured logging с Pino
+- **Metrics**: Prometheus готовые метрики
+- **Health Checks**: Kubernetes health/readiness probes
+- **Tracing**: Distributed tracing support
 
-```sh
-npx nx sync
-```
+## 🤝 Contributing
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+1. Fork репозиторий
+2. Создайте feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit изменения (`git commit -m 'Add amazing feature'`)
+4. Push в branch (`git push origin feature/amazing-feature`)
+5. Создайте Pull Request
 
-```sh
-npx nx sync:check
-```
+## 📄 Лицензия
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+MIT License - см. [LICENSE](LICENSE) файл для деталей.
 
+## 🆘 Поддержка
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- 📧 Email: `support@iot-hub.example.com`
+- 💬 Discord: [IoT Hub Community](https://discord.gg/iot-hub)
+- 📖 Docs: [Документация](./docs/)
+- 🐛 Issues: [GitHub Issues](https://github.com/user/iot-hub/issues)

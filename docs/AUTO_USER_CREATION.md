@@ -27,7 +27,7 @@
 
 ### Поток выполнения
 
-```
+```plaintext
 Запрос → KeycloakOAuth2Middleware → AutoUserSyncMiddleware → Контроллер
            ↓                         ↓
        Аутентификация           Синхронизация пользователя
@@ -80,7 +80,7 @@ configure(consumer: MiddlewareConsumer) {
 
 Пример логов:
 
-```
+```plaintext
 [AutoUserSyncMiddleware] Синхронизация пользователя: user@example.com
 [KeycloakUserService] Пользователь синхронизирован: user@example.com (uuid)
 ```
