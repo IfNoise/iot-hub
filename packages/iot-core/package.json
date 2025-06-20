@@ -12,7 +12,7 @@
       "default": "./dist/index.js"
     },
     "./schemas": {
-      "development": "./src/schemas/index.ts",
+      "development": "./src/schemas/i VT-Linuxndex.ts",
       "types": "./dist/schemas/index.d.ts",
       "import": "./dist/schemas/index.js",
       "default": "./dist/schemas/index.js"

@@ -107,7 +107,7 @@ openssl x509 -req -in "$SERVER_DIR/server.csr" \
   -out "$SERVER_DIR/server-cert.pem" \
   -days 365 \
   -extensions v3_req \
-  -extfile "$SERVER_DIR/server-ext.conf"
+  -extfile "$SERVER_DIR/server-ext.conf" 
 
 echo "✅ Серверный сертификат создан: $SERVER_DIR/server-cert.pem"
 
@@ -121,7 +121,7 @@ echo
 echo "🧹 Очистка временных файлов..."
 
 # Удаляем временные файлы
-rm -f "$SERVER_DIR/server.csr" "$SERVER_DIR/server.conf" "$SERVER_DIR/server-ext.conf" "$CA_DIR/ca-cert.srl"
+#rm -f "$SERVER_DIR/server.csr" "$SERVER_DIR/server.conf" "$SERVER_DIR/server-ext.conf" "$CA_DIR/ca-cert.srl"
 
 echo
 echo "📄 Установка правильных разрешений..."

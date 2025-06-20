@@ -67,7 +67,7 @@ services:
   # IoT Hub Backend
   iot-backend:
     build:
-      context: .
+      context: ./apps/backend
       dockerfile: Dockerfile.backend
     container_name: iot-hub-backend
     restart: unless-stopped

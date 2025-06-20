@@ -7,19 +7,25 @@
       "path": "./packages/iot-core"
     },
     {
-      "path": "./app/backend-e2e"
+      "path": "./apps/backend-e2e"
     },
     {
-      "path": "./app/backend"
+      "path": "./apps/backend"
     },
     {
-      "path": "./tools/device-simulator"
+      "path": "./libs/contracts/auth"
     },
     {
-      "path": "./app/iot-device-simulator"
+      "path": "./libs/contracts/users"
     },
     {
-      "path": "./app/device-simulator"
+      "path": "./libs/contracts/devices"
+    },
+    {
+      "path": "./libs/contracts/mqtt"
+    },
+    {
+      "path": "./libs/contracts/crypto"
     }
   ]
 }
