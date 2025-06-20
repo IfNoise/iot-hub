@@ -35,7 +35,10 @@ export const UserBaseSchema = z
       .describe('Баланс пользователя'),
     plan: PlanTypeEnum.default('free').describe('Тип подписки'),
     planExpiresAt: z
-      .preprocess((v) => new Date(v as string), z.date())
+      .preprocess(
+        (v) => (v ? new Date(v as string) : null),
+        z.date().nullable()
+      )
       .describe('Дата окончания подписки'),
     metadata: z.record(z.any()).optional().describe('Произвольные данные'),
   })

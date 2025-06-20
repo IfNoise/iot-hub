@@ -1,6 +1,5 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { CertificateSchema } from './device-schemas.js';
 
 const c = initContract();
 
@@ -23,49 +22,97 @@ export const CertificateResponseSchema = z.object({
 });
 
 /**
+ * Схема информации о сертификате
+ */
+export const CertificateInfoSchema = z.object({
+  deviceId: z.string(),
+  serialNumber: z.string(),
+  validFrom: z.string(),
+  validTo: z.string(),
+  status: z.enum(['active', 'revoked', 'expired']),
+  fingerprint: z.string(),
+});
+
+/**
+ * Схема ответа на отзыв сертификата
+ */
+export const RevokeCertificateResponseSchema = z.object({
+  message: z.string(),
+  deviceId: z.string(),
+  timestamp: z.string(),
+});
+
+/**
+ * Схема ответа с CA сертификатом
+ */
+export const CACertificateResponseSchema = z.object({
+  caCert: z.string(),
+  pemFormat: z.boolean(),
+  timestamp: z.string(),
+});
+
+/**
  * REST API контракты для сертификатов устройств
  * Соответствуют реальным эндпоинтам в CertificatesController
  */
 export const certificatesContract = c.router({
-  // POST /devices/certificates/sign-csr - Подписание CSR
-  signCSR: {
+  // POST /devices/certificates/:deviceId/sign-csr - Подписание CSR устройства
+  signDeviceCSR: {
     method: 'POST',
-    path: '/devices/certificates/sign-csr',
+    path: '/devices/certificates/:deviceId/sign-csr',
+    pathParams: z.object({
+      deviceId: z.string(),
+    }),
     body: SignCSRSchema,
     responses: {
-      200: CertificateResponseSchema,
+      201: CertificateResponseSchema,
       400: z.object({ message: z.string() }),
+      404: z.object({ message: z.string() }),
+      409: z.object({ message: z.string() }),
       500: z.object({ message: z.string() }),
     },
-    summary: 'Подписание CSR и выдача сертификата',
+    summary: 'Подписание CSR от устройства',
   },
 
-  // GET /devices/certificates/:fingerprint - Получение сертификата по отпечатку
-  getCertificate: {
+  // GET /devices/certificates/:deviceId/certificate - Получение информации о сертификате устройства
+  getCertificateInfo: {
     method: 'GET',
-    path: '/devices/certificates/:fingerprint',
+    path: '/devices/certificates/:deviceId/certificate',
     pathParams: z.object({
-      fingerprint: z.string(),
+      deviceId: z.string(),
     }),
     responses: {
-      200: CertificateSchema,
+      200: CertificateInfoSchema,
       404: z.object({ message: z.string() }),
+      500: z.object({ message: z.string() }),
     },
-    summary: 'Получение сертификата по отпечатку',
+    summary: 'Получение информации о сертификате устройства',
   },
 
-  // DELETE /devices/certificates/:fingerprint - Отзыв сертификата
+  // DELETE /devices/certificates/:deviceId/certificate - Отзыв сертификата устройства
   revokeCertificate: {
     method: 'DELETE',
-    path: '/devices/certificates/:fingerprint',
+    path: '/devices/certificates/:deviceId/certificate',
     pathParams: z.object({
-      fingerprint: z.string(),
+      deviceId: z.string(),
     }),
     responses: {
-      200: z.object({ message: z.string() }),
+      200: RevokeCertificateResponseSchema,
       404: z.object({ message: z.string() }),
+      500: z.object({ message: z.string() }),
     },
-    summary: 'Отзыв сертификата',
+    summary: 'Отзыв сертификата устройства',
+  },
+
+  // GET /devices/certificates/ca-certificate - Получение CA сертификата
+  getCACertificate: {
+    method: 'GET',
+    path: '/devices/certificates/ca-certificate',
+    responses: {
+      200: CACertificateResponseSchema,
+      500: z.object({ message: z.string() }),
+    },
+    summary: 'Получение CA сертификата',
   },
 });
 

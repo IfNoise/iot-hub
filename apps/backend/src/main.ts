@@ -6,21 +6,52 @@ import 'dotenv/config';
 import { Logger } from 'nestjs-pino';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { patchNestJsSwagger } from 'nestjs-zod';
-
+import { generateOpenApi } from '@ts-rest/open-api';
+import { contracts } from '@iot-hub/contracts';
+import * as swaggerUi from 'swagger-ui-express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Enable logging
   app.useLogger(app.get(Logger));
 
-  // Patch NestJS Swagger for Zod integration
-  patchNestJsSwagger();
-
   // Set up global prefix for API routes
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
+
+  // Generate OpenAPI documentation
+  const document = generateOpenApi(contracts, {
+    info: { title: 'IoT Hub API', version: '1.0.0' },
+    basePath: `/${globalPrefix}`,
+  });
+  document.servers = [
+    {
+      url: `http://localhost:${process.env.PORT || 3000}/${globalPrefix}`,
+      description: 'Local development server',
+    },
+  ];
+  document.components = {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
+    schemas: {
+      ErrorResponse: {
+        type: 'object',
+        properties: {
+          statusCode: { type: 'integer' },
+          message: { type: 'string' },
+          error: { type: 'string' },
+        },
+      },
+    },
+  };
+
+  // Setup Swagger UI with correct path
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(document));
 
   // Enable CORS with security considerations
   app.enableCors({
@@ -28,16 +59,6 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Authorization',
   });
-
-  // Enable Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('IoT Hub API')
-    .setDescription('API documentation for the IoT Hub platform')
-    .setVersion('0.0.1')
-    .addBearerAuth() // Add JWT Bearer token support
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${globalPrefix}/docs`, app, document);
 
   // Start the application
   const port = process.env.PORT || 3000;

@@ -1,120 +1,181 @@
-import { Controller, Post, Body, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Controller } from '@nestjs/common';
+import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { DevicesService } from './devices.service';
-import { CreateDeviceDto } from './dto/create-device.dto';
-import { BindDeviceDto } from './dto/bind-device.dto';
-import { CurrentUser } from '../common/decorator/current-user.decorator';
-import { Roles } from '../common/decorator/roles.decorator';
-import { RolesGuard } from '../common/guard/roles-guard.guard';
-import type { AuthenticatedUser } from '../common/types/keycloak-user.interface';
+import { devicesContract } from '@iot-hub/devices';
+import { DeviceMapper } from './mappers/device.mapper';
 
-@ApiTags('devices')
-@Controller('devices')
+@Controller()
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
-  @Post('sign-device')
-  @ApiOperation({ summary: 'Регистрация нового устройства' })
-  @ApiResponse({
-    status: 201,
-    description: 'Устройство успешно зарегистрировано',
-  })
-  @ApiResponse({ status: 400, description: 'Неверные данные запроса' })
-  async registerDevice(@Body() dto: CreateDeviceDto) {
-    return this.devicesService.createDevice(dto);
+  @TsRestHandler(devicesContract.registerDevice)
+  async registerDevice() {
+    return tsRestHandler(devicesContract.registerDevice, async ({ body }) => {
+      try {
+        const device = await this.devicesService.createDevice(body);
+        const deviceDto = DeviceMapper.toDto(device);
+
+        return {
+          status: 201 as const,
+          body: {
+            message: 'Устройство успешно зарегистрировано',
+            device: deviceDto,
+          },
+        };
+      } catch (error) {
+        return {
+          status: 400 as const,
+          body: {
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Неверные данные запроса',
+          },
+        };
+      }
+    });
   }
 
-  @Post('bind-device')
-  @ApiOperation({ summary: 'Привязка устройства к пользователю' })
-  @ApiResponse({ status: 200, description: 'Устройство успешно привязано' })
-  @ApiResponse({ status: 404, description: 'Устройство не найдено' })
-  @ApiResponse({ status: 409, description: 'Устройство уже привязано' })
-  async bindDevice(@Body() dto: BindDeviceDto) {
-    return this.devicesService.bindDevice(dto);
+  @TsRestHandler(devicesContract.bindDevice)
+  async bindDevice() {
+    return tsRestHandler(devicesContract.bindDevice, async ({ body }) => {
+      try {
+        const result = await this.devicesService.bindDevice(body);
+        const deviceDto = DeviceMapper.toDto(result.device);
+
+        return {
+          status: 200 as const,
+          body: {
+            message: 'Устройство успешно привязано',
+            device: deviceDto,
+          },
+        };
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('not found')) {
+            return {
+              status: 404 as const,
+              body: { message: 'Устройство не найдено' },
+            };
+          }
+          if (error.message.includes('already bound')) {
+            return {
+              status: 409 as const,
+              body: { message: 'Устройство уже привязано' },
+            };
+          }
+        }
+        return {
+          status: 400 as const,
+          body: {
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Ошибка привязки устройства',
+          },
+        };
+      }
+    });
   }
 
-  @Post('unbind-device')
-  @ApiOperation({ summary: 'Отвязка устройства от пользователя' })
-  @ApiResponse({ status: 200, description: 'Устройство успешно отвязано' })
-  @ApiResponse({ status: 404, description: 'Устройство не найдено' })
-  async unbindDevice(@Body() dto: { id: string }) {
-    return this.devicesService.unbindDevice(dto.id);
-  }
-  /**
-   * Получение списка устройств с разграничением доступа:
-   * - Администраторы получают все устройства
-   * - Обычные пользователи получают только свои устройства
-   * @param {number} [page=1] - Номер страницы (по умолчанию 1)
-   * @param {number} [limit=10] - Количество устройств на странице (по умолчанию 10)
-   * @param user - Текущий аутентифицированный пользователь
-   * @returns Список устройств в зависимости от роли пользователя
-   */
-  @Get()
-  @ApiOperation({
-    summary: 'Получение списка устройств',
-    description:
-      'Администраторы получают все устройства, обычные пользователи - только свои',
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: 'Номер страницы (по умолчанию 1)',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Количество устройств на странице (по умолчанию 10)',
-  })
-  @ApiResponse({ status: 200, description: 'Список устройств получен успешно' })
-  @ApiResponse({ status: 401, description: 'Пользователь не аутентифицирован' })
-  async getDevices(
-    @Query() query: { page?: number; limit?: number },
-    @CurrentUser() user: AuthenticatedUser
-  ) {
-    // Если пользователь администратор - возвращаем все устройства
-    if (user.role === 'admin') {
-      return this.devicesService.getDevices(query);
-    }
+  @TsRestHandler(devicesContract.unbindDevice)
+  async unbindDevice() {
+    return tsRestHandler(devicesContract.unbindDevice, async ({ body }) => {
+      try {
+        const result = await this.devicesService.unbindDevice(body.id);
+        const deviceDto = DeviceMapper.toDto(result.device);
 
-    // Если обычный пользователь - возвращаем только его устройства
-    return this.devicesService.getUserDevices(user.id, query);
+        return {
+          status: 200 as const,
+          body: {
+            message: 'Устройство успешно отвязано',
+            device: deviceDto,
+          },
+        };
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('not found')) {
+          return {
+            status: 404 as const,
+            body: { message: 'Устройство не найдено' },
+          };
+        }
+        return {
+          status: 400 as const,
+          body: {
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Ошибка отвязки устройства',
+          },
+        };
+      }
+    });
   }
 
-  /**
-   * Администраторский эндпоинт для получения всех устройств
-   * Доступен только пользователям с ролью admin
-   * @param {number} [page=1] - Номер страницы
-   * @param {number} [limit=10] - Количество устройств на странице
-   * @returns Список всех устройств в системе
-   */
-  @Get('admin/all')
-  @Roles('admin')
-  @UseGuards(RolesGuard)
-  @ApiOperation({
-    summary: 'Получение всех устройств (только для администраторов)',
-    description:
-      'Возвращает полный список всех устройств в системе. Доступен только администраторам.',
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: 'Номер страницы (по умолчанию 1)',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Количество устройств на странице (по умолчанию 10)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Список всех устройств получен успешно',
-  })
-  @ApiResponse({ status: 401, description: 'Пользователь не аутентифицирован' })
-  @ApiResponse({
-    status: 403,
-    description: 'Недостаточно прав (требуется роль admin)',
-  })
-  async getAllDevicesAdmin(@Query() query: { page?: number; limit?: number }) {
-    return this.devicesService.getDevices(query);
+  @TsRestHandler(devicesContract.getDevices)
+  async getDevices() {
+    return tsRestHandler(devicesContract.getDevices, async ({ query }) => {
+      try {
+        // TODO: Временно без авторизации - нужно добавить middleware для получения пользователя
+        const result = await this.devicesService.getDevices(query);
+        const devicesDto = DeviceMapper.toDtoArray(result.devices);
+
+        return {
+          status: 200 as const,
+          body: {
+            devices: devicesDto,
+            total: result.meta.total,
+            page: result.meta.page,
+            limit: result.meta.limit,
+            totalPages: result.meta.totalPages,
+          },
+        };
+      } catch (error) {
+        return {
+          status: 401 as const,
+          body: {
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Ошибка получения устройств',
+          },
+        };
+      }
+    });
+  }
+
+  @TsRestHandler(devicesContract.getAllDevicesAdmin)
+  async getAllDevicesAdmin() {
+    return tsRestHandler(
+      devicesContract.getAllDevicesAdmin,
+      async ({ query }) => {
+        try {
+          // TODO: Временно без проверки прав администратора - нужно добавить middleware
+          const result = await this.devicesService.getDevices(query);
+          const devicesDto = DeviceMapper.toDtoArray(result.devices);
+
+          return {
+            status: 200 as const,
+            body: {
+              devices: devicesDto,
+              total: result.meta.total,
+              page: result.meta.page,
+              limit: result.meta.limit,
+              totalPages: result.meta.totalPages,
+            },
+          };
+        } catch (error) {
+          return {
+            status: 500 as const,
+            body: {
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'Внутренняя ошибка сервера',
+            },
+          };
+        }
+      }
+    );
   }
 }

@@ -44,7 +44,6 @@ export class DeviceCertificateService {
     private readonly certificateRepository: Repository<Certificate>,
     @InjectRepository(Device)
     private readonly deviceRepository: Repository<Device>,
-    private readonly cryptoService: CryptoService,
     private readonly configService: ConfigService,
     @InjectPinoLogger(DeviceCertificateService.name)
     private readonly logger: PinoLogger
@@ -242,7 +241,10 @@ export class DeviceCertificateService {
         return { caCertPem, caKeyPem, caKey, caCert };
       }
     } catch (error) {
-      this.logger.warn('Не удалось загрузить существующий CA, создаем новый', error);
+      this.logger.warn(
+        'Не удалось загрузить существующий CA, создаем новый',
+        error
+      );
     }
 
     // Создаем новый CA

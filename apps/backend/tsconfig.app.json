@@ -33,7 +33,7 @@
       "path": "../../libs/contracts/mqtt/tsconfig.lib.json"
     },
     {
-      "path": "../../libs/contracts/mqtt/tsconfig.lib.json"
+      "path": "../../libs/contracts/tsconfig.lib.json"
     },
     {
       "path": "../../libs/contracts/devices/tsconfig.lib.json"

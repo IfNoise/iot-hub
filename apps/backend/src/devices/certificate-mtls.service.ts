@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '../config/config.service';
-import { CryptoService } from '../crypto/crypto.service';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Certificate } from './entities/certificate.entity';
@@ -55,7 +54,6 @@ export class CertificateService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly cryptoService: CryptoService,
     @InjectRepository(Certificate)
     private readonly certificateRepository: Repository<Certificate>,
     @InjectRepository(Device)

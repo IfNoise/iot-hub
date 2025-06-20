@@ -6,6 +6,12 @@
  * между клиентом и сервером.
  */
 
+import { authContract } from '@iot-hub/auth';
+import { certificatesContract, devicesContract } from '@iot-hub/devices';
+import { mqttContract } from '@iot-hub/mqtt';
+import { usersContract } from '@iot-hub/users';
+import { initContract } from '@ts-rest/core';
+
 // Users contracts
 export * from '@iot-hub/users';
 
@@ -18,9 +24,12 @@ export * from '@iot-hub/devices';
 // MQTT contracts
 export * from '@iot-hub/mqtt';
 
-// Crypto contracts
-export {
-  CertificatesContract as CryptoCertificatesContract,
-  CryptoContract,
-} from '@iot-hub/crypto';
-export * from '@iot-hub/crypto';
+const c = initContract();
+
+export const contracts = c.router({
+  auth: authContract,
+  users: usersContract,
+  devices: devicesContract,
+  mqtt: mqttContract,
+  certificates: certificatesContract,
+});

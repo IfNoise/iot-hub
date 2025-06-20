@@ -18,8 +18,8 @@ export class Device {
   @Column()
   publicKey!: string;
 
-  @Column({ nullable: true })
-  ownerId?: string;
+  @Column({ nullable: true, type: 'uuid' })
+  ownerId!: string;
 
   @Column({ default: 'unbound' })
   status!: 'unbound' | 'bound' | 'revoked';

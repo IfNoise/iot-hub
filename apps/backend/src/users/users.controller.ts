@@ -1,126 +1,84 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpStatus,
-  HttpCode,
-  ParseUUIDPipe,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Controller } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dto';
+import { UserMapper } from './mappers/user.mapper';
+import { usersContract } from '@iot-hub/users';
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Создать нового пользователя' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Пользователь успешно создан',
-    type: UserResponseDto,
-  })
-  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    return await this.usersService.create(createUserDto);
+  @TsRestHandler(usersContract.createUser)
+  async createUser() {
+    return tsRestHandler(usersContract.createUser, async ({ body }) => {
+      const user = await this.usersService.create(body);
+      const responseDto = UserMapper.toResponseDto(user);
+      return { status: 201, body: responseDto };
+    });
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Получить всех пользователей' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Список всех пользователей',
-    type: [UserResponseDto],
-  })
-  async findAll(): Promise<UserResponseDto[]> {
-    return await this.usersService.findAll();
+  @TsRestHandler(usersContract.getUsers)
+  async getUsers() {
+    return tsRestHandler(usersContract.getUsers, async () => {
+      const users = await this.usersService.findAll();
+      const responseDtos = UserMapper.toResponseDtos(users);
+      return { status: 200, body: responseDtos };
+    });
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Получить пользователя по ID' })
-  @ApiParam({ name: 'id', description: 'UUID пользователя' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Данные пользователя',
-    type: UserResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Пользователь не найден',
-  })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string
-  ): Promise<UserResponseDto> {
-    return await this.usersService.findOne(id);
+  @TsRestHandler(usersContract.getUser)
+  async getUser() {
+    return tsRestHandler(usersContract.getUser, async ({ params }) => {
+      const user = await this.usersService.findOne(params.id);
+      const responseDto = UserMapper.toResponseDto(user);
+      return { status: 200, body: responseDto };
+    });
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Обновить данные пользователя' })
-  @ApiParam({ name: 'id', description: 'UUID пользователя' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Пользователь успешно обновлен',
-    type: UserResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Пользователь не найден',
-  })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateUserDto: UpdateUserDto
-  ): Promise<UserResponseDto> {
-    return await this.usersService.update(id, updateUserDto);
+  @TsRestHandler(usersContract.updateUser)
+  async updateUser() {
+    return tsRestHandler(usersContract.updateUser, async ({ params, body }) => {
+      const user = await this.usersService.update(params.id, body);
+      const responseDto = UserMapper.toResponseDto(user);
+      return { status: 200, body: responseDto };
+    });
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Удалить пользователя' })
-  @ApiParam({ name: 'id', description: 'UUID пользователя' })
-  @ApiResponse({
-    status: HttpStatus.NO_CONTENT,
-    description: 'Пользователь успешно удален',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Пользователь не найден',
-  })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return await this.usersService.remove(id);
+  @TsRestHandler(usersContract.deleteUser)
+  async deleteUser() {
+    return tsRestHandler(usersContract.deleteUser, async ({ params }) => {
+      await this.usersService.remove(params.id);
+      return { status: 204, body: undefined };
+    });
   }
 
-  @Patch(':id/balance')
-  @ApiOperation({ summary: 'Обновить баланс пользователя' })
-  @ApiParam({ name: 'id', description: 'UUID пользователя' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Баланс успешно обновлен',
-    type: UserResponseDto,
-  })
-  async updateBalance(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body('amount') amount: number
-  ): Promise<UserResponseDto> {
-    return await this.usersService.updateBalance(id, amount);
+  @TsRestHandler(usersContract.updateBalance)
+  async updateBalance() {
+    return tsRestHandler(
+      usersContract.updateBalance,
+      async ({ params, body }) => {
+        const user = await this.usersService.updateBalance(
+          params.id,
+          body.amount
+        );
+        const responseDto = UserMapper.toResponseDto(user);
+        return { status: 200, body: responseDto };
+      }
+    );
   }
 
-  @Patch(':id/plan')
-  @ApiOperation({ summary: 'Обновить план пользователя' })
-  @ApiParam({ name: 'id', description: 'UUID пользователя' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'План успешно обновлен',
-    type: UserResponseDto,
-  })
-  async updatePlan(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { plan: 'free' | 'pro'; expiresAt?: Date }
-  ): Promise<UserResponseDto> {
-    return await this.usersService.updatePlan(id, body.plan, body.expiresAt);
+  @TsRestHandler(usersContract.updatePlan)
+  async updatePlan() {
+    return tsRestHandler(usersContract.updatePlan, async ({ params, body }) => {
+      const user = await this.usersService.updatePlan(
+        params.id,
+        body.plan,
+        body.expiresAt
+      );
+      const responseDto = UserMapper.toResponseDto(user);
+      return { status: 200, body: responseDto };
+    });
   }
 }
