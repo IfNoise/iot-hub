@@ -1,9 +1,8 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { ConfigService } from '../config/config.service';
-import { MqttRpcClient } from 'iot-core';
-import type { RpcMethod, RpcMethodParams, RpcResponse } from 'iot-core/types';
-import type { MqttClient } from 'mqtt';
+import { MqttRpcClient } from '@iot-hub/shared';
+import type { RpcResponse } from '@iot-hub/shared';
 
 /**
  * Сервис для отправки RPC команд устройствам через MQTT брокер
@@ -102,11 +101,13 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
       });
 
       // Настраиваем обработчики событий
-      this.mqttClient.onConnect(() => {
+      this.mqttClient.on('connect', () => {
         this.logger.info('Успешно подключен к MQTT брокеру');
         if (this.mqttClient) {
           // Подписываемся на все response topics с wildcard
-          this.subscribeToAllResponseTopics();
+          this.subscribeToAllResponseTopics().catch((error) => {
+            this.logger.error('Ошибка подписки на response topics:', error);
+          });
         }
         this.connectionResolver();
       });
@@ -166,8 +167,8 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
   async sendDeviceCommand(
     userId: string,
     deviceId: string,
-    method: RpcMethod,
-    params?: RpcMethodParams,
+    method: string,
+    params?: Record<string, unknown>,
     timeout = 5000
   ): Promise<RpcResponse> {
     await this.ensureReady();
@@ -191,7 +192,7 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
         throw new Error('MQTT клиент не инициализирован');
       }
 
-      const response = await this.mqttClient.sendCommandAsync(
+      const response = await this.mqttClient.sendCommandWithResponse(
         userId,
         deviceId,
         method,
@@ -244,8 +245,8 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
   async sendDeviceCommandNoResponse(
     userId: string,
     deviceId: string,
-    method: RpcMethod,
-    params?: RpcMethodParams
+    method: string,
+    params?: Record<string, unknown>
   ): Promise<void> {
     await this.ensureReady();
 
@@ -337,60 +338,31 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
    * Подписывается на все response topics с wildcard паттерном
    * Это позволяет backend получать ответы от всех устройств
    */
-  private subscribeToAllResponseTopics(): void {
+  private async subscribeToAllResponseTopics(): Promise<void> {
     if (!this.mqttClient) {
       this.logger.error('MQTT клиент не инициализирован');
       return;
     }
 
-    // Подписываемся на все response topics: users/+/devices/+/rpc/response
-    const wildcardTopic = 'users/+/devices/+/rpc/response';
+    try {
+      // Подписываемся на все response topics: users/+/devices/+/rpc/response
+      const wildcardTopic = 'users/+/devices/+/rpc/response';
+      await this.mqttClient.subscribe(wildcardTopic, { qos: 1 });
+      this.logger.info(`Подписка на wildcard response topic: ${wildcardTopic}`);
 
-    // Получаем доступ к внутреннему MQTT клиенту
-    const internalClient = (
-      this.mqttClient as unknown as { client: MqttClient }
-    ).client;
-
-    internalClient.subscribe(wildcardTopic, { qos: 1 }, (err: Error | null) => {
-      if (err) {
-        this.logger.error(
-          `Ошибка подписки на wildcard topic ${wildcardTopic}: ${err.message}`
-        );
-      } else {
-        this.logger.info(
-          `Подписка на wildcard response topic: ${wildcardTopic}`
-        );
-      }
-    });
-
-    // Добавляем обработчик сообщений для wildcard подписки
-    internalClient.on('message', (topic: string, payload: Buffer) => {
-      if (topic.endsWith('/rpc/response')) {
-        try {
-          const message = JSON.parse(payload.toString());
-          this.logger.debug(`Получен ответ с topic ${topic}:`, message);
-
-          // Передаем сообщение в оригинальный обработчик MqttRpcClient
-          const clientWithListeners = this.mqttClient as unknown as {
-            responseListeners: Map<string, (response: RpcResponse) => void>;
-          };
-
-          if (
-            clientWithListeners.responseListeners &&
-            message.id &&
-            clientWithListeners.responseListeners.has(message.id)
-          ) {
-            const callback = clientWithListeners.responseListeners.get(
-              message.id
-            );
-            if (callback) {
-              callback(message);
-            }
+      // Обработчик сообщений уже настроен в MqttRpcClient
+      this.mqttClient.on('message', (topic: string, payload: Buffer) => {
+        if (topic.endsWith('/rpc/response')) {
+          try {
+            const message = JSON.parse(payload.toString());
+            this.logger.debug(`Получен ответ с topic ${topic}:`, message);
+          } catch (error) {
+            this.logger.error(`Ошибка обработки response сообщения:`, error);
           }
-        } catch (error) {
-          this.logger.error(`Ошибка обработки response сообщения:`, error);
         }
-      }
-    });
+      });
+    } catch (error) {
+      this.logger.error('Ошибка подписки на wildcard topic:', error);
+    }
   }
 }

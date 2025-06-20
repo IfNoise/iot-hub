@@ -4,7 +4,7 @@ import {
   UserBaseSchema,
   CreateUserSchema,
   UpdateUserSchema,
-} from './users-schemas';
+} from './users-schemas.js';
 
 const c = initContract();
 

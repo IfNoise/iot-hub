@@ -4,9 +4,6 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/iot-core"
-    },
-    {
       "path": "./apps/backend-e2e"
     },
     {
@@ -26,6 +23,12 @@
     },
     {
       "path": "./libs/contracts/crypto"
+    },
+    {
+      "path": "./libs/shared"
+    },
+    {
+      "path": "./packages/iot-core"
     }
   ]
 }

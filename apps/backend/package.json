@@ -45,7 +45,7 @@
           "build"
         ],
         "options": {
-          "cwd": "app/backend",
+          "cwd": "apps/backend",
           "command": "node dist/main.js"
         },
         "configurations": {

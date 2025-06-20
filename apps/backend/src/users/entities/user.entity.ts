@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserRoleEnum, PlanTypeEnum } from 'iot-core/schemas';
+import { UserRoleEnum, PlanTypeEnum } from '@iot-hub/users';
 
 /**
  * User entity based on user.schemas.ts from iot-core package

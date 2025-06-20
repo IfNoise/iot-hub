@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # EMQX MQTT Broker with mTLS support
   emqx:
@@ -16,13 +14,14 @@ services:
       - '18083:18083'
       # MQTT over WebSocket
       - '8083:8083'
-      # MQTT over WebSocket with SSL
-      - '8084:8084'
+      # Disable WSS for now
+      # - '8084:8084'
 
     environment:
       # Basic EMQX configuration
       - EMQX_NAME=emqx-mtls
       - EMQX_HOST=127.0.0.1
+      - EMQX_NODE__COOKIE=emqxsecretcookie
 
       # Dashboard credentials
       - EMQX_DASHBOARD__DEFAULT_USERNAME=admin
@@ -33,14 +32,11 @@ services:
       - EMQX_LISTENERS__SSL__DEFAULT__SSL_OPTIONS__VERIFY=verify_peer
       - EMQX_LISTENERS__SSL__DEFAULT__SSL_OPTIONS__FAIL_IF_NO_PEER_CERT=true
 
-      # HTTP Auth settings
-      - EMQX_AUTHENTICATION__1__MECHANISM=http
-      - EMQX_AUTHENTICATION__1__METHOD=post
-      - EMQX_AUTHENTICATION__1__URL=http://host.docker.internal:3000/api/devices/certificates/validate
+      # Disable WSS listener to avoid certificate issues
+      - EMQX_LISTENERS__WSS__DEFAULT__ENABLE=false
 
       # Logging
-      - EMQX_LOG__LEVEL=info
-      - EMQX_LOG__CONSOLE__LEVEL=info
+      - EMQX_LOG__CONSOLE_HANDLER__LEVEL=info
 
     volumes:
       # Mount certificates directory
@@ -61,53 +57,53 @@ services:
     networks:
       - iot-network
 
-    depends_on:
-      - iot-backend
+    # depends_on:
+    #   - iot-backend
 
   # IoT Hub Backend
-  iot-backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile.backend
-    container_name: iot-hub-backend
-    restart: unless-stopped
+  # iot-backend:
+  #   build:
+  #     context: ./apps/backend
+  #     dockerfile: Dockerfile.backend
+  #   container_name: iot-hub-backend
+  #   restart: unless-stopped
 
-    ports:
-      - '3000:3000'
+  #   ports:
+  #     - '3000:3000'
 
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
+  #   environment:
+  #     - NODE_ENV=production
+  #     - PORT=3000
 
-      # Database
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=iot_user
-      - DATABASE_PASSWORD=iot_password
-      - DATABASE_NAME=iot_hub
+  #     # Database
+  #     - DATABASE_HOST=postgres
+  #     - DATABASE_PORT=5432
+  #     - DATABASE_USER=iot_user
+  #     - DATABASE_PASSWORD=iot_password
+  #     - DATABASE_NAME=iot_hub
 
-      # JWT
-      - JWT_SECRET=your-super-secret-jwt-key-for-production
+  #     # JWT
+  #     - JWT_SECRET=your-super-secret-jwt-key-for-production
 
-      # MQTT
-      - MQTT_HOST=emqx
-      - MQTT_PORT=1883
-      - MQTT_SECURE_PORT=8883
+  #     # MQTT
+  #     - MQTT_HOST=emqx
+  #     - MQTT_PORT=1883
+  #     - MQTT_SECURE_PORT=8883
 
-      # Keycloak (disabled for this setup)
-      - KEYCLOAK_URL=
-      - KEYCLOAK_REALM=
+  #     # Keycloak (disabled for this setup)
+  #     - KEYCLOAK_URL=
+  #     - KEYCLOAK_REALM=
 
-    volumes:
-      # Share certificates with backend
-      - ./certs:/app/certs:ro
+  #   volumes:
+  #     # Share certificates with backend
+  #     - ./certs:/app/certs:ro
 
-    depends_on:
-      - postgres
-      - redis
+  #   depends_on:
+  #     - postgres
+  #     - redis
 
-    networks:
-      - iot-network
+  #   networks:
+  #     - iot-network
 
   # PostgreSQL Database
   postgres:
@@ -147,26 +143,26 @@ services:
       - iot-network
 
   # Certificate Management Service (optional)
-  cert-manager:
-    build:
-      context: .
-      dockerfile: Dockerfile.cert-manager
-    container_name: iot-cert-manager
-    restart: unless-stopped
+  # cert-manager:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.cert-manager
+  #   container_name: iot-cert-manager
+  #   restart: unless-stopped
 
-    environment:
-      - BACKEND_URL=http://iot-backend:3000
-      - CERTS_DIR=/certs
+  #   environment:
+  #     - BACKEND_URL=http://iot-backend:3000
+  #     - CERTS_DIR=/certs
 
-    volumes:
-      - ./certs:/certs
-      - ./scripts:/scripts:ro
+  #   volumes:
+  #     - ./certs:/certs
+  #     - ./scripts:/scripts:ro
 
-    depends_on:
-      - iot-backend
+  #   depends_on:
+  #     - iot-backend
 
-    networks:
-      - iot-network
+  #   networks:
+  #     - iot-network
 
 volumes:
   emqx-data:

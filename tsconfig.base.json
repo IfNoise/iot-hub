@@ -4,20 +4,18 @@
     "declarationMap": true,
     "importHelpers": true,
     "isolatedModules": true,
-    "lib": [
-      "es2022"
-    ],
+    "lib": ["es2022"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "noEmitOnError": true,
     "baseUrl": ".",
     "paths": {
-      "iot-core": [
-        "packages/iot-core/src/index.ts"
-      ],
-      "iot-core/*": [
-        "packages/iot-core/src/*"
-      ]
+      "@iot-hub/auth": ["libs/contracts/auth/src/index.ts"],
+      "@iot-hub/crypto": ["libs/contracts/crypto/src/index.ts"],
+      "@iot-hub/devices": ["libs/contracts/devices/src/index.ts"],
+      "@iot-hub/mqtt": ["libs/contracts/mqtt/src/index.ts"],
+      "@iot-hub/shared": ["libs/shared/src/index.ts"],
+      "@iot-hub/users": ["libs/contracts/users/src/index.ts"]
     },
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,

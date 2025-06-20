@@ -1,4 +1,4 @@
-import { CreateUserSchema } from 'iot-core/schemas';
+import { CreateUserSchema } from '@iot-hub/users';
 import { createZodDto } from 'nestjs-zod';
 
 /**

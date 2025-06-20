@@ -140,7 +140,7 @@ npx nx lint
 
 ```text
 iot-hub/
-├── app/
+├── apps/
 │   ├── backend/           # NestJS API сервер
 │   └── backend-e2e/       # E2E тесты
 ├── packages/

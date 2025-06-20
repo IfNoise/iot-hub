@@ -6,7 +6,7 @@
 set -e
 
 HOSTNAME=${1:-localhost}
-CERTS_DIR="./certs"
+CERTS_DIR="./apps/backend/certs"
 CA_DIR="$CERTS_DIR"
 SERVER_DIR="$CERTS_DIR"
 
@@ -121,7 +121,7 @@ echo
 echo "🧹 Очистка временных файлов..."
 
 # Удаляем временные файлы
-#rm -f "$SERVER_DIR/server.csr" "$SERVER_DIR/server.conf" "$SERVER_DIR/server-ext.conf" "$CA_DIR/ca-cert.srl"
+rm -f "$SERVER_DIR/server.csr" "$SERVER_DIR/server.conf" "$SERVER_DIR/server-ext.conf" "$CA_DIR/ca-cert.srl"
 
 echo
 echo "📄 Установка правильных разрешений..."
