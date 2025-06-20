@@ -12,7 +12,7 @@
 
 ### Docker Compose оптимизация
 
-- **Обновлены переменные окружения** EMQX: EMQX_NODE__COOKIE, EMQX_LISTENERS__WSS__DEFAULT__ENABLE=false
+- **Обновлены переменные окружения** EMQX: EMQX_NODE**COOKIE, EMQX_LISTENERS**WSS**DEFAULT**ENABLE=false
 - **Удалены некорректные переменные** аутентификации
 - **Успешный запуск** всех контейнеров: emqx-mtls, iot-postgres, iot-redis
 
@@ -73,7 +73,7 @@
 ### Обновление DTO (12 файлов)
 
 - **Users**: CreateUserDto, UpdateUserDto, UserResponseDto → @iot-hub/users
-- **Devices**: CreateDeviceDto, BindDeviceDto → @iot-hub/devices  
+- **Devices**: CreateDeviceDto, BindDeviceDto → @iot-hub/devices
 - **MQTT**: DeviceCommandDto → @iot-hub/mqtt схемы
 - **Entity**: User.entity → enum'ы из @iot-hub/users
 
@@ -100,7 +100,7 @@
 ### Технологический стек
 
 - **TS-REST**: типобезопасные API контракты
-- **Zod**: валидация на уровне схем  
+- **Zod**: валидация на уровне схем
 - **TypeScript 5.x**: строгая типизация
 - **Nx монорепозиторий**: оптимизированная сборка
 - **MQTT 5.x**: с mTLS для production security
@@ -108,7 +108,7 @@
 ### Quality gates
 
 - ✅ **Сборка**: все библиотеки собираются без ошибок
-- ✅ **Линтинг**: код соответствует стандартам  
+- ✅ **Линтинг**: код соответствует стандартам
 - ✅ **Типизация**: устранены все any типы
 - ✅ **EMQX**: успешный запуск с mTLS
 - ✅ **Сертификаты**: автоматическая генерация
@@ -121,7 +121,7 @@
 - **Автоматическая генерация** серверных сертификатов
 - **JWT аутентификация** через MQTT username/password
 
-### Архитектура  
+### Архитектура
 
 - **Типобезопасные контракты** для всех API
 - **Модульная структура** с четким разделением доменов
