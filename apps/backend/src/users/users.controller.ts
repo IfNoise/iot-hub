@@ -6,7 +6,7 @@ import { UserMapper } from './mappers/user.mapper';
 import { usersContract } from '@iot-hub/users';
 
 @ApiTags('users')
-@Controller('users')
+@Controller()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

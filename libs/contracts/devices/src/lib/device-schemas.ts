@@ -367,12 +367,15 @@ export const BindDeviceSchema = z
  * DTO: Query параметры для поиска устройств
  */
 export const DeviceQuerySchema = z.object({
-  page: z.number().min(1).default(1).describe('Номер страницы'),
+  page: z
+    .union([z.string(), z.number()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .pipe(z.number().min(1).default(1))
+    .describe('Номер страницы'),
   limit: z
-    .number()
-    .min(1)
-    .max(100)
-    .default(10)
+    .union([z.string(), z.number()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .pipe(z.number().min(1).max(100).default(10))
     .describe('Количество элементов на странице'),
   status: z
     .enum(['unbound', 'bound', 'revoked'])

@@ -1,0 +1,24 @@
+/**
+ * DeviceSimulator - симулятор IoT устройства
+ * Включает имитацию криптографического чипа и полный флоу регистрации
+ */
+
+import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app/app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  const globalPrefix = 'api';
+  app.setGlobalPrefix(globalPrefix);
+  const port = 3001; // Используем 3001 чтобы не конфликтовать с backend
+  await app.listen(port);
+  Logger.log(
+    `🚀 DeviceSimulator запущен на: http://localhost:${port}/${globalPrefix}`
+  );
+  Logger.log(
+    `📖 Документация API доступна по адресу: http://localhost:${port}/${globalPrefix}/simulator`
+  );
+}
+
+bootstrap();

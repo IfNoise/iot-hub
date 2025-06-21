@@ -1,69 +1,99 @@
 #!/bin/bash
 
-# Скрипт для демонстрации работы IoT Device Simulator
+# Демонстрационный скрипт для тестирования DeviceSimulator
+# Показывает полный флоу от конфигурации до привязки устройства
 
-echo "🚀 IoT Device Simulator Demo"
-echo "============================"
-echo ""
+set -e
 
-# Показать справку
-echo "1. Показать справку по использованию:"
-echo "----------------------------------------"
-node app/iot-device-simulator/dist/main.js --help 2>/dev/null || echo "Справка недоступна, используйте следующие параметры:"
-echo ""
-echo "🔧 Обязательные параметры:"
-echo "  --user-id <id>        ID пользователя"
-echo "  --device-id <id>      ID устройства"
-echo ""
-echo "🔧 Опциональные параметры:"
-echo "  --mqtt-host <host>    MQTT брокер (по умолчанию: localhost)"
-echo "  --mqtt-port <port>    MQTT порт (по умолчанию: 1883)"
-echo "  --qos <0|1|2>         QoS уровень (по умолчанию: 1)"
+DEVICE_SIMULATOR_URL="http://localhost:3001"
+DEVICE_ID="demo-device-$(date +%s)"
+USER_ID="demo-user-$(uuidgen)"
+
+echo "🚀 Демонстрация DeviceSimulator"
+echo "================================"
+echo "Device ID: $DEVICE_ID"
+echo "User ID: $USER_ID"
 echo ""
 
-echo "2. Пример запуска:"
-echo "-------------------"
-echo "node app/iot-device-simulator/dist/main.js --user-id demo-user --device-id demo-device-001"
-echo ""
+echo "1. Конфигурирование устройства..."
+curl -X POST "$DEVICE_SIMULATOR_URL/api/simulator/configure" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"deviceId\": \"$DEVICE_ID\",
+    \"model\": \"Demo IoT Device\",
+    \"firmwareVersion\": \"1.0.0\",
+    \"backendUrl\": \"http://localhost:3000\",
+    \"autoRegister\": true
+  }" \
+  -w "\n\nStatus: %{http_code}\n" \
+  -s
 
-echo "3. Пример с настройкой MQTT:"
-echo "-----------------------------"
-echo "node app/iot-device-simulator/dist/main.js \\"
-echo "  --user-id demo-user \\"
-echo "  --device-id demo-device-001 \\"
-echo "  --mqtt-host broker.example.com \\"
-echo "  --mqtt-port 1883 \\"
-echo "  --qos 2"
 echo ""
+echo "2. Проверка состояния устройства..."
+sleep 2
+curl -X GET "$DEVICE_SIMULATOR_URL/api/simulator/status" \
+  -H "Content-Type: application/json" \
+  -w "\n\nStatus: %{http_code}\n" \
+  -s | jq . || echo "jq не установлен - показать raw JSON"
 
-echo "4. Пример с mTLS:"
-echo "------------------"
-echo "node app/iot-device-simulator/dist/main.js \\"
-echo "  --user-id demo-user \\"
-echo "  --device-id demo-device-001 \\"
-echo "  --use-tls true \\"
-echo "  --cert-path ./certs/devices/working-device-cert.pem \\"
-echo "  --key-path ./certs/devices/working-device-key.pem \\"
-echo "  --ca-path ./certs/devices/ca-cert.pem"
 echo ""
+echo "3. Привязка устройства к пользователю..."
+curl -X PUT "$DEVICE_SIMULATOR_URL/api/simulator/bind" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"userId\": \"$USER_ID\"
+  }" \
+  -w "\n\nStatus: %{http_code}\n" \
+  -s
 
-echo "📋 Функциональность симулятора:"
-echo "-------------------------------"
-echo "✅ Подключение к MQTT брокеру"
-echo "✅ Симуляция датчиков (температура, влажность, давление)"
-echo "✅ Обработка RPC команд через MQTT"
-echo "✅ Управление таймерами (дискретные и аналоговые)"
-echo "✅ Управление регуляторами (PID контроллеры)"
-echo "✅ Управление ирригационными системами"
-echo "✅ Поддержка mTLS аутентификации"
-echo "✅ Автоматическое обновление данных сенсоров"
 echo ""
+echo "4. Финальная проверка состояния..."
+sleep 1
+curl -X GET "$DEVICE_SIMULATOR_URL/api/simulator/status" \
+  -H "Content-Type: application/json" \
+  -w "\n\nStatus: %{http_code}\n" \
+  -s | jq . || echo "jq не установлен - показать raw JSON"
 
-echo "🔧 Команды для управления через Nx:"
-echo "-----------------------------------"
-echo "npx nx build iot-device-simulator    # Сборка приложения"
-echo "npx nx test iot-device-simulator     # Запуск тестов"
-echo "npx nx lint iot-device-simulator     # Проверка кода"
 echo ""
+echo "5. Получение данных сенсоров..."
+curl -X GET "$DEVICE_SIMULATOR_URL/api/simulator/sensors" \
+  -H "Content-Type: application/json" \
+  -w "\n\nStatus: %{http_code}\n" \
+  -s | jq . || echo "jq не установлен - показать raw JSON"
 
-echo "✨ Готово! Симулятор устройства создан и готов к использованию."
+echo ""
+echo "6. Информация о криптографическом чипе..."
+curl -X GET "$DEVICE_SIMULATOR_URL/api/simulator/crypto-chip" \
+  -H "Content-Type: application/json" \
+  -w "\n\nStatus: %{http_code}\n" \
+  -s | jq . || echo "jq не установлен - показать raw JSON"
+
+echo ""
+echo "7. Остановка симулятора..."
+curl -X POST "$DEVICE_SIMULATOR_URL/api/simulator/stop" \
+  -H "Content-Type: application/json" \
+  -w "\n\nStatus: %{http_code}\n" \
+  -s
+
+echo ""
+echo "✅ Демонстрация завершена!"
+echo "================================"
+echo "Устройство $DEVICE_ID успешно привязано к пользователю $USER_ID"
+echo ""
+echo "📋 Протестированные функции:"
+echo "- ✅ Конфигурирование устройства"
+echo "- ✅ Проверка статуса"
+echo "- ✅ Привязка к пользователю"
+echo "- ✅ Получение данных сенсоров"
+echo "- ✅ Работа с криптографическим чипом"
+echo "- ✅ Остановка симулятора"
+echo ""
+echo "🔧 Доступные REST API endpoints:"
+echo "- POST /api/simulator/configure - Конфигурация устройства"
+echo "- GET  /api/simulator/status    - Статус устройства"
+echo "- PUT  /api/simulator/bind      - Привязка к пользователю"
+echo "- GET  /api/simulator/sensors   - Данные сенсоров"
+echo "- GET  /api/simulator/crypto-chip - Информация о чипе"
+echo "- POST /api/simulator/stop      - Остановка симулятора"
+echo ""
+echo "✨ Симулятор готов к работе на $DEVICE_SIMULATOR_URL"

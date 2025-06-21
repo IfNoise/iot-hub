@@ -12,8 +12,16 @@ const c = initContract();
  * Схема запроса списка устройств с пагинацией
  */
 export const DeviceQuerySchema = z.object({
-  page: z.number().min(1).default(1).optional(),
-  limit: z.number().min(1).max(100).default(10).optional(),
+  page: z
+    .union([z.string(), z.number()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .pipe(z.number().min(1).default(1))
+    .optional(),
+  limit: z
+    .union([z.string(), z.number()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .pipe(z.number().min(1).max(100).default(10))
+    .optional(),
 });
 
 /**

@@ -1,0 +1,63 @@
+{
+  "name": "@iot-hub/device-simulator",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@iot-hub/contracts": "0.0.1",
+    "@iot-hub/devices": "0.0.1",
+    "@iot-hub/crypto": "0.0.1",
+    "@iot-hub/mqtt": "0.0.1",
+    "@iot-hub/shared": "0.0.1"
+  },
+  "nx": {
+    "name": "device-simulator",
+    "targets": {
+      "build": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "webpack-cli build",
+          "args": [
+            "node-env=production"
+          ]
+        },
+        "configurations": {
+          "development": {
+            "args": [
+              "node-env=development"
+            ]
+          }
+        }
+      },
+      "serve": {
+        "continuous": true,
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "device-simulator:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "device-simulator:build:development"
+          },
+          "production": {
+            "buildTarget": "device-simulator:build:production"
+          }
+        }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
+      }
+    },
+    "tags": [
+      "npm:private",
+      "type:app",
+      "domain:device-simulation"
+    ]
+  }
+}

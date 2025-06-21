@@ -3,6 +3,8 @@ import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { DevicesService } from './devices.service';
 import { devicesContract } from '@iot-hub/devices';
 import { DeviceMapper } from './mappers/device.mapper';
+import { CurrentUser } from '../common/decorator/current-user.decorator';
+import type { AuthenticatedUser } from '../common/types/keycloak-user.interface';
 
 @Controller()
 export class DevicesController {
@@ -113,11 +115,28 @@ export class DevicesController {
   }
 
   @TsRestHandler(devicesContract.getDevices)
-  async getDevices() {
+  async getDevices(@CurrentUser() user: AuthenticatedUser) {
     return tsRestHandler(devicesContract.getDevices, async ({ query }) => {
       try {
-        // TODO: Временно без авторизации - нужно добавить middleware для получения пользователя
-        const result = await this.devicesService.getDevices(query);
+        // Если пользователь администратор - возвращаем все устройства
+        if (user.role === 'admin') {
+          const result = await this.devicesService.getDevices(query);
+          const devicesDto = DeviceMapper.toDtoArray(result.devices);
+
+          return {
+            status: 200 as const,
+            body: {
+              devices: devicesDto,
+              total: result.meta.total,
+              page: result.meta.page,
+              limit: result.meta.limit,
+              totalPages: result.meta.totalPages,
+            },
+          };
+        }
+
+        // Если обычный пользователь - возвращаем только его устройства
+        const result = await this.devicesService.getUserDevices(user.id, query);
         const devicesDto = DeviceMapper.toDtoArray(result.devices);
 
         return {

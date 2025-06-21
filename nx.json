@@ -43,7 +43,8 @@
       },
       "exclude": [
         "packages/iot-core/app/backend-e2e/**/*",
-        "apps/backend-e2e/**/*"
+        "apps/backend-e2e/**/*",
+        "apps/device-simulator-e2e/**/*"
       ]
     },
     {
