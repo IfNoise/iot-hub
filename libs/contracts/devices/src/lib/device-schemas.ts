@@ -222,6 +222,14 @@ export const DeviceSchema = z
     createdAt: z
       .preprocess((v) => new Date(v as string), z.date())
       .describe('Время создания'),
+    boundAt: z
+      .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+      .nullable()
+      .describe('Время привязки устройства'),
+    bindingTokenExpiresAt: z
+      .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+      .nullable()
+      .describe('Время истечения токена привязки'),
   })
   .strict();
 
@@ -356,10 +364,18 @@ export const CreateDeviceSchema = z
   })
   .strict();
 
+/**
+ * Схема для привязки устройства
+ *
+ * ВАЖНО: userId (ownerId) НЕ передается в теле запроса!
+ * userId извлекается из JWT токена через middleware аутентификации
+ * в контроллере с помощью декоратора @CurrentUser()
+ */
 export const BindDeviceSchema = z
   .object({
     id: z.string().describe('Уникальный ID устройства'),
-    ownerId: z.string().uuid().describe('ID владельца устройства'),
+    // Примечание: ownerId (userId) получается из JWT токена через middleware аутентификации
+    // и НЕ передается в теле запроса
   })
   .strict();
 
@@ -430,3 +446,98 @@ export type UpdateDiscreteRegulator = z.infer<
 >;
 export type UpdateAnalogRegulator = z.infer<typeof UpdateAnalogRegulatorSchema>;
 export type UpdateIrrigator = z.infer<typeof UpdateIrrigatorSchema>;
+
+// ===== ALIASES FOR BACKWARD COMPATIBILITY =====
+// Алиасы для обратной совместимости с device-base-schemas.ts
+
+/**
+ * @deprecated Используйте DeviceSchema вместо DeviceBaseSchema
+ */
+export const DeviceBaseSchema = DeviceSchema;
+
+/**
+ * @deprecated Используйте CertificateSchema вместо CertificateBaseSchema
+ */
+export const CertificateBaseSchema = CertificateSchema;
+
+/**
+ * @deprecated Используйте CreateDeviceSchema вместо CreateDeviceBaseSchema
+ */
+export const CreateDeviceBaseSchema = CreateDeviceSchema;
+
+/**
+ * @deprecated Используйте BindDeviceSchema вместо BindDeviceBaseSchema
+ */
+export const BindDeviceBaseSchema = BindDeviceSchema;
+
+// Типы для обратной совместимости
+export type DeviceBase = Device;
+export type CertificateBase = Certificate;
+export type CreateDeviceBase = CreateDevice;
+export type BindDeviceBase = BindDevice;
+
+// ===== ADDITIONAL SCHEMAS =====
+
+/**
+ * Схема для ответа после успешной привязки устройства (QR)
+ */
+export const BindDeviceResponseSchema = z.object({
+  deviceId: z.string().describe('ID привязанного устройства'),
+  userId: z.string().uuid().describe('ID владельца'),
+  boundAt: z
+    .preprocess((v) => new Date(v as string), z.date())
+    .describe('Время привязки'),
+  status: z.literal('bound').describe('Статус устройства'),
+});
+
+/**
+ * Схема для запроса отвязки устройства
+ */
+export const UnbindDeviceRequestSchema = z.object({
+  deviceId: z.string().describe('ID устройства для отвязки'),
+  reason: z.string().optional().describe('Причина отвязки'),
+});
+
+/**
+ * Схема списка устройств пользователя (расширенная для QR-флоу)
+ */
+export const UserDevicesResponseSchema = z.object({
+  devices: z.array(
+    z.object({
+      deviceId: z.string(),
+      model: z.string().optional(),
+      status: z.enum(['bound', 'suspended']),
+      boundAt: z.preprocess((v) => new Date(v as string), z.date()),
+      lastSeenAt: z
+        .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+        .nullable(),
+    })
+  ),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+
+/**
+ * Унифицированная схема для административного управления устройствами
+ * (расширяет DeviceSchema для поддержки QR-флоу)
+ */
+export const AdminDeviceSchema = z.object({
+  deviceId: z.string(),
+  model: z.string().optional(),
+  firmwareVersion: z.string().optional(),
+  status: z.enum(['manufactured', 'unbound', 'bound', 'suspended', 'revoked']),
+  ownerId: z.string().uuid().nullable(),
+  createdAt: z.preprocess((v) => new Date(v as string), z.date()),
+  boundAt: z
+    .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+    .nullable(),
+  lastSeenAt: z
+    .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+    .nullable(),
+  bindingTokenExpiresAt: z
+    .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+    .nullable()
+    .optional()
+    .describe('Время истечения токена (null для бессрочных токенов)'),
+});

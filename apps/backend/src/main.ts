@@ -2,6 +2,10 @@
  * This is not a production server yet!
  * This is only a minimal backend to get started.
  */
+
+// ВАЖНО: OpenTelemetry должен быть инициализирован самым первым
+import './instrumentation';
+
 import 'dotenv/config';
 import { Logger } from 'nestjs-pino';
 import { NestFactory } from '@nestjs/core';

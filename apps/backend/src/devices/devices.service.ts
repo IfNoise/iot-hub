@@ -5,7 +5,7 @@ import { Device } from './entities/device.entity';
 import { Certificate } from './entities/certificate.entity';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { CryptoService } from '../crypto/crypto.service';
-import { BindDeviceDto } from './dto/bind-device.dto';
+import { BindDeviceWithOwnerDto } from './dto/bind-device.dto';
 
 @Injectable()
 export class DevicesService {
@@ -34,7 +34,7 @@ export class DevicesService {
     device.id = dto.id;
     device.model = dto.model || '';
     device.publicKey = dto.publicKey; // Временно для совместимости
-    device.ownerId = undefined;
+    device.ownerId = null;
     device.status = 'unbound';
     device.lastSeenAt = new Date();
     device.firmwareVersion = dto.firmwareVersion || undefined;
@@ -53,7 +53,7 @@ export class DevicesService {
    * @throws Ошибка, если устройство не найдено или уже привязано к другому владельцу.
    */
 
-  async bindDevice(dto: BindDeviceDto) {
+  async bindDevice(dto: BindDeviceWithOwnerDto) {
     // Находим устройство по id
     const device = await this.deviceRepo.findOne({
       where: { id: dto.id },
@@ -83,11 +83,12 @@ export class DevicesService {
   /**
    * Отвязывает устройство от владельца.
    * @param deviceId - Идентификатор устройства.
+   * @param userId - ID пользователя (владельца), который отвязывает устройство.
    * @returns Обновленное устройство с сертификатом.
-   * @throws Ошибка, если устройство не найдено или уже отвязано.
+   * @throws Ошибка, если устройство не найдено, уже отвязано или пользователь не является владельцем.
    */
 
-  async unbindDevice(deviceId: string) {
+  async unbindDevice(deviceId: string, userId?: string) {
     // Находим устройство по id
     const device = await this.deviceRepo.findOne({
       where: { id: deviceId },
@@ -100,8 +101,12 @@ export class DevicesService {
     if (!device.ownerId) {
       throw new Error(`Device with ID ${deviceId} is already unbound`);
     }
+    // Если передан userId, проверяем, что пользователь является владельцем устройства
+    if (userId && device.ownerId !== userId) {
+      throw new Error(`User ${userId} is not the owner of device ${deviceId}`);
+    }
     // Отвязываем устройство от владельца
-    device.ownerId = undefined;
+    device.ownerId = null;
     device.status = 'unbound';
     device.lastSeenAt = new Date();
     // Сохраняем обновленное устройство

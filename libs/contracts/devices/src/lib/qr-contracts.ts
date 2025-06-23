@@ -1,12 +1,6 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import {
-  BindDeviceResponseSchema,
-  UnbindDeviceRequestSchema,
-  UserDevicesResponseSchema,
-  AdminDeviceSchema,
-} from './device-schemas.js';
-import {
   BindDeviceRequestSchema,
   GenerateDeviceQRSchema,
   GenerateDeviceQRResponseSchema,
@@ -14,32 +8,6 @@ import {
 } from './qr-schemas.js';
 
 const c = initContract();
-
-/**
- * ==============================================
- * DEVICE CONTRACTS
- * ==============================================
- *
- * Контракты для работы с устройствами в IoT Hub.
- *
- * ВАЖНЫЕ ПРИНЦИПЫ:
- *
- * 1. ИЗВЛЕЧЕНИЕ USERID ЧЕРЕЗ MIDDLEWARE:
- *    - Все пользовательские эндпоинты извлекают userId из JWT токена
- *    - userId НЕ передается в теле запроса
- *    - Используется декоратор @CurrentUser() в контроллерах
- *    - Метаданные: requiresAuth: true, userIdFromToken: true
- *
- * 2. БЕССРОЧНЫЕ ТОКЕНЫ ПРИВЯЗКИ:
- *    - Токены привязки устройств не имеют срока действия
- *    - Убраны поля: exp, tokenExpirationDays, tokenExpiresAt
- *    - Токены действуют до момента привязки устройства
- *
- * 3. УНИФИЦИРОВАННЫЕ СХЕМЫ:
- *    - Все схемы устройств и QR в device-schemas.ts
- *    - Избегаем дублирования схем между модулями
- *    - Переиспользуем существующие схемы
- */
 
 /**
  * ==============================================
@@ -98,13 +66,48 @@ export const manufacturingContract = c.router({
  */
 
 /**
+ * Схема ответа после успешной привязки
+ */
+export const BindDeviceResponseSchema = z.object({
+  deviceId: z.string().describe('ID привязанного устройства'),
+  userId: z.string().uuid().describe('ID владельца'),
+  boundAt: z
+    .preprocess((v) => new Date(v as string), z.date())
+    .describe('Время привязки'),
+  status: z.literal('bound').describe('Статус устройства'),
+});
+
+/**
+ * Схема для отвязки устройства
+ */
+export const UnbindDeviceRequestSchema = z.object({
+  deviceId: z.string().describe('ID устройства для отвязки'),
+  reason: z.string().optional().describe('Причина отвязки'),
+});
+
+/**
+ * Схема списка устройств пользователя
+ */
+export const UserDevicesResponseSchema = z.object({
+  devices: z.array(
+    z.object({
+      deviceId: z.string(),
+      model: z.string().optional(),
+      status: z.enum(['bound', 'suspended']),
+      boundAt: z.preprocess((v) => new Date(v as string), z.date()),
+      lastSeenAt: z
+        .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+        .nullable(),
+    })
+  ),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+
+/**
  * Контракты для пользователей
  * Сканирование QR-кодов и управление устройствами
- *
- * ⚠️ ТРЕБУЕТ АУТЕНТИФИКАЦИИ:
- * - Все эндпоинты требуют Bearer token
- * - userId извлекается из JWT токена через middleware
- * - Используется @CurrentUser() декоратор в контроллере
  */
 export const userDevicesContract = c.router({
   // POST /devices/bind-qr - Привязка устройства через QR-код
@@ -121,10 +124,6 @@ export const userDevicesContract = c.router({
         message: z.string(),
         code: z.enum(['INVALID_QR', 'DEVICE_NOT_FOUND']).optional(),
       }),
-      401: z.object({
-        message: z.string(),
-        code: z.literal('UNAUTHORIZED').optional(),
-      }),
       409: z.object({
         message: z.string(),
         code: z.literal('ALREADY_BOUND'),
@@ -136,12 +135,7 @@ export const userDevicesContract = c.router({
     },
     summary: 'Привязка устройства через сканирование QR-кода',
     description:
-      'Привязывает устройство к аутентифицированному пользователю используя данные из QR-кода. ' +
-      'userId извлекается из JWT токена.',
-    metadata: {
-      requiresAuth: true,
-      userIdFromToken: true,
-    } as const,
+      'Привязывает устройство к пользователю используя данные из QR-кода',
   },
 
   // POST /devices/unbind - Отвязка устройства
@@ -158,14 +152,6 @@ export const userDevicesContract = c.router({
       403: z.object({ message: z.string() }),
     },
     summary: 'Отвязка устройства от пользователя',
-    description:
-      'Отвязывает устройство от аутентифицированного пользователя. ' +
-      'Проверяется, что пользователь является владельцем устройства. ' +
-      'userId извлекается из JWT токена.',
-    metadata: {
-      requiresAuth: true,
-      userIdFromToken: true,
-    } as const,
   },
 
   // GET /devices/my - Получение списка устройств пользователя
@@ -182,13 +168,6 @@ export const userDevicesContract = c.router({
       401: z.object({ message: z.string() }),
     },
     summary: 'Получение списка устройств текущего пользователя',
-    description:
-      'Возвращает список устройств, принадлежащих аутентифицированному пользователю. ' +
-      'userId извлекается из JWT токена.',
-    metadata: {
-      requiresAuth: true,
-      userIdFromToken: true,
-    } as const,
   },
 
   // GET /devices/:deviceId/status - Получение статуса конкретного устройства
@@ -212,13 +191,6 @@ export const userDevicesContract = c.router({
       403: z.object({ message: z.string() }),
     },
     summary: 'Получение статуса устройства',
-    description:
-      'Возвращает статус устройства и информацию о том, принадлежит ли оно текущему пользователю. ' +
-      'userId извлекается из JWT токена.',
-    metadata: {
-      requiresAuth: true,
-      userIdFromToken: true,
-    } as const,
   },
 });
 
@@ -229,10 +201,31 @@ export const userDevicesContract = c.router({
  */
 
 /**
+ * Схема для административного управления устройствами
+ */
+export const AdminDeviceSchema = z.object({
+  deviceId: z.string(),
+  model: z.string().optional(),
+  firmwareVersion: z.string().optional(),
+  status: z.enum(['manufactured', 'unbound', 'bound', 'suspended', 'revoked']),
+  ownerId: z.string().uuid().nullable(),
+  createdAt: z.preprocess((v) => new Date(v as string), z.date()),
+  boundAt: z
+    .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+    .nullable(),
+  lastSeenAt: z
+    .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+    .nullable(),
+  bindingTokenExpiresAt: z
+    .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+    .nullable(),
+});
+
+/**
  * Контракты для администраторов
  */
 export const adminDevicesContract = c.router({
-  // GET /admin/devices - Получение всех устройств (заменяет старый getAllDevicesAdmin)
+  // GET /admin/devices - Получение всех устройств
   getAllDevices: {
     method: 'GET',
     path: '/admin/devices',
@@ -288,13 +281,12 @@ export const adminDevicesContract = c.router({
  */
 
 /**
- * Объединенный контракт для всех операций с устройствами
- * Включает и QR-функционал и традиционный API
+ * Объединенный контракт для всех операций с устройствами через QR-коды
  */
-export const devicesContract = c.router({
+export const deviceQRContract = c.router({
   manufacturing: manufacturingContract,
   user: userDevicesContract,
   admin: adminDevicesContract,
 });
 
-export type DevicesContract = typeof devicesContract;
+export type DeviceQRContract = typeof deviceQRContract;
