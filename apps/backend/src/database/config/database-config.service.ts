@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { databaseConfigSchema, DatabaseConfig, createTypeOrmOptionsFromConfig } from './database-config.schema';
+import {
+  databaseConfigSchema,
+  DatabaseConfig,
+  createTypeOrmOptionsFromConfig,
+} from './database-config.schema';
 
 @Injectable()
 export class DatabaseConfigService {
@@ -10,15 +14,15 @@ export class DatabaseConfigService {
     this.config = databaseConfigSchema.parse({
       type: env.DB_TYPE,
       host: env.DATABASE_HOST,
-      port: env.DATABASE_PORT,
+      port: env.DATABASE_PORT ? parseInt(env.DATABASE_PORT, 10) : undefined,
       username: env.DATABASE_USER,
       password: env.DATABASE_PASSWORD,
       database: env.DATABASE_NAME,
-      synchronize: env.DB_SYNCHRONIZE,
-      logging: env.DB_LOGGING,
-      dropSchema: env.DB_DROP_SCHEMA,
+      synchronize: env.DB_SYNCHRONIZE === 'true',
+      logging: env.DB_LOGGING === 'true',
+      dropSchema: env.DB_DROP_SCHEMA === 'true',
       cache: false, // Фиксированное значение
-      ssl: env.DB_SSL,
+      ssl: env.DB_SSL === 'true',
       extra: {
         connectionTimeoutMillis: 60000,
         max: parseInt(env.DB_POOL_SIZE || '10', 10),
