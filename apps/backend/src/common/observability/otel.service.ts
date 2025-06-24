@@ -1,11 +1,11 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '../../config/config.service';
 import { OpenTelemetryConfig } from './types';
 
 @Injectable()
 export class OtelService implements OnModuleInit, OnModuleDestroy {
   private config: OpenTelemetryConfig;
-  private readonly logger = Logger(OtelService.name); // Используем console для логирования, можно заменить на LoggerService
+  private readonly logger = new Logger(OtelService.name);
 
   constructor(private readonly configService: ConfigService) {
     this.config = this.configService.getOpenTelemetryConfig();
