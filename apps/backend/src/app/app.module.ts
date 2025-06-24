@@ -1,7 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { MetricsController } from './metrics.controller';
 import { DatabaseModule } from '../database/database.module';
 import { CryptoModule } from '../crypto/crypto.module';
 import { DevicesModule } from '../devices/devices.module';
@@ -48,7 +47,7 @@ import { MqttModule } from '../mqtt/mqtt.module';
       }),
     }),
   ],
-  controllers: [AppController, MetricsController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
@@ -56,14 +55,28 @@ export class AppModule implements NestModule {
     // Включаем middleware Keycloak с исключениями для публичных маршрутов
     consumer
       .apply(KeycloakOAuth2Middleware)
-      .exclude('/api', '/api/health', '/api/health/*', '/api/status', '/api/metrics', '/api/metrics/*')
+      .exclude(
+        '/api',
+        '/api/health',
+        '/api/health/*',
+        '/api/status',
+        '/api/metrics',
+        '/api/metrics/*'
+      )
       .forRoutes('*');
 
     // Включаем middleware автоматической синхронизации пользователей
     // Применяется после Keycloak middleware для всех защищенных маршрутов
     consumer
       .apply(AutoUserSyncMiddleware)
-      .exclude('/api', '/api/health', '/api/health/*', '/api/status', '/api/metrics', '/api/metrics/*')
+      .exclude(
+        '/api',
+        '/api/health',
+        '/api/health/*',
+        '/api/status',
+        '/api/metrics',
+        '/api/metrics/*'
+      )
       .forRoutes('*');
   }
 }

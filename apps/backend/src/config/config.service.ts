@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { envConfigSchema } from './config.schema';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import type { LogRequest, LogResponse } from '../common/types/logging.types';
+import type { OpenTelemetryConfig } from '../common/observability/config.types';
 
 // Импортируем ваши сущности
 import { Device } from '../devices/entities/device.entity';
@@ -396,5 +397,100 @@ export class ConfigService {
       .map((opt) => opt.trim()) as TypeOrmLoggingOption[];
     // Фильтруем, чтобы оставить только валидные опции
     return options.filter((opt) => validLoggingOptions.includes(opt));
+  }
+
+  // OpenTelemetry Configuration
+  getOpenTelemetryConfig(): OpenTelemetryConfig {
+    const baseUrl = this.env.OTEL_COLLECTOR_URL;
+    
+    return {
+      enabled: this.env.OTEL_ENABLED,
+      serviceName: this.env.OTEL_SERVICE_NAME,
+      serviceVersion: this.env.OTEL_SERVICE_VERSION,
+      collectorUrl: baseUrl,
+      endpoints: {
+        traces: this.env.OTEL_COLLECTOR_TRACES_ENDPOINT || `${baseUrl}/v1/traces`,
+        metrics: this.env.OTEL_COLLECTOR_METRICS_ENDPOINT || `${baseUrl}/v1/metrics`,
+        logs: this.env.OTEL_COLLECTOR_LOGS_ENDPOINT || `${baseUrl}/v1/logs`,
+      },
+      tracing: {
+        enabled: this.env.OTEL_ENABLE_TRACING,
+        sampler: this.env.OTEL_TRACES_SAMPLER,
+        samplerRatio: this.env.OTEL_TRACES_SAMPLER_RATIO,
+      },
+      metrics: {
+        enabled: this.env.OTEL_ENABLE_METRICS,
+        exportInterval: this.env.OTEL_METRICS_EXPORT_INTERVAL,
+      },
+      logging: {
+        enabled: this.env.OTEL_ENABLE_LOGGING,
+      },
+      exporter: {
+        timeout: this.env.OTEL_EXPORTER_TIMEOUT,
+        batchSize: this.env.OTEL_BATCH_SIZE,
+        batchTimeout: this.env.OTEL_BATCH_TIMEOUT,
+        maxQueueSize: this.env.OTEL_MAX_QUEUE_SIZE,
+      },
+      debug: this.env.OTEL_DEBUG || this.isDevelopment(),
+      resourceAttributes: this.parseResourceAttributes(this.env.OTEL_RESOURCE_ATTRIBUTES),
+    };
+  }
+
+  getOpenTelemetryServiceName(): string {
+    return this.env.OTEL_SERVICE_NAME;
+  }
+
+  getOpenTelemetryCollectorUrl(): string {
+    return this.env.OTEL_COLLECTOR_URL;
+  }
+
+  isOpenTelemetryEnabled(): boolean {
+    return this.env.OTEL_ENABLED;
+  }
+
+  isOpenTelemetryTracingEnabled(): boolean {
+    return this.env.OTEL_ENABLED && this.env.OTEL_ENABLE_TRACING;
+  }
+
+  isOpenTelemetryMetricsEnabled(): boolean {
+    return this.env.OTEL_ENABLED && this.env.OTEL_ENABLE_METRICS;
+  }
+
+  isOpenTelemetryLoggingEnabled(): boolean {
+    return this.env.OTEL_ENABLED && this.env.OTEL_ENABLE_LOGGING;
+  }
+
+  getResourceAttributes(): Record<string, string> {
+    return this.parseResourceAttributes(this.env.OTEL_RESOURCE_ATTRIBUTES);
+  }
+
+  private parseResourceAttributes(attributesString?: string): Record<string, string> {
+    if (!attributesString) {
+      return {
+        'service.name': this.env.OTEL_SERVICE_NAME,
+        'service.version': this.env.OTEL_SERVICE_VERSION,
+        'environment': this.env.NODE_ENV,
+        'deployment.environment': this.env.NODE_ENV,
+      };
+    }
+
+    const attributes: Record<string, string> = {};
+    
+    // Парсим строку формата "key1=value1,key2=value2"
+    attributesString.split(',').forEach(pair => {
+      const [key, value] = pair.trim().split('=');
+      if (key && value) {
+        attributes[key.trim()] = value.trim();
+      }
+    });
+
+    // Добавляем базовые атрибуты, если они не указаны
+    return {
+      'service.name': this.env.OTEL_SERVICE_NAME,
+      'service.version': this.env.OTEL_SERVICE_VERSION,
+      'environment': this.env.NODE_ENV,
+      'deployment.environment': this.env.NODE_ENV,
+      ...attributes,
+    };
   }
 }

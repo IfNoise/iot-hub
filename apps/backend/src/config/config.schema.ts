@@ -200,6 +200,97 @@ export const envConfigSchema = z.object({
     .number()
     .default(10)
     .describe('MQTT max reconnect attempts'),
+
+  // OpenTelemetry Configuration
+  OTEL_ENABLED: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Enable OpenTelemetry observability'),
+  OTEL_SERVICE_NAME: z
+    .string()
+    .default('iot-hub-backend')
+    .describe('OpenTelemetry service name'),
+  OTEL_SERVICE_VERSION: z
+    .string()
+    .default('1.0.0')
+    .describe('OpenTelemetry service version'),
+  OTEL_COLLECTOR_URL: z
+    .string()
+    .url()
+    .default('http://localhost:4318')
+    .describe('OpenTelemetry Collector URL'),
+  OTEL_COLLECTOR_TRACES_ENDPOINT: z
+    .string()
+    .optional()
+    .describe('OpenTelemetry Collector traces endpoint (overrides default)'),
+  OTEL_COLLECTOR_METRICS_ENDPOINT: z
+    .string()
+    .optional()
+    .describe('OpenTelemetry Collector metrics endpoint (overrides default)'),
+  OTEL_COLLECTOR_LOGS_ENDPOINT: z
+    .string()
+    .optional()
+    .describe('OpenTelemetry Collector logs endpoint (overrides default)'),
+  OTEL_ENABLE_TRACING: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Enable OpenTelemetry tracing'),
+  OTEL_ENABLE_METRICS: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Enable OpenTelemetry metrics collection'),
+  OTEL_ENABLE_LOGGING: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Enable OpenTelemetry logging'),
+  OTEL_METRICS_EXPORT_INTERVAL: z.coerce
+    .number()
+    .min(1000)
+    .max(300000)
+    .default(10000)
+    .describe('OpenTelemetry metrics export interval in milliseconds'),
+  OTEL_TRACES_SAMPLER: z
+    .enum(['always_on', 'always_off', 'traceidratio', 'parentbased_always_on'])
+    .default('parentbased_always_on')
+    .describe('OpenTelemetry traces sampling strategy'),
+  OTEL_TRACES_SAMPLER_RATIO: z.coerce
+    .number()
+    .min(0)
+    .max(1)
+    .default(1.0)
+    .describe('OpenTelemetry traces sampling ratio (for traceidratio sampler)'),
+  OTEL_DEBUG: z.coerce
+    .boolean()
+    .default(false)
+    .describe('Enable OpenTelemetry debug logging'),
+  OTEL_EXPORTER_TIMEOUT: z.coerce
+    .number()
+    .min(1000)
+    .max(60000)
+    .default(5000)
+    .describe('OpenTelemetry exporter timeout in milliseconds'),
+  OTEL_BATCH_SIZE: z.coerce
+    .number()
+    .min(1)
+    .max(512)
+    .default(10)
+    .describe('OpenTelemetry batch export size'),
+  OTEL_BATCH_TIMEOUT: z.coerce
+    .number()
+    .min(100)
+    .max(10000)
+    .default(1000)
+    .describe('OpenTelemetry batch export timeout in milliseconds'),
+  OTEL_MAX_QUEUE_SIZE: z.coerce
+    .number()
+    .min(10)
+    .max(2048)
+    .default(100)
+    .describe('OpenTelemetry maximum queue size'),
+  OTEL_RESOURCE_ATTRIBUTES: z
+    .string()
+    .optional()
+    .describe('OpenTelemetry resource attributes (comma-separated key=value pairs)'),
 });
 
 export type EnvConfig = z.infer<typeof envConfigSchema>;

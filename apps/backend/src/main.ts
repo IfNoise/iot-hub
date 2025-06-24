@@ -4,7 +4,7 @@
  */
 
 // ВАЖНО: OpenTelemetry должен быть инициализирован самым первым
-import './instrumentation';
+import './common/instrumentation';
 
 import 'dotenv/config';
 import { Logger } from 'nestjs-pino';
