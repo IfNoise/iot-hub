@@ -1,18 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from './config.service';
 
-describe('ConfigService', () => {
+describe('ConfigService (Decomposed)', () => {
   let service: ConfigService;
 
   beforeEach(async () => {
-    // Mock environment variables for tests
-    process.env.DATABASE_PASSWORD = 'test-password';
-    process.env.DATABASE_USER = 'test-user';
-    process.env.DATABASE_NAME = 'test-db';
-    process.env.JWT_SECRET = 'test-jwt-secret-with-at-least-32-characters-long';
+    // Set up test environment variables
+    process.env.NODE_ENV = 'test';
+    process.env.PORT = '3000';
     process.env.DATABASE_HOST = 'localhost';
     process.env.DATABASE_PORT = '5432';
-    process.env.PORT = '3000';
+    process.env.DATABASE_PASSWORD = 'testpassword';
+    process.env.DATABASE_USER = 'testuser';
+    process.env.DATABASE_NAME = 'testdb';
+    process.env.JWT_SECRET = 'testsecretthatislongenoughforvalidation';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [ConfigService],
@@ -23,16 +24,80 @@ describe('ConfigService', () => {
 
   afterEach(() => {
     // Clean up environment variables
+    delete process.env.NODE_ENV;
+    delete process.env.PORT;
+    delete process.env.DATABASE_HOST;
+    delete process.env.DATABASE_PORT;
     delete process.env.DATABASE_PASSWORD;
     delete process.env.DATABASE_USER;
     delete process.env.DATABASE_NAME;
     delete process.env.JWT_SECRET;
-    delete process.env.DATABASE_HOST;
-    delete process.env.DATABASE_PORT;
-    delete process.env.PORT;
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('should have all domain services', () => {
+    expect(service.common).toBeDefined();
+    expect(service.auth).toBeDefined();
+    expect(service.database).toBeDefined();
+    expect(service.mqtt).toBeDefined();
+    expect(service.telemetry).toBeDefined();
+    expect(service.devices).toBeDefined();
+    expect(service.users).toBeDefined();
+  });
+
+  it('should provide environment-aware methods', () => {
+    expect(service.isDevelopment()).toBe(false);
+    expect(service.isTest()).toBe(true);
+    expect(service.isProduction()).toBe(false);
+  });
+
+  it('should provide domain-specific configurations', () => {
+    const jwtConfig = service.auth.getJwtConfig();
+    expect(jwtConfig.secret).toBe('testsecretthatislongenoughforvalidation');
+    expect(jwtConfig.expiration).toBe('1h');
+
+    const dbConfig = service.database.getConnectionInfo();
+    expect(dbConfig.host).toBe('localhost');
+    expect(dbConfig.port).toBe(5432);
+    expect(dbConfig.database).toBe('testdb');
+
+    const commonConfig = service.common.getAll();
+    expect(commonConfig.nodeEnv).toBe('test');
+    expect(commonConfig.port).toBe(3000);
+  });
+
+  it('should provide composed configuration', () => {
+    const allConfig = service.getAll();
+    expect(allConfig.common).toBeDefined();
+    expect(allConfig.auth).toBeDefined();
+    expect(allConfig.database).toBeDefined();
+    expect(allConfig.mqtt).toBeDefined();
+    expect(allConfig.telemetry).toBeDefined();
+    expect(allConfig.devices).toBeDefined();
+    expect(allConfig.users).toBeDefined();
+  });
+
+  it('should provide backward compatibility', () => {
+    expect(service.get('NODE_ENV')).toBe('test');
+    expect(service.get('PORT')).toBe(3000);
+    expect(service.get('DATABASE_HOST')).toBe('localhost');
+  });
+
+  it('should provide convenience methods', () => {
+    expect(service.getDatabaseConfig()).toBeDefined();
+    expect(service.getJwtConfig()).toBeDefined();
+    expect(service.getCorsConfig()).toBeDefined();
+    expect(service.getLoggingConfig()).toBeDefined();
+  });
+
+  it('should handle feature flags', () => {
+    expect(typeof service.isKeycloakEnabled()).toBe('boolean');
+    expect(typeof service.isRedisEnabled()).toBe('boolean');
+    expect(typeof service.isOpenTelemetryEnabled()).toBe('boolean');
+    expect(typeof service.isUserRegistrationEnabled()).toBe('boolean');
+    expect(typeof service.isEmailVerificationRequired()).toBe('boolean');
   });
 });

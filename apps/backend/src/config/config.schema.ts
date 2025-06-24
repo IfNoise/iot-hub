@@ -1,296 +1,146 @@
 import { z } from 'zod';
+import { commonConfigSchema } from '../common/config/common-config.schema';
+import { authConfigSchema } from '../auth/config/auth-config.schema';
+import { databaseConfigSchema } from '../database/config/database-config.schema';
+import { mqttConfigSchema } from '../mqtt/config/mqtt-config.schema';
+import { telemetryConfigSchema } from '../common/config/telemetry-config.schema';
+import { devicesConfigSchema } from '../devices/config/devices-config.schema';
+import { usersConfigSchema } from '../users/config/users-config.schema';
 
-// Расширенная схема конфигурации с environment-зависимыми значениями
+// Environment variables schema - maps env vars to config sections
 export const envConfigSchema = z.object({
+  // Common/Application
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),
   PORT: z.coerce.number().default(3000),
 
-  // Database Configuration
+  // Database
   DB_TYPE: z
-    .enum(['postgres', 'mysql', 'mariadb', 'sqlite', 'mssql', 'oracle'])
+    .enum(['postgres', 'mysql', 'mariadb', 'cockroachdb', 'mongodb'])
     .default('postgres'),
   DATABASE_HOST: z.string().default('localhost'),
   DATABASE_PORT: z.coerce.number().default(5432),
   DATABASE_PASSWORD: z.string().min(8).max(64),
   DATABASE_USER: z.string().min(3).max(32),
   DATABASE_NAME: z.string().min(1).max(64),
-
-  // Database behavior (будет переопределяться в зависимости от среды)
   DB_SYNCHRONIZE: z.coerce.boolean().default(false),
-  DB_LOGGING: z.string().default('false'), // 'true', 'false', 'error', 'warn'
+  DB_LOGGING: z.string().default('false'),
   DB_DROP_SCHEMA: z.coerce.boolean().default(false),
   DB_SSL: z.coerce.boolean().default(false),
   DB_POOL_SIZE: z.coerce.number().default(10),
 
-  // JWT Configuration
+  // JWT & Auth
   JWT_SECRET: z.string().min(32).max(64),
   JWT_EXPIRATION: z.string().default('1h'),
 
-  // Keycloak & OAuth2 Proxy Configuration
-  KEYCLOAK_URL: z
-    .string()
-    .url()
-    .optional()
-    .or(z.literal(''))
-    .describe('Keycloak server URL'),
-  KEYCLOAK_REALM: z
-    .string()
-    .min(1)
-    .optional()
-    .or(z.literal(''))
-    .describe('Keycloak realm name'),
-  KEYCLOAK_CLIENT_ID: z
-    .string()
-    .min(1)
-    .optional()
-    .or(z.literal(''))
-    .describe('Keycloak client ID'),
-  OAUTH2_PROXY_USER_HEADER: z
-    .string()
-    .default('X-Auth-Request-User')
-    .describe('OAuth2 proxy user header'),
-  OAUTH2_PROXY_EMAIL_HEADER: z
-    .string()
-    .default('X-Auth-Request-Email')
-    .describe('OAuth2 proxy email header'),
-  OAUTH2_PROXY_PREFERRED_USERNAME_HEADER: z
-    .string()
-    .default('X-Auth-Request-Preferred-Username')
-    .describe('OAuth2 proxy preferred username header'),
-  OAUTH2_PROXY_ACCESS_TOKEN_HEADER: z
-    .string()
-    .default('X-Auth-Request-Access-Token')
-    .describe('OAuth2 proxy access token header'),
+  // Keycloak & OAuth2 Proxy
+  KEYCLOAK_URL: z.string().url().optional().or(z.literal('')),
+  KEYCLOAK_REALM: z.string().min(1).optional().or(z.literal('')),
+  KEYCLOAK_CLIENT_ID: z.string().min(1).optional().or(z.literal('')),
+  OAUTH2_PROXY_USER_HEADER: z.string().default('X-Auth-Request-User'),
+  OAUTH2_PROXY_EMAIL_HEADER: z.string().default('X-Auth-Request-Email'),
+  OAUTH2_PROXY_PREFERRED_USERNAME_HEADER: z.string().default('X-Auth-Request-Preferred-Username'),
+  OAUTH2_PROXY_ACCESS_TOKEN_HEADER: z.string().default('X-Auth-Request-Access-Token'),
 
-  // Development User Configuration (только для разработки когда Keycloak отключен)
-  DEV_USER_ID: z
-    .string()
-    .default('dev-user-id')
-    .describe('Development user ID'),
-  DEV_USER_EMAIL: z
-    .string()
-    .email()
-    .default('dev@example.com')
-    .describe('Development user email'),
-  DEV_USER_NAME: z
-    .string()
-    .default('Dev User')
-    .describe('Development user name'),
-  DEV_USER_ROLE: z
-    .enum(['admin', 'user'])
-    .default('admin')
-    .describe('Development user role'),
-  DEV_USER_AVATAR: z
-    .string()
-    .url()
-    .optional()
-    .describe('Development user avatar URL'),
-  DEV_USER_EMAIL_VERIFIED: z.coerce
-    .boolean()
-    .default(true)
-    .describe('Development user email verification status'),
+  // Development User
+  DEV_USER_ID: z.string().default('dev-user-id'),
+  DEV_USER_EMAIL: z.string().email().default('dev@example.com'),
+  DEV_USER_NAME: z.string().default('Dev User'),
+  DEV_USER_ROLE: z.enum(['admin', 'user']).default('admin'),
+  DEV_USER_AVATAR: z.string().url().optional(),
+  DEV_USER_EMAIL_VERIFIED: z.coerce.boolean().default(true),
 
-  // Redis Configuration
+  // Redis
   REDIS_URL: z.string().url().optional(),
   REDIS_ENABLED: z.coerce.boolean().default(true),
   REDIS_RETRY_ATTEMPTS: z.coerce.number().default(3),
   REDIS_RETRY_DELAY: z.coerce.number().default(1000),
 
-  // CORS Configuration
+  // CORS & Security
   CORS_ORIGIN: z.string().default('*'),
   CORS_CREDENTIALS: z.coerce.boolean().default(true),
-
-  // Security
   ALLOWED_ORIGINS: z.string().optional(),
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000), // 15 minutes
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  LOG_TO_FILE: z.coerce.boolean().default(true),
+  LOG_FILE_PATH: z.string().default('./logs/app.log'),
+  LOG_FILE_MAX_SIZE: z.string().default('10M'),
+  LOG_FILE_MAX_FILES: z.coerce.number().default(5),
+  LOG_FORMAT: z.enum(['json', 'pretty']).default('json'),
+  LOG_ENABLE_METADATA: z.coerce.boolean().default(true),
+  LOG_ENABLE_REQUEST_LOGGING: z.coerce.boolean().default(true),
+  ENABLE_FILE_LOGGING_IN_DEV: z.coerce.boolean().default(false),
 
-  // File Logging Configuration
-  LOG_TO_FILE: z.coerce.boolean().default(true).describe('Enable file logging'),
-  LOG_FILE_PATH: z
-    .string()
-    .default('./logs/app.log')
-    .describe('Path to log file'),
-  LOG_FILE_MAX_SIZE: z
-    .string()
-    .default('10M')
-    .describe('Maximum log file size before rotation'),
-  LOG_FILE_MAX_FILES: z.coerce
-    .number()
-    .default(5)
-    .describe('Maximum number of rotated log files'),
+  // MQTT
+  MQTT_HOST: z.string().default('localhost'),
+  MQTT_PORT: z.coerce.number().default(1883),
+  MQTT_SECURE_PORT: z.coerce.number().default(8883),
+  MQTT_USERNAME: z.string().optional(),
+  MQTT_PASSWORD: z.string().optional(),
+  MQTT_CLIENT_ID: z.string().default('iot-hub-backend'),
+  MQTT_KEEPALIVE: z.coerce.number().default(60),
+  MQTT_CLEAN_SESSION: z.coerce.boolean().default(true),
+  MQTT_RECONNECT_PERIOD: z.coerce.number().default(2000),
+  MQTT_CONNECT_TIMEOUT: z.coerce.number().default(30000),
+  MQTT_QOS: z.coerce.number().min(0).max(2).default(1),
+  MQTT_RETAIN: z.coerce.boolean().default(false),
+  MQTT_WILL_TOPIC: z.string().optional(),
+  MQTT_WILL_PAYLOAD: z.string().optional(),
+  MQTT_WILL_QOS: z.coerce.number().min(0).max(2).default(0),
+  MQTT_WILL_RETAIN: z.coerce.boolean().default(false),
+  MQTT_MAX_RECONNECT_ATTEMPTS: z.coerce.number().default(10),
 
-  // Logging Enhancement Options
-  LOG_FORMAT: z
-    .enum(['json', 'pretty'])
-    .default('json')
-    .describe('Log output format'),
-  LOG_ENABLE_METADATA: z.coerce
-    .boolean()
-    .default(true)
-    .describe('Include metadata in logs (requestId, userId, etc.)'),
-  LOG_ENABLE_REQUEST_LOGGING: z.coerce
-    .boolean()
-    .default(true)
-    .describe('Enable HTTP request/response logging'),
+  // OpenTelemetry
+  OTEL_ENABLED: z.coerce.boolean().default(true),
+  OTEL_SERVICE_NAME: z.string().default('iot-hub-backend'),
+  OTEL_SERVICE_VERSION: z.string().default('1.0.0'),
+  OTEL_COLLECTOR_URL: z.string().url().default('http://localhost:4318'),
+  OTEL_COLLECTOR_TRACES_ENDPOINT: z.string().optional(),
+  OTEL_COLLECTOR_METRICS_ENDPOINT: z.string().optional(),
+  OTEL_COLLECTOR_LOGS_ENDPOINT: z.string().optional(),
+  OTEL_ENABLE_TRACING: z.coerce.boolean().default(true),
+  OTEL_ENABLE_METRICS: z.coerce.boolean().default(true),
+  OTEL_ENABLE_LOGGING: z.coerce.boolean().default(true),
+  OTEL_METRICS_EXPORT_INTERVAL: z.coerce.number().min(1000).max(300000).default(10000),
+  OTEL_TRACES_SAMPLER: z.enum(['always_on', 'always_off', 'traceidratio', 'parentbased_always_on']).default('parentbased_always_on'),
+  OTEL_TRACES_SAMPLER_RATIO: z.coerce.number().min(0).max(1).default(1.0),
+  OTEL_DEBUG: z.coerce.boolean().default(false),
+  OTEL_EXPORTER_TIMEOUT: z.coerce.number().min(1000).max(60000).default(5000),
+  OTEL_BATCH_SIZE: z.coerce.number().min(1).max(512).default(10),
+  OTEL_BATCH_TIMEOUT: z.coerce.number().min(100).max(10000).default(1000),
+  OTEL_MAX_QUEUE_SIZE: z.coerce.number().min(10).max(2048).default(100),
+  OTEL_RESOURCE_ATTRIBUTES: z.string().optional(),
 
-  // Development specific
-  ENABLE_FILE_LOGGING_IN_DEV: z.coerce
-    .boolean()
-    .default(false)
-    .describe('Enable file logging in development mode'),
+  // Devices
+  DEVICE_TIMEOUT_MS: z.coerce.number().min(1000).default(30000),
+  DEVICE_HEARTBEAT_INTERVAL_MS: z.coerce.number().min(1000).default(10000),
+  MAX_DEVICES_PER_USER: z.coerce.number().min(1).default(100),
+  CERTIFICATE_VALIDITY_DAYS: z.coerce.number().min(1).default(365),
+  DEVICE_DATA_RETENTION_DAYS: z.coerce.number().min(1).default(30),
 
-  // MQTT Configuration
-  MQTT_HOST: z.string().default('localhost').describe('MQTT broker host'),
-  MQTT_PORT: z.coerce.number().default(1883).describe('MQTT broker port'),
-  MQTT_SECURE_PORT: z.coerce
-    .number()
-    .default(8883)
-    .describe('MQTT secure broker port for mTLS'),
-  MQTT_USERNAME: z.string().optional().describe('MQTT broker username'),
-  MQTT_PASSWORD: z.string().optional().describe('MQTT broker password'),
-  MQTT_CLIENT_ID: z
-    .string()
-    .default('iot-hub-backend')
-    .describe('MQTT client ID'),
-  MQTT_KEEPALIVE: z.coerce
-    .number()
-    .default(60)
-    .describe('MQTT keepalive interval'),
-  MQTT_CLEAN_SESSION: z.coerce
-    .boolean()
-    .default(true)
-    .describe('MQTT clean session'),
-  MQTT_RECONNECT_PERIOD: z.coerce
-    .number()
-    .default(2000)
-    .describe('MQTT reconnect period'),
-  MQTT_CONNECT_TIMEOUT: z.coerce
-    .number()
-    .default(30000)
-    .describe('MQTT connect timeout'),
-  MQTT_QOS: z.coerce
-    .number()
-    .min(0)
-    .max(2)
-    .default(1)
-    .describe('MQTT QoS level'),
-  MQTT_RETAIN: z.coerce
-    .boolean()
-    .default(false)
-    .describe('MQTT retain messages'),
-  MQTT_WILL_TOPIC: z.string().optional().describe('MQTT will topic'),
-  MQTT_WILL_PAYLOAD: z.string().optional().describe('MQTT will payload'),
-  MQTT_WILL_QOS: z.coerce
-    .number()
-    .min(0)
-    .max(2)
-    .default(0)
-    .describe('MQTT will QoS'),
-  MQTT_WILL_RETAIN: z.coerce
-    .boolean()
-    .default(false)
-    .describe('MQTT will retain'),
-  MQTT_MAX_RECONNECT_ATTEMPTS: z.coerce
-    .number()
-    .default(10)
-    .describe('MQTT max reconnect attempts'),
-
-  // OpenTelemetry Configuration
-  OTEL_ENABLED: z.coerce
-    .boolean()
-    .default(true)
-    .describe('Enable OpenTelemetry observability'),
-  OTEL_SERVICE_NAME: z
-    .string()
-    .default('iot-hub-backend')
-    .describe('OpenTelemetry service name'),
-  OTEL_SERVICE_VERSION: z
-    .string()
-    .default('1.0.0')
-    .describe('OpenTelemetry service version'),
-  OTEL_COLLECTOR_URL: z
-    .string()
-    .url()
-    .default('http://localhost:4318')
-    .describe('OpenTelemetry Collector URL'),
-  OTEL_COLLECTOR_TRACES_ENDPOINT: z
-    .string()
-    .optional()
-    .describe('OpenTelemetry Collector traces endpoint (overrides default)'),
-  OTEL_COLLECTOR_METRICS_ENDPOINT: z
-    .string()
-    .optional()
-    .describe('OpenTelemetry Collector metrics endpoint (overrides default)'),
-  OTEL_COLLECTOR_LOGS_ENDPOINT: z
-    .string()
-    .optional()
-    .describe('OpenTelemetry Collector logs endpoint (overrides default)'),
-  OTEL_ENABLE_TRACING: z.coerce
-    .boolean()
-    .default(true)
-    .describe('Enable OpenTelemetry tracing'),
-  OTEL_ENABLE_METRICS: z.coerce
-    .boolean()
-    .default(true)
-    .describe('Enable OpenTelemetry metrics collection'),
-  OTEL_ENABLE_LOGGING: z.coerce
-    .boolean()
-    .default(true)
-    .describe('Enable OpenTelemetry logging'),
-  OTEL_METRICS_EXPORT_INTERVAL: z.coerce
-    .number()
-    .min(1000)
-    .max(300000)
-    .default(10000)
-    .describe('OpenTelemetry metrics export interval in milliseconds'),
-  OTEL_TRACES_SAMPLER: z
-    .enum(['always_on', 'always_off', 'traceidratio', 'parentbased_always_on'])
-    .default('parentbased_always_on')
-    .describe('OpenTelemetry traces sampling strategy'),
-  OTEL_TRACES_SAMPLER_RATIO: z.coerce
-    .number()
-    .min(0)
-    .max(1)
-    .default(1.0)
-    .describe('OpenTelemetry traces sampling ratio (for traceidratio sampler)'),
-  OTEL_DEBUG: z.coerce
-    .boolean()
-    .default(false)
-    .describe('Enable OpenTelemetry debug logging'),
-  OTEL_EXPORTER_TIMEOUT: z.coerce
-    .number()
-    .min(1000)
-    .max(60000)
-    .default(5000)
-    .describe('OpenTelemetry exporter timeout in milliseconds'),
-  OTEL_BATCH_SIZE: z.coerce
-    .number()
-    .min(1)
-    .max(512)
-    .default(10)
-    .describe('OpenTelemetry batch export size'),
-  OTEL_BATCH_TIMEOUT: z.coerce
-    .number()
-    .min(100)
-    .max(10000)
-    .default(1000)
-    .describe('OpenTelemetry batch export timeout in milliseconds'),
-  OTEL_MAX_QUEUE_SIZE: z.coerce
-    .number()
-    .min(10)
-    .max(2048)
-    .default(100)
-    .describe('OpenTelemetry maximum queue size'),
-  OTEL_RESOURCE_ATTRIBUTES: z
-    .string()
-    .optional()
-    .describe('OpenTelemetry resource attributes (comma-separated key=value pairs)'),
+  // Users
+  USER_SESSION_TIMEOUT_MS: z.coerce.number().min(60000).default(3600000),
+  MAX_ACTIVE_SESSIONS_PER_USER: z.coerce.number().min(1).default(5),
+  ENABLE_USER_REGISTRATION: z.coerce.boolean().default(true),
+  REQUIRE_EMAIL_VERIFICATION: z.coerce.boolean().default(true),
+  USER_PROFILE_IMAGE_MAX_SIZE_BYTES: z.coerce.number().min(1024).default(2097152),
+  PASSWORD_MIN_LENGTH: z.coerce.number().min(6).default(8),
+  PASSWORD_REQUIRE_SPECIAL_CHARS: z.coerce.boolean().default(true),
 });
 
 export type EnvConfig = z.infer<typeof envConfigSchema>;
+
+// Composed configuration type
+export interface AppConfig {
+  common: z.infer<typeof commonConfigSchema>;
+  auth: z.infer<typeof authConfigSchema>;
+  database: z.infer<typeof databaseConfigSchema>;
+  mqtt: z.infer<typeof mqttConfigSchema>;
+  telemetry: z.infer<typeof telemetryConfigSchema>;
+  devices: z.infer<typeof devicesConfigSchema>;
+  users: z.infer<typeof usersConfigSchema>;
+}
