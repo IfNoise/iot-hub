@@ -49,22 +49,52 @@ export class TelemetryConfigService {
       serviceName: this.config.otelServiceName,
       serviceVersion: this.config.otelServiceVersion,
       collectorUrl: this.config.otelCollectorUrl,
-      collectorTracesEndpoint: this.config.otelCollectorTracesEndpoint,
-      collectorMetricsEndpoint: this.config.otelCollectorMetricsEndpoint,
-      collectorLogsEndpoint: this.config.otelCollectorLogsEndpoint,
-      enableTracing: this.config.otelEnableTracing,
-      enableMetrics: this.config.otelEnableMetrics,
-      enableLogging: this.config.otelEnableLogging,
-      metricsExportInterval: this.config.otelMetricsExportInterval,
-      tracesSampler: this.config.otelTracesSampler,
-      tracesSamplerRatio: this.config.otelTracesSamplerRatio,
+      endpoints: {
+        traces: this.config.otelCollectorTracesEndpoint || `${this.config.otelCollectorUrl}/v1/traces`,
+        metrics: this.config.otelCollectorMetricsEndpoint || `${this.config.otelCollectorUrl}/v1/metrics`,
+        logs: this.config.otelCollectorLogsEndpoint || `${this.config.otelCollectorUrl}/v1/logs`,
+      },
+      tracing: {
+        enabled: this.config.otelEnableTracing,
+        sampler: (this.config.otelTracesSampler || 'parentbased_always_on') as 'always_on' | 'always_off' | 'traceidratio' | 'parentbased_always_on',
+        samplerRatio: this.config.otelTracesSamplerRatio,
+      },
+      metrics: {
+        enabled: this.config.otelEnableMetrics,
+        exportInterval: this.config.otelMetricsExportInterval,
+      },
+      logging: {
+        enabled: this.config.otelEnableLogging,
+      },
+      exporter: {
+        timeout: this.config.otelExporterTimeout,
+        batchSize: this.config.otelBatchSize,
+        batchTimeout: this.config.otelBatchTimeout,
+        maxQueueSize: this.config.otelMaxQueueSize,
+      },
       debug: this.config.otelDebug,
-      exporterTimeout: this.config.otelExporterTimeout,
-      batchSize: this.config.otelBatchSize,
-      batchTimeout: this.config.otelBatchTimeout,
-      maxQueueSize: this.config.otelMaxQueueSize,
-      resourceAttributes: this.config.otelResourceAttributes,
+      resourceAttributes: this.parseResourceAttributes(this.config.otelResourceAttributes),
     };
+  }
+
+  private parseResourceAttributes(attributes?: string): Record<string, string> {
+    if (!attributes) {
+      return {};
+    }
+    
+    try {
+      const result: Record<string, string> = {};
+      const pairs = attributes.split(',');
+      for (const pair of pairs) {
+        const [key, value] = pair.split('=');
+        if (key && value) {
+          result[key.trim()] = value.trim();
+        }
+      }
+      return result;
+    } catch {
+      return {};
+    }
   }
 
   getServiceInfo() {

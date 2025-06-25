@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const mqttConfigSchema = z.object({
+  brokerUrl: z.string().url('MQTT broker URL must be a valid URL').default('mqtt://localhost:1883'),
   host: z.string().min(1, 'MQTT host is required').default('localhost'),
   port: z.coerce
     .number()

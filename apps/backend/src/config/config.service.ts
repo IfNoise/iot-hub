@@ -101,6 +101,11 @@ export class ConfigService {
     return this.common.getRedisConfig();
   }
 
+  // MQTT configuration methods
+  getMqttBrokerUrl(): string {
+    return this.mqtt.getBrokerUrl();
+  }
+
   // CORS configuration (delegated to common config)
   getCorsConfig() {
     return this.common.getCorsConfig();

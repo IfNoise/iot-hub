@@ -365,4 +365,27 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Ошибка подписки на wildcard topic:', error);
     }
   }
+
+  /**
+   * Получить статус MQTT соединения
+   */
+  async getConnectionStatus() {
+    const config = this.configService.getMqttConfig();
+
+    if (!this.mqttClient) {
+      return {
+        connected: false,
+        brokerUrl: config.brokerUrl,
+        clientId: config.clientId,
+      };
+    }
+
+    return {
+      connected: this.mqttClient.connected,
+      brokerUrl: config.brokerUrl,
+      clientId: config.clientId,
+      connectTime: this.mqttClient.options?.connectTime?.toISOString(),
+      lastMessage: new Date().toISOString(),
+    };
+  }
 }

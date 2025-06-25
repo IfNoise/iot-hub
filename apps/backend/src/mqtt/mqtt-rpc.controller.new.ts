@@ -73,11 +73,6 @@ export class MqttRpcController {
               statusCode: 408,
               message: 'Device response timeout',
               error: 'Request Timeout',
-              details: {
-                executionTime,
-                sentAt,
-                originalError: error.message,
-              },
             },
           };
         }
@@ -89,11 +84,6 @@ export class MqttRpcController {
               statusCode: 503,
               message: 'MQTT сервис недоступен',
               error: 'Service Unavailable',
-              details: {
-                executionTime,
-                sentAt,
-                originalError: error.message,
-              },
             },
           };
         }

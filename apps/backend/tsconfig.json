@@ -13,10 +13,13 @@
       "path": "../../libs/contracts/mqtt"
     },
     {
-      "path": "../../libs/contracts"
+      "path": "../../libs/contracts/devices"
     },
     {
-      "path": "../../libs/contracts/devices"
+      "path": "../../libs/contracts/auth"
+    },
+    {
+      "path": "../../libs/contracts"
     },
     {
       "path": "./tsconfig.app.json"

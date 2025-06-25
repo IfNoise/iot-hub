@@ -7,6 +7,7 @@ export class MqttConfigService {
 
   constructor(env: Record<string, string | undefined>) {
     this.config = mqttConfigSchema.parse({
+      brokerUrl: env.MQTT_BROKER_URL,
       host: env.MQTT_HOST,
       port: env.MQTT_PORT,
       securePort: env.MQTT_SECURE_PORT,
@@ -41,6 +42,10 @@ export class MqttConfigService {
   }
 
   // Convenience methods
+  getBrokerUrl(): string {
+    return this.config.brokerUrl;
+  }
+
   getConnectionConfig() {
     return {
       host: this.config.host,

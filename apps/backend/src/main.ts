@@ -4,7 +4,7 @@
  */
 
 // ВАЖНО: OpenTelemetry должен быть инициализирован самым первым
-import './common/instrumentation';
+// import './common/instrumentation'; // Временно отключено для отладки
 
 import 'dotenv/config';
 import { Logger } from 'nestjs-pino';
@@ -13,6 +13,7 @@ import { AppModule } from './app/app.module';
 import { generateOpenApi } from '@ts-rest/open-api';
 import { contracts } from '@iot-hub/contracts';
 import * as swaggerUi from 'swagger-ui-express';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -23,36 +24,29 @@ async function bootstrap() {
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
 
-  // Generate OpenAPI documentation
+  // Generate OpenAPI documentation from TS-REST contracts
   const document = generateOpenApi(contracts, {
-    info: { title: 'IoT Hub API', version: '1.0.0' },
-    basePath: `/${globalPrefix}`,
-  });
-  document.servers = [
-    {
-      url: `http://localhost:${process.env.PORT || 3000}/${globalPrefix}`,
-      description: 'Local development server',
+    info: {
+      title: 'IoT Hub API',
+      version: '1.0.0',
+      description: 'API для IoT Hub системы',
     },
-  ];
-  document.components = {
-    securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
+    servers: [
+      {
+        url: `http://localhost:${process.env.PORT || 3000}/${globalPrefix}`,
+        description: 'Local development server',
       },
-    },
-    schemas: {
-      ErrorResponse: {
-        type: 'object',
-        properties: {
-          statusCode: { type: 'integer' },
-          message: { type: 'string' },
-          error: { type: 'string' },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
         },
       },
     },
-  };
+  });
 
   // Setup Swagger UI with correct path
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(document));
@@ -76,4 +70,7 @@ async function bootstrap() {
   );
 }
 
-bootstrap();
+bootstrap().catch(error => {
+  console.error('❌ Ошибка запуска приложения:', error);
+  process.exit(1);
+});

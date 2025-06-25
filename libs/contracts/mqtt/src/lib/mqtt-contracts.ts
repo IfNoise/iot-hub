@@ -79,6 +79,17 @@ export const DeviceCommandNoResponseResultSchema = z.object({
 });
 
 /**
+ * Схема статуса MQTT соединения
+ */
+export const MqttStatusSchema = z.object({
+  connected: z.boolean(),
+  brokerUrl: z.string(),
+  clientId: z.string(),
+  connectTime: z.string().optional(),
+  lastMessage: z.string().optional(),
+});
+
+/**
  * REST API контракты для MQTT RPC
  * Соответствуют реальным эндпоинтам в MqttRpcController
  */
@@ -157,6 +168,23 @@ export const mqttContract = c.router({
     summary: 'Отправить команду устройству без ожидания ответа',
     description:
       'Отправляет RPC команду IoT устройству через MQTT брокер без ожидания ответа',
+  },
+
+  // GET /mqtt/status - Получить статус MQTT соединения
+  getMqttStatus: {
+    method: 'GET',
+    path: '/mqtt/status',
+    responses: {
+      200: MqttStatusSchema,
+      503: z.object({
+        statusCode: z.number(),
+        message: z.string(),
+        error: z.string(),
+      }),
+    },
+    summary: 'Получить статус MQTT соединения',
+    description:
+      'Возвращает информацию о текущем статусе подключения к MQTT брокеру',
   },
 });
 

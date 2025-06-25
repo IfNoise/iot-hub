@@ -11,52 +11,6 @@ export class HealthController {
 
   constructor(private readonly loggingService: LoggingService) {}
 
-  @TsRestHandler(healthContract.checkHealth)
-  async checkHealth() {
-    return tsRestHandler(healthContract.checkHealth, async () => {
-      this.logger.log('🔍 Checking overall system health...');
-
-      const services: Record<string, { status: 'healthy' | 'degraded' | 'unhealthy'; details?: Record<string, unknown> }> = {};
-
-      // Check logging service
-      try {
-        const loggingHealth = await this.loggingService.healthCheck();
-        services.logging = {
-          status: loggingHealth.status === 'healthy' ? 'healthy' as const : 'degraded' as const,
-          details: loggingHealth.details as Record<string, unknown>,
-        };
-      } catch (error) {
-        services.logging = {
-          status: 'unhealthy' as const,
-          details: { error: error instanceof Error ? error.message : 'Unknown error' },
-        };
-      }
-
-      // Determine overall status
-      const hasUnhealthy = Object.values(services).some(s => s.status === 'unhealthy');
-      const hasDegraded = Object.values(services).some(s => s.status === 'degraded');
-      
-      let overallStatus: 'healthy' | 'degraded' | 'unhealthy';
-      if (hasUnhealthy) {
-        overallStatus = 'unhealthy';
-      } else if (hasDegraded) {
-        overallStatus = 'degraded';
-      } else {
-        overallStatus = 'healthy';
-      }
-
-      return {
-        status: 200 as const,
-        body: {
-          status: overallStatus,
-          version: '1.0.0',
-          timestamp: new Date().toISOString(),
-          services,
-        },
-      };
-    });
-  }
-
   @TsRestHandler(healthContract.checkLoggingHealth)
   async checkLoggingHealth() {
     return tsRestHandler(healthContract.checkLoggingHealth, async () => {
@@ -79,8 +33,7 @@ export class HealthController {
     return tsRestHandler(healthContract.getLogStats, async () => {
       this.logger.log('📊 Retrieving log statistics...');
 
-      const rawStats = await this.loggingService.getLogFileStats();
-      const stats = rawStats || {};
+      const stats = await this.loggingService.getLogFileStats();
 
       return {
         status: 200 as const,

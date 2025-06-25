@@ -6,10 +6,9 @@ import { metricsContract } from '@iot-hub/contracts';
 
 @Controller()
 export class MetricsController {
-
   constructor(
     private readonly metricsService: MetricsService,
-    private readonly otelService: OtelService,
+    private readonly otelService: OtelService
   ) {}
 
   @TsRestHandler(metricsContract.getMetricsInfo)
@@ -69,11 +68,7 @@ export class MetricsController {
   @TsRestHandler(metricsContract.testMetrics)
   async testMetrics() {
     return tsRestHandler(metricsContract.testMetrics, async ({ body }) => {
-      const {
-        deviceCount = 5,
-        messageCount = 10,
-        errorCount = 2,
-      } = body;
+      const { deviceCount = 5, messageCount = 10, errorCount = 2 } = body;
 
       const results = [];
 
@@ -163,7 +158,9 @@ export class MetricsController {
               durationMs: Math.random() * 50 + 10,
             });
             if (i % 10 === 0) {
-              (results.metrics as string[]).push(`Processed ${i} MQTT messages`);
+              (results.metrics as string[]).push(
+                `Processed ${i} MQTT messages`
+              );
             }
           }
           break;
@@ -194,7 +191,8 @@ export class MetricsController {
       }
 
       results.endTime = new Date().toISOString();
-      results.duration = Date.now() - new Date(results.startTime as string).getTime();
+      results.duration =
+        Date.now() - new Date(results.startTime as string).getTime();
 
       return {
         status: 200 as const,

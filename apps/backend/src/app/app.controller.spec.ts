@@ -13,9 +13,10 @@ describe('AppController', () => {
   });
 
   describe('getData', () => {
-    it('should return "Hello API"', () => {
+    it('should return TS-REST handler function', () => {
       const appController = app.get<AppController>(AppController);
-      expect(appController.getData()).toEqual({ message: 'Hello API' });
+      const result = appController.getData();
+      expect(typeof result).toBe('function');
     });
   });
 });
