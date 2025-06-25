@@ -16,26 +16,41 @@ export class HealthController {
     return tsRestHandler(healthContract.checkHealth, async () => {
       this.logger.log('🔍 Checking overall system health...');
 
-      const services: Record<string, { status: 'healthy' | 'degraded' | 'unhealthy'; details?: Record<string, unknown> }> = {};
+      const services: Record<
+        string,
+        {
+          status: 'healthy' | 'degraded' | 'unhealthy';
+          details?: Record<string, unknown>;
+        }
+      > = {};
 
       // Check logging service
       try {
         const loggingHealth = await this.loggingService.healthCheck();
         services.logging = {
-          status: loggingHealth.status === 'healthy' ? 'healthy' as const : 'degraded' as const,
+          status:
+            loggingHealth.status === 'healthy'
+              ? ('healthy' as const)
+              : ('degraded' as const),
           details: loggingHealth.details as Record<string, unknown>,
         };
       } catch (error) {
         services.logging = {
           status: 'unhealthy' as const,
-          details: { error: error instanceof Error ? error.message : 'Unknown error' },
+          details: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
         };
       }
 
       // Determine overall status
-      const hasUnhealthy = Object.values(services).some(s => s.status === 'unhealthy');
-      const hasDegraded = Object.values(services).some(s => s.status === 'degraded');
-      
+      const hasUnhealthy = Object.values(services).some(
+        (s) => s.status === 'unhealthy'
+      );
+      const hasDegraded = Object.values(services).some(
+        (s) => s.status === 'degraded'
+      );
+
       let overallStatus: 'healthy' | 'degraded' | 'unhealthy';
       if (hasUnhealthy) {
         overallStatus = 'unhealthy';

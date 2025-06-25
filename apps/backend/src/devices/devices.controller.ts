@@ -20,7 +20,7 @@ export class DevicesController {
         try {
           // Схемы теперь унифицированы - нет необходимости в маппинге
           const device = await this.devicesService.createDevice(body);
-          
+
           // Generate QR code data based on qrType
           const qrData = {
             deviceId: device.id,
@@ -36,7 +36,9 @@ export class DevicesController {
                 deviceId: device.id,
                 qrData,
                 estimatedQRSize: JSON.stringify(qrData).length,
-                bindingToken: device.bindingTokenExpiresAt ? 'placeholder-token' : undefined,
+                bindingToken: device.bindingTokenExpiresAt
+                  ? 'placeholder-token'
+                  : undefined,
               },
             },
           };

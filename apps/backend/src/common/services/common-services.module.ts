@@ -22,7 +22,8 @@ export class CommonServicesModule implements OnModuleInit {
     try {
       await this.loggingService.ensureLogDirectory();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('⚠️ Failed to initialize logging service:', errorMessage);
     }
   }

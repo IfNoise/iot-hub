@@ -210,7 +210,9 @@ export const DeviceSchema = z
   .object({
     deviceId: z.string().describe('Уникальный ID устройства'),
     model: z.string().default('').describe('Модель устройства'),
-    publicKeyPem: z.string().describe('Публичный ключ устройства в формате PEM'),
+    publicKeyPem: z
+      .string()
+      .describe('Публичный ключ устройства в формате PEM'),
     ownerId: z.string().uuid().nullable().describe('ID владельца устройства'),
     status: z
       .enum(['unbound', 'bound', 'revoked'])

@@ -39,7 +39,10 @@ export class DeviceMapper {
     return {
       deviceId: entity.id,
       model: entity.model || undefined,
-      status: entity.status === 'revoked' ? 'suspended' as const : entity.status as 'bound' | 'suspended',
+      status:
+        entity.status === 'revoked'
+          ? ('suspended' as const)
+          : (entity.status as 'bound' | 'suspended'),
       boundAt: entity.boundAt || entity.createdAt, // Fallback на createdAt если boundAt не установлен
       lastSeenAt: entity.lastSeenAt,
     };
