@@ -22,18 +22,18 @@ export class DevicesService {
   async createDevice(dto: CreateDeviceDto) {
     // Проверяем, что устройство с таким ID еще не существует
     const existingDevice = await this.deviceRepo.findOne({
-      where: { id: dto.id },
+      where: { id: dto.deviceId },
     });
 
     if (existingDevice) {
-      throw new Error(`Device with ID ${dto.id} already exists`);
+      throw new Error(`Device with ID ${dto.deviceId} already exists`);
     }
 
     // Создаем устройство БЕЗ сертификата
     const device = new Device();
-    device.id = dto.id;
+    device.id = dto.deviceId;
     device.model = dto.model || '';
-    device.publicKey = dto.publicKey; // Временно для совместимости
+    device.publicKey = dto.publicKeyPem; // Унифицированное поле
     device.ownerId = null;
     device.status = 'unbound';
     device.lastSeenAt = new Date();

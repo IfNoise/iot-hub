@@ -129,6 +129,7 @@ export const BindDeviceRequestSchema = z
 
 /**
  * Схема для генерации устройства в производстве
+ * Унифицирована с CreateDeviceSchema из device-schemas.ts
  */
 export const GenerateDeviceQRSchema = z
   .object({

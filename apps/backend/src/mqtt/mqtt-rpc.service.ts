@@ -381,10 +381,10 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
     }
 
     return {
-      connected: this.mqttClient.connected,
+      connected: this.mqttClient.isConnected(),
       brokerUrl: config.brokerUrl,
       clientId: config.clientId,
-      connectTime: this.mqttClient.options?.connectTime?.toISOString(),
+      connectTime: this.mqttClient.getOptions?.()?.connectTimeout?.toString(),
       lastMessage: new Date().toISOString(),
     };
   }

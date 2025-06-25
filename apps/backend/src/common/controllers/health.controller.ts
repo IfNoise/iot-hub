@@ -80,7 +80,8 @@ export class HealthController {
       this.logger.log('📊 Retrieving log statistics...');
 
       const rawStats = await this.loggingService.getLogFileStats();
-      const stats = rawStats || {};
+      // Ensure stats is always a Record<string, unknown>, never null
+      const stats: Record<string, unknown> = rawStats || {};
 
       return {
         status: 200 as const,

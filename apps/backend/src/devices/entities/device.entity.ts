@@ -30,6 +30,12 @@ export class Device {
   @Column({ nullable: true })
   firmwareVersion?: string;
 
+  @Column({ nullable: true, type: 'timestamp' })
+  boundAt!: Date | null;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  bindingTokenExpiresAt!: Date | null;
+
   @OneToOne(
     () => require('./certificate.entity').Certificate,
     (cert: Certificate) => cert.device,

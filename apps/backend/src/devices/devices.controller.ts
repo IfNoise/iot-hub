@@ -18,14 +18,26 @@ export class DevicesController {
       devicesContract.manufacturing.generateDeviceQR,
       async ({ body }) => {
         try {
+          // Схемы теперь унифицированы - нет необходимости в маппинге
           const device = await this.devicesService.createDevice(body);
-          const deviceDto = DeviceMapper.toDto(device);
+          
+          // Generate QR code data based on qrType
+          const qrData = {
+            deviceId: device.id,
+            fingerprint: 'placeholder-fingerprint', // TODO: implement actual fingerprint
+            v: 1,
+          };
 
           return {
             status: 201 as const,
             body: {
               message: 'Устройство успешно зарегистрировано',
-              device: deviceDto,
+              data: {
+                deviceId: device.id,
+                qrData,
+                estimatedQRSize: JSON.stringify(qrData).length,
+                bindingToken: device.bindingTokenExpiresAt ? 'placeholder-token' : undefined,
+              },
             },
           };
         } catch (error) {
@@ -142,29 +154,13 @@ export class DevicesController {
       devicesContract.user.getMyDevices,
       async ({ query }) => {
         try {
-          // Если пользователь администратор - возвращаем все устройства
-          if (user.role === 'admin') {
-            const result = await this.devicesService.getDevices(query);
-            const devicesDto = DeviceMapper.toDtoArray(result.devices);
-
-            return {
-              status: 200 as const,
-              body: {
-                devices: devicesDto,
-                total: result.meta.total,
-                page: result.meta.page,
-                limit: result.meta.limit,
-                totalPages: result.meta.totalPages,
-              },
-            };
-          }
-
-          // Если обычный пользователь - возвращаем только его устройства
+          // Получаем устройства пользователя (убираем логику администратора)
           const result = await this.devicesService.getUserDevices(
             user.id,
             query
           );
-          const devicesDto = DeviceMapper.toDtoArray(result.devices);
+          // Используем специальный маппер для пользовательских устройств
+          const devicesDto = DeviceMapper.toUserDeviceDtoArray(result.devices);
 
           return {
             status: 200 as const,
@@ -173,7 +169,6 @@ export class DevicesController {
               total: result.meta.total,
               page: result.meta.page,
               limit: result.meta.limit,
-              totalPages: result.meta.totalPages,
             },
           };
         } catch (error) {

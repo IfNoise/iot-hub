@@ -120,12 +120,13 @@ describe('DevicesController (e2e)', () => {
       expect(response.body).toEqual(
         expect.objectContaining({
           message: 'Устройство успешно зарегистрировано',
-          device: expect.objectContaining({
-            id: 'test-device-001',
-            model: 'ESP32',
-            firmwareVersion: '1.0.0',
-            status: 'unbound',
-            publicKey: 'mock-public-key',
+          data: expect.objectContaining({
+            deviceId: 'test-device-001',
+            qrData: expect.objectContaining({
+              deviceId: 'test-device-001',
+              v: 1,
+            }),
+            estimatedQRSize: expect.any(Number),
           }),
         })
       );

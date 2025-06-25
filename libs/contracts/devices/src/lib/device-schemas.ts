@@ -204,12 +204,13 @@ export const DeviceInternalStateSchema = z
 
 /**
  * Базовая схема устройства
+ * Унифицированная схема для всех операций с устройствами
  */
 export const DeviceSchema = z
   .object({
-    id: z.string().describe('Уникальный ID устройства'),
+    deviceId: z.string().describe('Уникальный ID устройства'),
     model: z.string().default('').describe('Модель устройства'),
-    publicKey: z.string().describe('Публичный ключ устройства'),
+    publicKeyPem: z.string().describe('Публичный ключ устройства в формате PEM'),
     ownerId: z.string().uuid().nullable().describe('ID владельца устройства'),
     status: z
       .enum(['unbound', 'bound', 'revoked'])
@@ -348,14 +349,15 @@ export const UpdateIrrigatorSchema = z
 // ===== CREATE/UPDATE DEVICE SCHEMAS =====
 
 /**
- * DTO: Create
+ * DTO: Create Device - Производственная схема для создания устройства
+ * Унифицированная схема для всех процессов создания устройств
  */
 export const CreateDeviceSchema = z
   .object({
-    id: z.string().describe('Уникальный ID устройства'),
-    publicKey: z
+    deviceId: z.string().describe('Уникальный ID устройства'),
+    publicKeyPem: z
       .string()
-      .describe('Публичный ключ устройства (временный, для совместимости)'),
+      .describe('Публичный ключ устройства в формате PEM'),
     model: z.string().default('').describe('Модель устройства'),
     firmwareVersion: z
       .string()
@@ -373,7 +375,7 @@ export const CreateDeviceSchema = z
  */
 export const BindDeviceSchema = z
   .object({
-    id: z.string().describe('Уникальный ID устройства'),
+    deviceId: z.string().describe('Уникальный ID устройства'),
     // Примечание: ownerId (userId) получается из JWT токена через middleware аутентификации
     // и НЕ передается в теле запроса
   })
