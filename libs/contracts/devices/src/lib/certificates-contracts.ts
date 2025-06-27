@@ -52,6 +52,27 @@ export const CACertificateResponseSchema = z.object({
 });
 
 /**
+ * Схема запроса от EMQX для валидации сертификата
+ */
+export const EMQXValidationRequestSchema = z.object({
+  clientid: z.string(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  cert_subject: z.string().optional(),
+  cert_common_name: z.string().optional(),
+  cert_fingerprint: z.string().optional(),
+});
+
+/**
+ * Схема ответа для EMQX валидации
+ */
+export const EMQXValidationResponseSchema = z.object({
+  result: z.enum(['allow', 'deny', 'ignore']),
+  is_superuser: z.boolean().optional(),
+  client_attrs: z.record(z.string()).optional(),
+});
+
+/**
  * REST API контракты для сертификатов устройств
  * Соответствуют реальным эндпоинтам в CertificatesController
  */
@@ -113,6 +134,18 @@ export const certificatesContract = c.router({
       500: z.object({ message: z.string() }),
     },
     summary: 'Получение CA сертификата',
+  },
+
+  // POST /devices/certificates/validate - Валидация сертификата для EMQX
+  validateCertificate: {
+    method: 'POST',
+    path: '/devices/certificates/validate',
+    body: EMQXValidationRequestSchema,
+    responses: {
+      200: EMQXValidationResponseSchema,
+      500: z.object({ message: z.string() }),
+    },
+    summary: 'Валидация сертификата устройства для EMQX',
   },
 });
 

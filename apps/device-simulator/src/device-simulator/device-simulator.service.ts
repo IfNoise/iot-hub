@@ -1,7 +1,14 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-// import { HttpService } from '@nestjs/axios';
-// import { firstValueFrom } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { CryptoChipService } from '../crypto-chip/crypto-chip.service';
+import {
+  MqttDeviceService,
+  MqttDeviceConfig,
+  DeviceDataProvider,
+} from '../mqtt/mqtt-device.service';
+import { CertificateClientService } from '../mqtt/certificate-client.service';
+import { MtlsConfigService } from '../mqtt/mtls-config.service';
 
 export interface DeviceConfig {
   deviceId: string;
@@ -9,6 +16,18 @@ export interface DeviceConfig {
   firmwareVersion: string;
   backendUrl: string;
   autoRegister: boolean;
+  // MQTT конфигурация
+  mqtt?: {
+    brokerUrl: string;
+    userId?: string;
+    token?: string;
+    qos?: 0 | 1 | 2;
+    // mTLS конфигурация
+    useTls?: boolean;
+    securePort?: number;
+    autoObtainCertificates?: boolean;
+    certsDir?: string;
+  };
 }
 
 export interface DeviceState {
@@ -31,16 +50,21 @@ export interface SensorData {
  * Включает полный флоу от инициализации до привязки к пользователю
  */
 @Injectable()
-export class DeviceSimulatorService implements OnModuleInit {
+export class DeviceSimulatorService
+  implements OnModuleInit, DeviceDataProvider
+{
   private readonly logger = new Logger(DeviceSimulatorService.name);
   private deviceState: DeviceState;
-  private config: DeviceConfig;
+  private config!: DeviceConfig;
   private sensorUpdateInterval?: NodeJS.Timeout;
   private currentSensorData: SensorData;
 
   constructor(
-    // private readonly httpService: HttpService,
-    private readonly cryptoChip: CryptoChipService
+    private readonly httpService: HttpService,
+    private readonly cryptoChip: CryptoChipService,
+    private readonly mqttDevice: MqttDeviceService,
+    private readonly certificateClient: CertificateClientService,
+    private readonly mtlsConfig: MtlsConfigService
   ) {
     // Инициализация базового состояния устройства
     this.deviceState = {
@@ -58,6 +82,8 @@ export class DeviceSimulatorService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Инициализация симулятора устройства...');
+    // Устанавливаем себя как провайдер данных для MQTT сервиса
+    this.mqttDevice.setDataProvider(this);
   }
 
   /**
@@ -72,12 +98,122 @@ export class DeviceSimulatorService implements OnModuleInit {
     // Инициализация криптографического чипа
     await this.cryptoChip.initializeChip(config.deviceId);
 
+    // Настройка MQTT подключения
+    if (config.mqtt) {
+      await this.configureMqtt(config);
+    }
+
     if (config.autoRegister) {
       await this.registerDevice();
     }
 
     // Запуск симуляции сенсоров
     this.startSensorSimulation();
+  }
+
+  /**
+   * Настройка MQTT подключения с поддержкой mTLS
+   */
+  private async configureMqtt(config: DeviceConfig): Promise<void> {
+    if (!config.mqtt) return;
+
+    this.logger.log('Настройка MQTT подключения');
+
+    const mqttConfig: MqttDeviceConfig = {
+      brokerUrl: config.mqtt.brokerUrl,
+      userId: config.mqtt.userId || 'simulator-user',
+      deviceId: config.deviceId,
+      token: config.mqtt.token,
+      qos: config.mqtt.qos || 1,
+      useTls: config.mqtt.useTls,
+      securePort: config.mqtt.securePort,
+    };
+
+    // Если включен mTLS, получаем или генерируем сертификаты
+    if (config.mqtt.useTls && config.mqtt.autoObtainCertificates) {
+      this.logger.log('mTLS включен, получение сертификатов...');
+
+      try {
+        // Проверяем существующие сертификаты
+        const certsDir = config.mqtt.certsDir || './certs/devices';
+        const certPaths = this.mtlsConfig.getStandardCertPaths(
+          config.deviceId,
+          certsDir
+        );
+        let mtlsConfig = this.mtlsConfig.loadCertificatesFromFiles(certPaths);
+
+        if (!mtlsConfig) {
+          this.logger.log(
+            'Сертификаты не найдены, получение новых через CSR...'
+          );
+
+          // Получаем новые сертификаты через CSR процесс
+          const certificateResponse =
+            await this.certificateClient.obtainCertificate(
+              {
+                deviceId: config.deviceId,
+                firmwareVersion: config.firmwareVersion,
+              },
+              config.backendUrl
+            );
+
+          // Сохраняем полученные сертификаты в файлы
+          await this.mtlsConfig.saveCertificatesToFiles(
+            config.deviceId,
+            {
+              caCert: certificateResponse.caCert,
+              clientCert: certificateResponse.clientCert,
+              clientKey: '', // Ключ остается в криптографическом чипе
+            },
+            certsDir
+          );
+
+          // Создаем mTLS конфигурацию
+          mtlsConfig = this.mtlsConfig.createMtlsConfig(
+            certificateResponse.caCert,
+            certificateResponse.clientCert,
+            '', // Ключ будет получен из чипа
+            {
+              rejectUnauthorized: true,
+              servername: 'localhost', // или имя сервера из brokerUrl
+            }
+          );
+
+          // Обновляем URL брокера для безопасного подключения
+          mqttConfig.brokerUrl = `mqtts://${certificateResponse.brokerUrl}:${certificateResponse.mqttSecurePort}`;
+        }
+
+        // Добавляем TLS конфигурацию к MQTT настройкам
+        if (mtlsConfig && this.mtlsConfig.validateMtlsConfig(mtlsConfig)) {
+          mqttConfig.tls = {
+            ca: mtlsConfig.caCert,
+            cert: mtlsConfig.clientCert,
+            key: mtlsConfig.clientKey,
+            rejectUnauthorized: mtlsConfig.rejectUnauthorized,
+            servername: mtlsConfig.servername,
+          };
+
+          this.logger.log('mTLS конфигурация успешно настроена');
+        } else {
+          this.logger.error(
+            'Неверная mTLS конфигурация, откат к незащищенному соединению'
+          );
+          mqttConfig.useTls = false;
+        }
+      } catch (error) {
+        this.logger.error('Ошибка получения сертификатов mTLS:', error);
+        this.logger.warn('Продолжение без mTLS...');
+        mqttConfig.useTls = false;
+      }
+    }
+
+    try {
+      await this.mqttDevice.configure(mqttConfig);
+      this.logger.log('MQTT успешно настроен');
+    } catch (error) {
+      this.logger.error('Ошибка настройки MQTT:', error);
+      // Не останавливаем весь процесс из-за ошибки MQTT
+    }
   }
 
   /**
@@ -90,19 +226,25 @@ export class DeviceSimulatorService implements OnModuleInit {
       // Получаем публичный ключ от криптографического чипа
       const publicKey = this.cryptoChip.getPublicKey();
 
-      // Отправляем запрос на регистрацию устройства
+      // Подготавливаем данные для регистрации согласно GenerateDeviceQRSchema
       const registrationData = {
-        id: this.config.deviceId,
+        deviceId: this.config.deviceId,
         model: this.config.model,
-        publicKey: publicKey,
         firmwareVersion: this.config.firmwareVersion,
+        publicKeyPem: publicKey,
+        qrType: 'token' as const, // используем token-based QR код
       };
 
-      // Mock HTTP request for now
-      this.logger.log('Mock registration request:', registrationData);
-      const response = {
-        data: { message: 'Device registered', device: registrationData },
-      };
+      this.logger.log(
+        'Отправка запроса на регистрацию устройства...',
+        registrationData
+      );
+
+      // Отправляем реальный HTTP-запрос на backend
+      const url = `${this.config.backendUrl}/manufacturing/generate-device-qr`;
+      const response = await firstValueFrom(
+        this.httpService.post(url, registrationData)
+      );
 
       this.logger.log('Устройство успешно зарегистрировано:', response.data);
       this.deviceState.status = 'registered';
@@ -114,6 +256,17 @@ export class DeviceSimulatorService implements OnModuleInit {
       this.deviceState.status = 'error';
       this.deviceState.lastError =
         error instanceof Error ? error.message : 'Unknown error';
+
+      // Логируем дополнительную информацию об ошибке HTTP
+      if (error && typeof error === 'object' && 'response' in error) {
+        const httpError = error as {
+          response?: { status?: number; data?: unknown };
+        };
+        this.logger.error('HTTP Error Response:', {
+          status: httpError.response?.status,
+          data: httpError.response?.data,
+        });
+      }
     }
   }
 
@@ -127,29 +280,43 @@ export class DeviceSimulatorService implements OnModuleInit {
       // Генерируем CSR с помощью криптографического чипа
       const csrData = await this.cryptoChip.generateCSR(this.config.deviceId);
 
-      // Отправляем CSR на подпись
+      // Подготавливаем данные для запроса согласно SignCSRSchema
       const csrRequest = {
         csrPem: csrData.csr,
         firmwareVersion: this.config.firmwareVersion,
       };
 
-      // Mock HTTP request for certificate
-      this.logger.log('Mock CSR request:', csrRequest);
-      const response = {
-        data: {
-          certificate: 'mock-certificate-pem',
-          caCertificate: 'mock-ca-certificate-pem',
-          fingerprint: 'mock-fingerprint-' + Date.now(),
-        },
-      };
+      this.logger.log('Отправка запроса на подпись CSR...', {
+        deviceId: this.config.deviceId,
+      });
 
-      this.logger.log('Сертификат получен:', response.data);
+      // Отправляем реальный HTTP-запрос на backend
+      const url = `${this.config.backendUrl}/devices/certificates/${this.config.deviceId}/sign-csr`;
+      const response = await firstValueFrom(
+        this.httpService.post(url, csrRequest)
+      );
+
+      this.logger.log('Сертификат получен:', {
+        fingerprint: response.data.fingerprint,
+        hasCA: !!response.data.caCertificate,
+      });
       this.deviceState.certificateFingerprint = response.data.fingerprint;
     } catch (error) {
       this.logger.error('Ошибка получения сертификата:', error);
       this.deviceState.status = 'error';
       this.deviceState.lastError =
         error instanceof Error ? error.message : 'Certificate error';
+
+      // Логируем дополнительную информацию об ошибке HTTP
+      if (error && typeof error === 'object' && 'response' in error) {
+        const httpError = error as {
+          response?: { status?: number; data?: unknown };
+        };
+        this.logger.error('HTTP Error Response:', {
+          status: httpError.response?.status,
+          data: httpError.response?.data,
+        });
+      }
     }
   }
 
@@ -184,6 +351,27 @@ export class DeviceSimulatorService implements OnModuleInit {
       this.deviceState.lastError =
         error instanceof Error ? error.message : 'Binding error';
     }
+  }
+  /**
+   * Генерация тестового CSR
+   */
+  async generateTestCSR(): Promise<{
+    csr: string;
+    publicKey: string;
+    deviceId: string;
+  }> {
+    if (!this.config) {
+      throw new Error('Устройство не сконфигурировано');
+    }
+
+    this.logger.log('Генерация тестового CSR');
+    const csrData = await this.cryptoChip.generateCSR(this.config.deviceId);
+
+    return {
+      csr: csrData.csr,
+      publicKey: csrData.publicKey,
+      deviceId: csrData.deviceId,
+    };
   }
 
   /**
@@ -280,5 +468,15 @@ export class DeviceSimulatorService implements OnModuleInit {
       clearInterval(this.sensorUpdateInterval);
       this.sensorUpdateInterval = undefined;
     }
+
+    // Отключаем MQTT
+    await this.mqttDevice.disconnect();
+  }
+
+  /**
+   * Получение статуса MQTT подключения
+   */
+  getMqttStatus() {
+    return this.mqttDevice.getConnectionStatus();
   }
 }

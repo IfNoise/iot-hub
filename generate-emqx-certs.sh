@@ -106,7 +106,6 @@ openssl x509 -req -in "$SERVER_DIR/server.csr" \
   -CAcreateserial \
   -out "$SERVER_DIR/server-cert.pem" \
   -days 365 \
-  -extensions v3_req \
   -extfile "$SERVER_DIR/server-ext.conf" 
 
 echo "✅ Серверный сертификат создан: $SERVER_DIR/server-cert.pem"

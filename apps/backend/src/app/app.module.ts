@@ -49,14 +49,26 @@ export class AppModule implements NestModule {
     // Включаем middleware Keycloak с исключениями для публичных маршрутов
     consumer
       .apply(KeycloakOAuth2Middleware)
-      .exclude('/health/*path', '/metrics/*path', '/docs/*path')
+      .exclude(
+        '/health/*path',
+        '/metrics/*path',
+        '/docs/*path',
+        '/manufacturing/*path', // Исключаем производственные endpoints
+        '/devices/certificates/*path' // Исключаем endpoints сертификатов для устройств
+      )
       .forRoutes('*');
 
     // Включаем middleware автоматической синхронизации пользователей
     // Применяется после Keycloak middleware для всех защищенных маршрутов
     consumer
       .apply(AutoUserSyncMiddleware)
-      .exclude('/health/*path', '/metrics/*path', '/docs/*path')
+      .exclude(
+        '/health/*path',
+        '/metrics/*path',
+        '/docs/*path',
+        '/manufacturing/*path', // Исключаем производственные endpoints
+        '/devices/certificates/*path' // Исключаем endpoints сертификатов для устройств
+      )
       .forRoutes('*');
   }
 }

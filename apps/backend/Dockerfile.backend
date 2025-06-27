@@ -1,0 +1,75 @@
+# Build stage
+FROM node:20-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files and configuration
+COPY package*.json ./
+COPY nx.json ./
+COPY tsconfig*.json ./
+COPY eslint.config.mjs ./
+
+# Copy all project files (needed for Nx workspace)
+COPY apps/ ./apps/
+COPY libs/ ./libs/
+
+# Install dependencies
+RUN npm ci
+
+# Sync Nx workspace and build with disabled daemon
+ENV NX_DAEMON=false
+RUN npx nx sync
+RUN npx nx build backend --configuration=production
+
+# Production stage
+FROM node:20-alpine AS production
+
+# Install necessary tools for healthcheck
+RUN apk add --no-cache wget
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/apps/backend/dist ./
+
+# Copy node_modules for local workspace libraries
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy libs for workspace library dependencies
+COPY --from=builder /app/libs ./libs
+
+# Copy package.json for production dependencies
+COPY --from=builder /app/package*.json ./
+
+# Install only production dependencies (commented out since copying full node_modules)
+# RUN npm ci --only=production
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# Create directories for certificates and logs
+RUN mkdir -p /app/certs /app/logs
+
+# Copy certificates with proper permissions
+COPY --chown=nestjs:nodejs apps/backend/certs/ ./certs/
+
+# Set proper ownership for all app files and ensure certs are accessible
+RUN chown -R nestjs:nodejs /app && \
+    chmod -R 644 /app/certs/*.pem && \
+    chown -R nestjs:nodejs /app/certs/
+
+# Switch to non-root user
+USER nestjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+# Start the application
+CMD ["node", "main.js"]

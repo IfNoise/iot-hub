@@ -22,7 +22,7 @@ export class DatabaseConfigService {
       logging: env.DB_LOGGING === 'true',
       dropSchema: env.DB_DROP_SCHEMA === 'true',
       cache: false, // Фиксированное значение
-      ssl: env.DB_SSL === 'true',
+      ssl: env.DB_SSL !== 'false', // По умолчанию SSL отключен, включается только если DB_SSL=true
       extra: {
         connectionTimeoutMillis: 60000,
         max: parseInt(env.DB_POOL_SIZE || '10', 10),
@@ -68,7 +68,7 @@ export class DatabaseConfigService {
       logging: ['error'],
       dropSchema: false,
       cache: true,
-      ssl: true,
+      ssl: false, // Отключаем SSL для Docker окружения
       extra: {
         connectionTimeoutMillis: 30000,
         max: 20,

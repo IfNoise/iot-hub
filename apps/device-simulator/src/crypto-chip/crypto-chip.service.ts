@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { promisify } from 'util';
+import * as forge from 'node-forge';
 
 export interface KeyPair {
   publicKey: string;
@@ -93,34 +94,53 @@ export class CryptoChipService {
 
     this.logger.log(`Создание CSR для устройства: ${deviceId}`);
 
-    // Создаем subject для сертификата
-    const subject = [
-      ['CN', deviceId], // Common Name - ID устройства
-      ['O', organizationName], // Organization
-      ['C', countryCode], // Country
-    ];
+    try {
+      // Конвертируем PEM ключи в формат node-forge
+      const privateKey = forge.pki.privateKeyFromPem(this.keyPair.privateKey);
+      const publicKey = forge.pki.publicKeyFromPem(this.keyPair.publicKey);
 
-    // Используем Node.js crypto для создания CSR
-    const csr = crypto.createSign('RSA-SHA256');
+      // Создаем CSR с помощью node-forge
+      const csr = forge.pki.createCertificationRequest();
+      csr.publicKey = publicKey;
 
-    // Создаем простой CSR в формате, который понимает OpenSSL
-    const csrContent = this.createCSRContent(deviceId, subject);
+      // Устанавливаем subject
+      csr.setSubject([
+        {
+          name: 'commonName',
+          value: deviceId,
+        },
+        {
+          name: 'organizationName',
+          value: organizationName,
+        },
+        {
+          name: 'countryName',
+          value: countryCode,
+        },
+      ]);
 
-    const signature = csr
-      .update(csrContent)
-      .sign(this.keyPair.privateKey, 'base64');
+      // Подписываем CSR приватным ключом
+      csr.sign(privateKey, forge.md.sha256.create());
 
-    // Формируем PEM формат CSR
-    const csrPem = this.formatCSRToPEM(csrContent, signature);
+      // Конвертируем в PEM формат
+      const csrPem = forge.pki.certificationRequestToPem(csr);
 
-    const csrData: CsrData = {
-      csr: csrPem,
-      publicKey: this.keyPair.publicKey,
-      deviceId,
-    };
+      const csrData: CsrData = {
+        csr: csrPem,
+        publicKey: this.keyPair.publicKey,
+        deviceId,
+      };
 
-    this.logger.log('CSR успешно создан');
-    return csrData;
+      this.logger.log('CSR успешно создан');
+      return csrData;
+    } catch (error) {
+      this.logger.error('Ошибка создания CSR:', error);
+      throw new Error(
+        `Не удалось создать CSR: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    }
   }
 
   /**
@@ -172,36 +192,5 @@ export class CryptoChipService {
       keyType: this.keyPair?.keyType,
       keySize: this.keyPair?.keySize,
     };
-  }
-
-  /**
-   * Создание содержимого CSR
-   */
-  private createCSRContent(deviceId: string, subject: string[][]): string {
-    // Упрощенная версия CSR содержимого
-    const subjectString = subject
-      .map(([key, value]) => `${key}=${value}`)
-      .join(', ');
-
-    return `-----BEGIN CERTIFICATE REQUEST-----
-Subject: ${subjectString}
-Device-ID: ${deviceId}
-Public-Key: ${this.keyPair?.publicKey.replace(/\n/g, '\\n') || ''}
------END CERTIFICATE REQUEST-----`;
-  }
-
-  /**
-   * Форматирование CSR в PEM формат
-   */
-  private formatCSRToPEM(content: string, signature: string): string {
-    const base64Content = Buffer.from(content).toString('base64');
-    const base64Signature = signature;
-
-    // Простая имитация PEM формата CSR
-    return `-----BEGIN CERTIFICATE REQUEST-----
-${base64Content}
------SIGNATURE-----
-${base64Signature}
------END CERTIFICATE REQUEST-----`;
   }
 }

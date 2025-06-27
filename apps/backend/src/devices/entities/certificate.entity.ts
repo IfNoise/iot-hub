@@ -25,6 +25,18 @@ export class Certificate {
   @Column()
   deviceId!: string;
 
+  @Column({ default: 'active' })
+  status!: 'active' | 'revoked' | 'expired';
+
+  @Column({ type: 'timestamp' })
+  validFrom!: Date;
+
+  @Column({ type: 'timestamp' })
+  validTo!: Date;
+
+  @Column({ nullable: true })
+  serialNumber?: string;
+
   @OneToOne(
     () => require('./device.entity').Device,
     (device: Device) => device.certificate

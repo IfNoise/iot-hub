@@ -23,6 +23,25 @@ export interface MqttRpcClientOptions extends MqttConnectionOptions {
   username?: string;
   /** Полезная нагрузка для Last Will сообщения */
   willPayload?: string;
+  /** Использовать TLS/mTLS соединение */
+  useTls?: boolean;
+  /** Порт для защищенного соединения */
+  securePort?: number;
+  /** TLS настройки */
+  tls?: {
+    /** CA сертификат */
+    ca?: string | Buffer;
+    /** Клиентский сертификат */
+    cert?: string | Buffer;
+    /** Клиентский приватный ключ */
+    key?: string | Buffer;
+    /** Passphrase для приватного ключа */
+    passphrase?: string;
+    /** Проверять сертификат сервера */
+    rejectUnauthorized?: boolean;
+    /** Имя сервера для проверки */
+    servername?: string;
+  };
 }
 
 /**
@@ -54,9 +73,33 @@ export class MqttRpcClient extends BaseMqttClient {
             retain: true,
           }
         : undefined,
-    };
+    }; // Настройка TLS/mTLS
+    if (options.useTls && options.tls) {
+      const tlsOptions: IClientOptions & { passphrase?: string } = {
+        ...mqttOptions,
+        ca: options.tls.ca,
+        cert: options.tls.cert,
+        key: options.tls.key,
+        rejectUnauthorized: options.tls.rejectUnauthorized ?? true,
+        servername: options.tls.servername,
+      };
 
-    this.client = mqtt.connect(options.brokerUrl, mqttOptions);
+      // Добавляем passphrase если он есть
+      if (options.tls.passphrase) {
+        tlsOptions.passphrase = options.tls.passphrase;
+      }
+
+      // Обновляем URL для безопасного соединения
+      const url = new URL(options.brokerUrl);
+      url.protocol = 'mqtts:';
+      if (options.securePort) {
+        url.port = options.securePort.toString();
+      }
+      this.client = mqtt.connect(url.toString(), tlsOptions);
+    } else {
+      this.client = mqtt.connect(options.brokerUrl, mqttOptions);
+    }
+
     this.attachEventListeners();
     this.attachMessageHandler();
 

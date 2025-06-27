@@ -40,8 +40,23 @@ export class CertificatesController {
           };
 
           const response = await this.certificateService.signDeviceCSR(request);
+
+          this.logger.log(
+            `Сервис вернул ответ для устройства ${params.deviceId}`
+          );
+          this.logger.log(`Response type check:`, {
+            isObject: typeof response === 'object',
+            hasClientCert: 'clientCert' in response,
+            hasCaCert: 'caCert' in response,
+            hasFingerprint: 'fingerprint' in response,
+          });
+
           const mappedResponse =
             CertificateMapper.toCertificateResponse(response);
+
+          this.logger.log(
+            `Маппер успешно преобразовал ответ для устройства ${params.deviceId}`
+          );
 
           this.logger.log(
             `CSR успешно подписан для устройства: ${params.deviceId}`
@@ -214,5 +229,81 @@ export class CertificatesController {
         };
       }
     });
+  }
+
+  @TsRestHandler(certificatesContract.validateCertificate)
+  async validateCertificate() {
+    return tsRestHandler(
+      certificatesContract.validateCertificate,
+      async ({ body }) => {
+        try {
+          this.logger.log('EMQX запрос валидации сертификата:', {
+            clientid: body.clientid,
+            username: body.username,
+            cert_common_name: body.cert_common_name,
+            cert_fingerprint: body.cert_fingerprint,
+          });
+
+          // Проверяем, предоставлен ли сертификат через mTLS
+          if (!body.cert_fingerprint || !body.cert_common_name) {
+            this.logger.warn(
+              'EMQX запрос без cert_fingerprint или cert_common_name - отклоняем'
+            );
+            return {
+              status: 200 as const,
+              body: {
+                result: 'deny' as const,
+                is_superuser: false,
+              },
+            };
+          }
+
+          // Валидируем сертификат через сервис
+          const isValid =
+            await this.certificateService.validateCertificateForMQTT(
+              body.cert_fingerprint,
+              body.cert_common_name,
+              body.clientid
+            );
+
+          if (isValid) {
+            this.logger.log(`Сертификат валиден для клиента ${body.clientid}`);
+            return {
+              status: 200 as const,
+              body: {
+                result: 'allow' as const,
+                is_superuser: false,
+                client_attrs: {
+                  device_id: body.clientid,
+                  auth_method: 'mtls',
+                },
+              },
+            };
+          } else {
+            this.logger.warn(
+              `Сертификат не валиден для клиента ${body.clientid}`
+            );
+            return {
+              status: 200 as const,
+              body: {
+                result: 'deny' as const,
+                is_superuser: false,
+              },
+            };
+          }
+        } catch (error) {
+          this.logger.error('Ошибка валидации сертификата для EMQX:', error);
+
+          // В случае ошибки отклоняем подключение
+          return {
+            status: 200 as const,
+            body: {
+              result: 'deny' as const,
+              is_superuser: false,
+            },
+          };
+        }
+      }
+    );
   }
 }

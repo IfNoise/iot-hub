@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 export const mqttConfigSchema = z.object({
-  brokerUrl: z.string().url('MQTT broker URL must be a valid URL').default('mqtt://localhost:1883'),
+  brokerUrl: z
+    .string()
+    .url('MQTT broker URL must be a valid URL')
+    .default('mqtt://localhost:1883'),
   host: z.string().min(1, 'MQTT host is required').default('localhost'),
   port: z.coerce
     .number()
@@ -41,16 +44,8 @@ export const mqttConfigSchema = z.object({
     .min(0, 'Connect timeout must be a non-negative integer')
     .default(30_000),
   rejectUnauthorized: z.coerce.boolean().default(true),
-  qos: z.coerce
-    .number()
-    .min(0)
-    .max(2)
-    .default(1)
-    .describe('MQTT QoS level'),
-  retain: z.coerce
-    .boolean()
-    .default(false)
-    .describe('MQTT retain messages'),
+  qos: z.coerce.number().min(0).max(2).default(1).describe('MQTT QoS level'),
+  retain: z.coerce.boolean().default(false).describe('MQTT retain messages'),
   maxReconnectAttempts: z.coerce
     .number()
     .default(10)
@@ -61,6 +56,10 @@ export const mqttConfigSchema = z.object({
       cert: z.string().optional(),
       key: z.string().optional(),
       passphrase: z.string().optional(),
+      rejectUnauthorized: z.coerce.boolean().default(true),
+      servername: z.string().optional(),
+      requestCert: z.coerce.boolean().default(false),
+      verifyClient: z.coerce.boolean().default(false),
     })
     .optional(),
   will: z

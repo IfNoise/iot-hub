@@ -183,6 +183,30 @@ export class CertificateService {
       `Получен запрос на подписание CSR для устройства: ${deviceId}`
     );
 
+    // Получаем MQTT конфигурацию в начале, чтобы провалиться рано если есть проблемы
+    let brokerUrl: string;
+    let mqttPort: number;
+    let mqttSecurePort: number;
+
+    try {
+      this.logger.log(`Получение конфигурации MQTT...`);
+      const mqttConfig = this.configService.getMqttConfig();
+      brokerUrl = mqttConfig?.brokerUrl || 'mqtt://localhost:1883';
+      mqttPort = mqttConfig?.port || 1883;
+      mqttSecurePort = mqttConfig?.securePort || 8883;
+      this.logger.log(
+        `MQTT конфигурация получена: ${brokerUrl}:${mqttPort}/${mqttSecurePort}`
+      );
+    } catch (error) {
+      this.logger.warn(
+        'Ошибка получения MQTT конфигурации, используем значения по умолчанию:',
+        error
+      );
+      brokerUrl = 'mqtt://localhost:1883';
+      mqttPort = 1883;
+      mqttSecurePort = 8883;
+    }
+
     // Проверяем, существует ли устройство
     const device = await this.deviceRepository.findOne({
       where: { id: deviceId },
@@ -204,17 +228,27 @@ export class CertificateService {
 
     try {
       // Валидируем и подписываем CSR с помощью постоянного CA
+      this.logger.log(`Подписание CSR для устройства ${deviceId}...`);
       const signedResult = this.signCSRWithPersistentCA(deviceId, csrPem);
 
       // Извлекаем информацию о сертификате
+      this.logger.log(`Извлечение метаданных сертификата...`);
       const cert = forge.pki.certificateFromPem(signedResult.clientCert);
+      const serialNumber = String(cert.serialNumber || '');
+      const validFrom = cert.validity.notBefore.toISOString();
+      const validTo = cert.validity.notAfter.toISOString();
 
       // Сохраняем сертификат в базу данных
+      this.logger.log(`Сохранение сертификата в базу данных...`);
       const certificate = this.certificateRepository.create({
         clientCert: signedResult.clientCert,
         caCert: signedResult.caCert,
         fingerprint: signedResult.fingerprint,
         deviceId: device.id,
+        status: 'active',
+        validFrom: new Date(validFrom),
+        validTo: new Date(validTo),
+        serialNumber: serialNumber,
       });
 
       const savedCertificate = await this.certificateRepository.save(
@@ -222,6 +256,7 @@ export class CertificateService {
       );
 
       // Обновляем информацию об устройстве
+      this.logger.log(`Обновление информации об устройстве...`);
       if (firmwareVersion) {
         device.firmwareVersion = firmwareVersion;
       }
@@ -233,22 +268,40 @@ export class CertificateService {
         `Сертификат для устройства ${deviceId} подписан и сохранен в базе данных`
       );
 
-      return {
-        deviceId,
+      // Формируем ответ с безопасными значениями
+      this.logger.log(`Формирование ответа...`);
+      const response: DeviceCertificateResponse = {
+        deviceId: deviceId,
         clientCert: signedResult.clientCert,
         caCert: signedResult.caCert,
-        brokerUrl: this.configService.getMqttBrokerHost(),
-        mqttPort: this.configService.getMqttBrokerPort(),
-        mqttSecurePort: this.configService.getMqttSecureBrokerPort(),
+        brokerUrl: brokerUrl,
+        mqttPort: mqttPort,
+        mqttSecurePort: mqttSecurePort,
         fingerprint: signedResult.fingerprint,
-        serialNumber: cert.serialNumber,
-        validFrom: cert.validity.notBefore.toISOString(),
-        validTo: cert.validity.notAfter.toISOString(),
+        serialNumber: serialNumber,
+        validFrom: validFrom,
+        validTo: validTo,
       };
+
+      this.logger.log(`Ответ сформирован успешно для устройства ${deviceId}`);
+      this.logger.log(`Response fields check:`, {
+        hasDeviceId: !!response.deviceId,
+        hasClientCert: !!response.clientCert,
+        hasCaCert: !!response.caCert,
+        hasFingerprint: !!response.fingerprint,
+        clientCertLength: response.clientCert?.length || 0,
+        caCertLength: response.caCert?.length || 0,
+      });
+
+      return response;
     } catch (error: unknown) {
       this.logger.error(
         `Ошибка подписания CSR для устройства ${deviceId}:`,
         error
+      );
+      this.logger.error(
+        `Стек ошибки:`,
+        error instanceof Error ? error.stack : 'No stack trace available'
       );
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -460,6 +513,82 @@ export class CertificateService {
         reason: 'Validation error',
         fingerprint,
       };
+    }
+  }
+
+  /**
+   * Валидирует сертификат для MQTT подключения через EMQX
+   * Проверяет отпечаток, статус сертификата и соответствие clientId
+   */
+  async validateCertificateForMQTT(
+    fingerprint: string,
+    commonName: string,
+    clientId: string
+  ): Promise<boolean> {
+    try {
+      this.logger.log(
+        `Валидация MQTT сертификата: fingerprint=${fingerprint}, CN=${commonName}, clientId=${clientId}`
+      );
+
+      // Нормализуем отпечаток (убираем двоеточия и приводим к верхнему регистру)
+      const normalizedFingerprint = fingerprint.replace(/:/g, '').toUpperCase();
+
+      // Ищем сертификат по отпечатку
+      const certificate = await this.certificateRepository.findOne({
+        where: { fingerprint: normalizedFingerprint },
+        relations: ['device'],
+      });
+
+      if (!certificate) {
+        this.logger.warn(`Сертификат с отпечатком ${fingerprint} не найден`);
+        return false;
+      }
+
+      // Проверяем, что сертификат активен
+      if (certificate.status !== 'active') {
+        this.logger.warn(
+          `Сертификат имеет неактивный статус: ${certificate.status}`
+        );
+        return false;
+      }
+
+      // Проверяем срок действия
+      const now = new Date();
+      if (certificate.validTo < now) {
+        this.logger.warn(`Сертификат истек: ${certificate.validTo}`);
+        return false;
+      }
+
+      if (certificate.validFrom > now) {
+        this.logger.warn(
+          `Сертификат еще не действителен: ${certificate.validFrom}`
+        );
+        return false;
+      }
+
+      // Проверяем соответствие clientId с deviceId
+      if (certificate.device.id !== clientId) {
+        this.logger.warn(
+          `ClientId ${clientId} не соответствует deviceId ${certificate.device.id}`
+        );
+        return false;
+      }
+
+      // Проверяем Common Name (должен соответствовать deviceId)
+      if (commonName !== certificate.device.id) {
+        this.logger.warn(
+          `Common Name ${commonName} не соответствует deviceId ${certificate.device.id}`
+        );
+        return false;
+      }
+
+      this.logger.log(
+        `Сертификат успешно валидирован для устройства ${clientId}`
+      );
+      return true;
+    } catch (error) {
+      this.logger.error('Ошибка валидации сертификата для MQTT:', error);
+      return false;
     }
   }
 
