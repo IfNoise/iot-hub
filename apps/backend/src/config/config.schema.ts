@@ -40,8 +40,12 @@ export const envConfigSchema = z.object({
   KEYCLOAK_CLIENT_ID: z.string().min(1).optional().or(z.literal('')),
   OAUTH2_PROXY_USER_HEADER: z.string().default('X-Auth-Request-User'),
   OAUTH2_PROXY_EMAIL_HEADER: z.string().default('X-Auth-Request-Email'),
-  OAUTH2_PROXY_PREFERRED_USERNAME_HEADER: z.string().default('X-Auth-Request-Preferred-Username'),
-  OAUTH2_PROXY_ACCESS_TOKEN_HEADER: z.string().default('X-Auth-Request-Access-Token'),
+  OAUTH2_PROXY_PREFERRED_USERNAME_HEADER: z
+    .string()
+    .default('X-Auth-Request-Preferred-Username'),
+  OAUTH2_PROXY_ACCESS_TOKEN_HEADER: z
+    .string()
+    .default('X-Auth-Request-Access-Token'),
 
   // Development User
   DEV_USER_ID: z.string().default('dev-user-id'),
@@ -75,6 +79,12 @@ export const envConfigSchema = z.object({
   LOG_ENABLE_REQUEST_LOGGING: z.coerce.boolean().default(true),
   ENABLE_FILE_LOGGING_IN_DEV: z.coerce.boolean().default(false),
 
+  // Loki Logging Configuration
+  LOKI_URL: z.string().url().optional(),
+  LOKI_USERNAME: z.string().optional(),
+  LOKI_PASSWORD: z.string().optional(),
+  LOKI_TIMEOUT: z.coerce.number().default(30000),
+
   // MQTT
   MQTT_HOST: z.string().default('localhost'),
   MQTT_PORT: z.coerce.number().default(1883),
@@ -105,8 +115,14 @@ export const envConfigSchema = z.object({
   OTEL_ENABLE_TRACING: z.coerce.boolean().default(true),
   OTEL_ENABLE_METRICS: z.coerce.boolean().default(true),
   OTEL_ENABLE_LOGGING: z.coerce.boolean().default(true),
-  OTEL_METRICS_EXPORT_INTERVAL: z.coerce.number().min(1000).max(300000).default(10000),
-  OTEL_TRACES_SAMPLER: z.enum(['always_on', 'always_off', 'traceidratio', 'parentbased_always_on']).default('parentbased_always_on'),
+  OTEL_METRICS_EXPORT_INTERVAL: z.coerce
+    .number()
+    .min(1000)
+    .max(300000)
+    .default(10000),
+  OTEL_TRACES_SAMPLER: z
+    .enum(['always_on', 'always_off', 'traceidratio', 'parentbased_always_on'])
+    .default('parentbased_always_on'),
   OTEL_TRACES_SAMPLER_RATIO: z.coerce.number().min(0).max(1).default(1.0),
   OTEL_DEBUG: z.coerce.boolean().default(false),
   OTEL_EXPORTER_TIMEOUT: z.coerce.number().min(1000).max(60000).default(5000),
@@ -127,7 +143,10 @@ export const envConfigSchema = z.object({
   MAX_ACTIVE_SESSIONS_PER_USER: z.coerce.number().min(1).default(5),
   ENABLE_USER_REGISTRATION: z.coerce.boolean().default(true),
   REQUIRE_EMAIL_VERIFICATION: z.coerce.boolean().default(true),
-  USER_PROFILE_IMAGE_MAX_SIZE_BYTES: z.coerce.number().min(1024).default(2097152),
+  USER_PROFILE_IMAGE_MAX_SIZE_BYTES: z.coerce
+    .number()
+    .min(1024)
+    .default(2097152),
   PASSWORD_MIN_LENGTH: z.coerce.number().min(6).default(8),
   PASSWORD_REQUIRE_SPECIAL_CHARS: z.coerce.boolean().default(true),
 });

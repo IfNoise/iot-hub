@@ -118,6 +118,9 @@ export class DeviceSimulatorService
     if (!config.mqtt) return;
 
     this.logger.log('Настройка MQTT подключения');
+    this.logger.debug(
+      `MQTT конфигурация: ${JSON.stringify(config.mqtt, null, 2)}`
+    );
 
     const mqttConfig: MqttDeviceConfig = {
       brokerUrl: config.mqtt.brokerUrl,
@@ -129,9 +132,16 @@ export class DeviceSimulatorService
       securePort: config.mqtt.securePort,
     };
 
+    this.logger.debug(
+      `Исходная mqttConfig: ${JSON.stringify(mqttConfig, null, 2)}`
+    );
+
     // Если включен mTLS, получаем или генерируем сертификаты
     if (config.mqtt.useTls && config.mqtt.autoObtainCertificates) {
       this.logger.log('mTLS включен, получение сертификатов...');
+      this.logger.debug(
+        `useTls: ${config.mqtt.useTls}, autoObtainCertificates: ${config.mqtt.autoObtainCertificates}`
+      );
 
       try {
         // Проверяем существующие сертификаты
@@ -147,44 +157,16 @@ export class DeviceSimulatorService
             'Сертификаты не найдены, получение новых через CSR...'
           );
 
-          // Получаем новые сертификаты через CSR процесс
-          const certificateResponse =
-            await this.certificateClient.obtainCertificate(
-              {
-                deviceId: config.deviceId,
-                firmwareVersion: config.firmwareVersion,
-              },
-              config.backendUrl
-            );
+          // Получаем новые сертификаты через стандартный метод
+          await this.requestCertificate();
 
-          // Сохраняем полученные сертификаты в файлы
-          await this.mtlsConfig.saveCertificatesToFiles(
-            config.deviceId,
-            {
-              caCert: certificateResponse.caCert,
-              clientCert: certificateResponse.clientCert,
-              clientKey: '', // Ключ остается в криптографическом чипе
-            },
-            certsDir
-          );
-
-          // Создаем mTLS конфигурацию
-          mtlsConfig = this.mtlsConfig.createMtlsConfig(
-            certificateResponse.caCert,
-            certificateResponse.clientCert,
-            '', // Ключ будет получен из чипа
-            {
-              rejectUnauthorized: true,
-              servername: 'localhost', // или имя сервера из brokerUrl
-            }
-          );
-
-          // Обновляем URL брокера для безопасного подключения
-          mqttConfig.brokerUrl = `mqtts://${certificateResponse.brokerUrl}:${certificateResponse.mqttSecurePort}`;
+          // Перезагружаем сертификаты после получения
+          mtlsConfig = this.mtlsConfig.loadCertificatesFromFiles(certPaths);
         }
 
         // Добавляем TLS конфигурацию к MQTT настройкам
         if (mtlsConfig && this.mtlsConfig.validateMtlsConfig(mtlsConfig)) {
+          this.logger.log('Добавление TLS конфигурации к MQTT настройкам...');
           mqttConfig.tls = {
             ca: mtlsConfig.caCert,
             cert: mtlsConfig.clientCert,
@@ -193,19 +175,81 @@ export class DeviceSimulatorService
             servername: mtlsConfig.servername,
           };
 
+          // Обновляем URL брокера для безопасного подключения
+          // Извлекаем hostname из существующего URL
+          let hostname = 'localhost';
+          try {
+            const url = new URL(config.mqtt.brokerUrl);
+            hostname = url.hostname;
+          } catch {
+            // Если URL не валидный, используем как hostname напрямую
+            hostname = config.mqtt.brokerUrl
+              .replace(/^(mqtt|mqtts):\/\//, '')
+              .split(':')[0];
+          }
+
+          const newBrokerUrl = `mqtts://${hostname}:${
+            config.mqtt.securePort || 8883
+          }`;
+          this.logger.log(
+            `Обновление brokerUrl: ${mqttConfig.brokerUrl} -> ${newBrokerUrl}`
+          );
+          mqttConfig.brokerUrl = newBrokerUrl;
+
           this.logger.log('mTLS конфигурация успешно настроена');
+          this.logger.debug(
+            `TLS настройки добавлены к mqttConfig. rejectUnauthorized: ${mtlsConfig.rejectUnauthorized}, servername: ${mtlsConfig.servername}`
+          );
         } else {
           this.logger.error(
             'Неверная mTLS конфигурация, откат к незащищенному соединению'
           );
+          this.logger.warn(
+            `mtlsConfig: ${mtlsConfig}, validation: ${
+              mtlsConfig
+                ? this.mtlsConfig.validateMtlsConfig(mtlsConfig)
+                : 'N/A'
+            }`
+          );
           mqttConfig.useTls = false;
+          // Возвращаем URL брокера к незащищенному варианту
+          const regularUrl = config.mqtt.brokerUrl
+            .replace('mqtts://', 'mqtt://')
+            .replace(':8883', ':1883');
+          mqttConfig.brokerUrl = regularUrl;
         }
       } catch (error) {
         this.logger.error('Ошибка получения сертификатов mTLS:', error);
         this.logger.warn('Продолжение без mTLS...');
         mqttConfig.useTls = false;
+        // Возвращаем URL брокера к незащищенному варианту
+        const regularUrl = config.mqtt.brokerUrl
+          .replace('mqtts://', 'mqtt://')
+          .replace(':8883', ':1883');
+        mqttConfig.brokerUrl = regularUrl;
       }
     }
+
+    this.logger.log('Финальная настройка MQTT...');
+    this.logger.debug(
+      `Финальная mqttConfig: ${JSON.stringify(
+        {
+          ...mqttConfig,
+          tls: mqttConfig.tls
+            ? {
+                ...mqttConfig.tls,
+                ca: `[CA cert ${mqttConfig.tls.ca?.length || 0} символов]`,
+                cert: `[Client cert ${
+                  mqttConfig.tls.cert?.length || 0
+                } символов]`,
+                key: `[Key ${mqttConfig.tls.key?.length || 0} символов]`,
+              }
+            : undefined,
+        },
+        null,
+        2
+      )}`
+    );
 
     try {
       await this.mqttDevice.configure(mqttConfig);
@@ -241,7 +285,7 @@ export class DeviceSimulatorService
       );
 
       // Отправляем реальный HTTP-запрос на backend
-      const url = `${this.config.backendUrl}/manufacturing/generate-device-qr`;
+      const url = `${this.config.backendUrl}/api/manufacturing/generate-device-qr`;
       const response = await firstValueFrom(
         this.httpService.post(url, registrationData)
       );
@@ -251,6 +295,12 @@ export class DeviceSimulatorService
 
       // Запускаем процесс получения сертификата
       await this.requestCertificate();
+
+      // Переконфигурируем MQTT с полученными сертификатами
+      if (this.config.mqtt?.useTls) {
+        this.logger.log('Переконфигурация MQTT с полученными сертификатами...');
+        await this.configureMqtt(this.config);
+      }
     } catch (error) {
       this.logger.error('Ошибка регистрации устройства:', error);
       this.deviceState.status = 'error';
@@ -277,30 +327,33 @@ export class DeviceSimulatorService
     try {
       this.logger.log('Запрос сертификата для устройства');
 
-      // Генерируем CSR с помощью криптографического чипа
-      const csrData = await this.cryptoChip.generateCSR(this.config.deviceId);
+      if (!this.config) {
+        throw new Error('Устройство не сконфигурировано');
+      }
 
-      // Подготавливаем данные для запроса согласно SignCSRSchema
-      const csrRequest = {
-        csrPem: csrData.csr,
-        firmwareVersion: this.config.firmwareVersion,
-      };
-
-      this.logger.log('Отправка запроса на подпись CSR...', {
-        deviceId: this.config.deviceId,
-      });
-
-      // Отправляем реальный HTTP-запрос на backend
-      const url = `${this.config.backendUrl}/devices/certificates/${this.config.deviceId}/sign-csr`;
-      const response = await firstValueFrom(
-        this.httpService.post(url, csrRequest)
-      );
+      // Используем certificateClient для получения сертификата
+      const certificateResponse =
+        await this.certificateClient.obtainCertificate(
+          {
+            deviceId: this.config.deviceId,
+            firmwareVersion: this.config.firmwareVersion,
+          },
+          this.config.backendUrl
+        );
 
       this.logger.log('Сертификат получен:', {
-        fingerprint: response.data.fingerprint,
-        hasCA: !!response.data.caCertificate,
+        fingerprint: certificateResponse.fingerprint,
+        hasCA: !!certificateResponse.caCert,
       });
-      this.deviceState.certificateFingerprint = response.data.fingerprint;
+
+      // Сохраняем сертификаты
+      await this.saveCertificates(
+        certificateResponse.clientCert,
+        certificateResponse.caCert,
+        certificateResponse.fingerprint
+      );
+
+      this.deviceState.certificateFingerprint = certificateResponse.fingerprint;
     } catch (error) {
       this.logger.error('Ошибка получения сертификата:', error);
       this.deviceState.status = 'error';
@@ -406,56 +459,14 @@ export class DeviceSimulatorService
    * Симуляция работы сенсоров
    */
   private startSensorSimulation(): void {
-    this.logger.log('Запуск симуляции сенсоров');
+    // Временно отключено для тестирования
+    this.logger.log('Симуляция сенсоров отключена для тестирования');
 
-    // Обновляем показания каждые 5 секунд
-    this.sensorUpdateInterval = setInterval(() => {
-      this.updateSensorData();
-    }, 5000);
-  }
-
-  /**
-   * Обновление данных сенсоров
-   */
-  private updateSensorData(): void {
-    // Симулируем реалистичные изменения показаний
-    this.currentSensorData = {
-      temperature: this.addRandomVariation(
-        this.currentSensorData.temperature,
-        0.5,
-        15,
-        35
-      ),
-      humidity: this.addRandomVariation(
-        this.currentSensorData.humidity,
-        2,
-        30,
-        80
-      ),
-      pressure: this.addRandomVariation(
-        this.currentSensorData.pressure,
-        1,
-        1000,
-        1030
-      ),
-      timestamp: new Date(),
-    };
-
-    this.logger.debug('Обновлены показания сенсоров:', this.currentSensorData);
-  }
-
-  /**
-   * Добавление случайной вариации к значению
-   */
-  private addRandomVariation(
-    currentValue: number,
-    maxChange: number,
-    minValue: number,
-    maxValue: number
-  ): number {
-    const change = (Math.random() - 0.5) * 2 * maxChange;
-    const newValue = currentValue + change;
-    return Math.max(minValue, Math.min(maxValue, newValue));
+    // this.logger.log('Запуск симуляции сенсоров');
+    // // Обновляем показания каждые 5 секунд
+    // this.sensorUpdateInterval = setInterval(() => {
+    //   this.updateSensorData();
+    // }, 5000);
   }
 
   /**
@@ -478,5 +489,63 @@ export class DeviceSimulatorService
    */
   getMqttStatus() {
     return this.mqttDevice.getConnectionStatus();
+  }
+
+  /**
+   * Переподключение к MQTT брокеру
+   */
+  async reconnectMqtt(): Promise<void> {
+    try {
+      this.logger.log('Переподключение к MQTT брокеру...');
+      await this.mqttDevice.reconnect();
+      this.logger.log('Переподключение к MQTT успешно выполнено');
+    } catch (error) {
+      this.logger.error('Ошибка переподключения к MQTT:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Сохранение сертификатов
+   */
+  async saveCertificates(
+    certificate: string,
+    caCertificate: string,
+    fingerprint: string
+  ): Promise<void> {
+    try {
+      this.logger.log('Сохранение полученных сертификатов...');
+
+      if (!this.config) {
+        throw new Error('Устройство не сконфигурировано');
+      }
+
+      const certsDir = this.config.mqtt?.certsDir || './certs/devices';
+
+      // Получаем приватный ключ из криптографического чипа для сохранения
+      const privateKey = this.cryptoChip.getPrivateKey();
+
+      // Создаем объект сертификатов для сохранения
+      const certificatesData = {
+        caCert: caCertificate,
+        clientCert: certificate,
+        clientKey: privateKey, // Приватный ключ из криптографического чипа
+      };
+
+      // Сохраняем сертификаты в файлы
+      await this.mtlsConfig.saveCertificatesToFiles(
+        this.config.deviceId,
+        certificatesData,
+        certsDir
+      );
+
+      // Обновляем состояние устройства
+      this.deviceState.certificateFingerprint = fingerprint;
+
+      this.logger.log('Сертификаты успешно сохранены');
+    } catch (error) {
+      this.logger.error('Ошибка сохранения сертификатов:', error);
+      throw error;
+    }
   }
 }

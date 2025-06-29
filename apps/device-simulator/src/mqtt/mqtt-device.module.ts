@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { MqttDeviceService } from './mqtt-device.service';
 import { MtlsConfigService } from './mtls-config.service';
 import { CertificateClientService } from './certificate-client.service';
@@ -15,7 +16,7 @@ import { CryptoChipModule } from '../crypto-chip/crypto-chip.module';
  * - Получения сертификатов через CSR процесс
  */
 @Module({
-  imports: [CryptoChipModule],
+  imports: [CryptoChipModule, HttpModule],
   providers: [MqttDeviceService, MtlsConfigService, CertificateClientService],
   exports: [MqttDeviceService, MtlsConfigService, CertificateClientService],
 })

@@ -1,12 +1,62 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { HttpService } from '@nestjs/axios';
+import { of } from 'rxjs';
 import { DeviceSimulatorService } from './device-simulator.service';
 import { CryptoChipService } from '../crypto-chip/crypto-chip.service';
+import { MqttDeviceService } from '../mqtt/mqtt-device.service';
+import { CertificateClientService } from '../mqtt/certificate-client.service';
+import { MtlsConfigService } from '../mqtt/mtls-config.service';
 
 // Mock HttpService
 const mockHttpService = {
-  post: jest.fn(),
-  put: jest.fn(),
-  get: jest.fn(),
+  post: jest.fn().mockReturnValue(
+    of({
+      data: { success: true, deviceId: 'test-device-001' },
+    })
+  ),
+  put: jest.fn().mockReturnValue(of({ data: { success: true } })),
+  get: jest.fn().mockReturnValue(of({ data: { success: true } })),
+};
+
+// Mock MqttDeviceService
+const mockMqttDeviceService = {
+  connectWithSsl: jest.fn().mockResolvedValue(true),
+  disconnect: jest.fn().mockResolvedValue(true),
+  subscribe: jest.fn().mockResolvedValue(true),
+  publish: jest.fn().mockResolvedValue(true),
+  isConnected: jest.fn().mockReturnValue(false),
+};
+
+// Mock CertificateClientService
+const mockCertificateClientService = {
+  obtainCertificate: jest.fn().mockResolvedValue({
+    certificate: 'mock-certificate',
+    privateKey: 'mock-private-key',
+    caCertificate: 'mock-ca-certificate',
+  }),
+  generateCsr: jest.fn().mockResolvedValue('mock-csr'),
+};
+
+// Mock MtlsConfigService
+const mockMtlsConfigService = {
+  generateMtlsConfig: jest.fn().mockReturnValue({
+    cert: 'mock-cert-path',
+    key: 'mock-key-path',
+    ca: 'mock-ca-path',
+  }),
+  validateCertificates: jest.fn().mockReturnValue(true),
+  getStandardCertPaths: jest.fn().mockReturnValue({
+    cert: '/path/to/cert.pem',
+    key: '/path/to/key.pem',
+    ca: '/path/to/ca.pem',
+  }),
+  loadCertificatesFromFiles: jest.fn().mockReturnValue({
+    cert: 'cert-content',
+    key: 'key-content',
+    ca: 'ca-content',
+  }),
+  validateMtlsConfig: jest.fn().mockReturnValue(true),
+  saveCertificatesToFiles: jest.fn().mockResolvedValue(true),
 };
 
 describe('DeviceSimulatorService', () => {
@@ -18,8 +68,20 @@ describe('DeviceSimulatorService', () => {
         DeviceSimulatorService,
         CryptoChipService,
         {
-          provide: 'HttpService',
+          provide: HttpService,
           useValue: mockHttpService,
+        },
+        {
+          provide: MqttDeviceService,
+          useValue: mockMqttDeviceService,
+        },
+        {
+          provide: CertificateClientService,
+          useValue: mockCertificateClientService,
+        },
+        {
+          provide: MtlsConfigService,
+          useValue: mockMtlsConfigService,
         },
       ],
     }).compile();
@@ -29,6 +91,46 @@ describe('DeviceSimulatorService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    // Дополнительный сброс для моков с возвращением дефолтных значений
+    mockHttpService.post.mockReturnValue(
+      of({
+        data: { success: true, deviceId: 'test-device-001' },
+      })
+    );
+    mockHttpService.put.mockReturnValue(of({ data: { success: true } }));
+    mockHttpService.get.mockReturnValue(of({ data: { success: true } }));
+
+    mockMqttDeviceService.connectWithSsl.mockResolvedValue(true);
+    mockMqttDeviceService.disconnect.mockResolvedValue(true);
+    mockMqttDeviceService.subscribe.mockResolvedValue(true);
+    mockMqttDeviceService.publish.mockResolvedValue(true);
+    mockMqttDeviceService.isConnected.mockReturnValue(false);
+
+    mockCertificateClientService.obtainCertificate.mockResolvedValue({
+      certificate: 'mock-certificate',
+      privateKey: 'mock-private-key',
+      caCertificate: 'mock-ca-certificate',
+    });
+    mockCertificateClientService.generateCsr.mockResolvedValue('mock-csr');
+
+    mockMtlsConfigService.generateMtlsConfig.mockReturnValue({
+      cert: 'mock-cert-path',
+      key: 'mock-key-path',
+      ca: 'mock-ca-path',
+    });
+    mockMtlsConfigService.validateCertificates.mockReturnValue(true);
+    mockMtlsConfigService.getStandardCertPaths.mockReturnValue({
+      cert: '/path/to/cert.pem',
+      key: '/path/to/key.pem',
+      ca: '/path/to/ca.pem',
+    });
+    mockMtlsConfigService.loadCertificatesFromFiles.mockReturnValue({
+      cert: 'cert-content',
+      key: 'key-content',
+      ca: 'ca-content',
+    });
+    mockMtlsConfigService.validateMtlsConfig.mockReturnValue(true);
+    mockMtlsConfigService.saveCertificatesToFiles.mockResolvedValue(true);
   });
 
   it('should be defined', () => {

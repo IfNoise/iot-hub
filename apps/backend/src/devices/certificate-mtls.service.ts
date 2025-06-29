@@ -59,7 +59,8 @@ export class CertificateService {
     @InjectRepository(Device)
     private readonly deviceRepository: Repository<Device>
   ) {
-    this.certsDir = path.join(process.cwd(), 'certs');
+    // Исправляем путь к сертификатам - они лежат в apps/backend/certs
+    this.certsDir = path.join(__dirname, '../../certs');
     this.ensureCertsDirectory();
     this.initializePersistentCA();
   }
@@ -183,6 +184,18 @@ export class CertificateService {
       `Получен запрос на подписание CSR для устройства: ${deviceId}`
     );
 
+    // Логируем полученные данные для отладки
+    this.logger.log(`Подробная информация о запросе:`, {
+      deviceId,
+      firmwareVersion,
+      csrPemLength: csrPem?.length || 0,
+      csrPemType: typeof csrPem,
+      csrPemDefined: !!csrPem,
+      requestKeys: Object.keys(request),
+      csrPemStart: csrPem?.substring(0, 50) || 'undefined',
+      csrPemEnd: csrPem?.substring(csrPem.length - 50) || 'undefined',
+    });
+
     // Получаем MQTT конфигурацию в начале, чтобы провалиться рано если есть проблемы
     let brokerUrl: string;
     let mqttPort: number;
@@ -303,6 +316,16 @@ export class CertificateService {
         `Стек ошибки:`,
         error instanceof Error ? error.stack : 'No stack trace available'
       );
+      this.logger.error(`Подробная информация об ошибке:`, {
+        errorName: error instanceof Error ? error.name : 'Unknown',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name,
+        errorStringified: JSON.stringify(
+          error,
+          Object.getOwnPropertyNames(error)
+        ),
+      });
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Не удалось подписать CSR: ${errorMessage}`);
@@ -319,8 +342,67 @@ export class CertificateService {
 
     const pki = forge.pki;
 
-    // Парсим CSR
-    const csr = pki.certificationRequestFromPem(csrPem);
+    // Детальное логирование CSR для отладки
+    this.logger.log(`Отладка CSR для устройства ${deviceId}:`);
+    this.logger.log(`CSR длина: ${csrPem?.length || 'undefined'}`);
+    this.logger.log(`CSR тип: ${typeof csrPem}`);
+    this.logger.log(
+      `CSR первые 100 символов: ${csrPem?.substring(0, 100) || 'undefined'}`
+    );
+    this.logger.log(
+      `CSR последние 100 символов: ${
+        csrPem?.substring(csrPem.length - 100) || 'undefined'
+      }`
+    );
+
+    // Проверяем и очищаем CSR
+    if (!csrPem || typeof csrPem !== 'string') {
+      throw new Error('CSR is empty or not a string');
+    }
+
+    // Удаляем лишние пробелы и переносы строк
+    const cleanCsrPem = csrPem.trim();
+
+    // Проверяем формат PEM
+    if (!cleanCsrPem.startsWith('-----BEGIN CERTIFICATE REQUEST-----')) {
+      this.logger.error(
+        `Неверный формат CSR. Начинается с: ${cleanCsrPem.substring(0, 50)}`
+      );
+      throw new Error('CSR does not start with proper PEM header');
+    }
+
+    if (!cleanCsrPem.endsWith('-----END CERTIFICATE REQUEST-----')) {
+      this.logger.error(
+        `Неверный формат CSR. Заканчивается на: ${cleanCsrPem.substring(
+          cleanCsrPem.length - 50
+        )}`
+      );
+      throw new Error('CSR does not end with proper PEM footer');
+    }
+
+    // Парсим CSR с обработкой ошибок
+    let csr;
+    try {
+      this.logger.log(`Попытка парсинга CSR для устройства ${deviceId}...`);
+      csr = pki.certificationRequestFromPem(cleanCsrPem);
+      this.logger.log(`CSR успешно распарсен для устройства ${deviceId}`);
+    } catch (parseError) {
+      this.logger.error(
+        `Ошибка парсинга CSR для устройства ${deviceId}:`,
+        parseError
+      );
+      this.logger.error(`CSR содержимое для анализа:`, {
+        length: cleanCsrPem.length,
+        lines: cleanCsrPem.split('\n').length,
+        firstLine: cleanCsrPem.split('\n')[0],
+        lastLine: cleanCsrPem.split('\n')[cleanCsrPem.split('\n').length - 1],
+        hasCarriageReturns: cleanCsrPem.includes('\r'),
+        encoding: Buffer.from(cleanCsrPem, 'utf8')
+          .toString('hex')
+          .substring(0, 100),
+      });
+      throw new Error(`Failed to parse CSR: ${parseError.message}`);
+    }
     if (!csr.verify()) {
       throw new Error('CSR verification failed');
     }

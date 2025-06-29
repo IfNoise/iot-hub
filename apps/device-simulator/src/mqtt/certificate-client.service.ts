@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { CryptoChipService } from '../crypto-chip/crypto-chip.service';
+import { CertificateResponseSchema } from '@iot-hub/devices';
+import { z } from 'zod';
+
+// Типы из contracts
+type BackendCertificateResponse = z.infer<typeof CertificateResponseSchema>;
 
 export interface DeviceCertificateRequest {
   deviceId: string;
@@ -27,7 +34,10 @@ export interface DeviceCertificateResponse {
 export class CertificateClientService {
   private readonly logger = new Logger(CertificateClientService.name);
 
-  constructor(private readonly cryptoChipService: CryptoChipService) {}
+  constructor(
+    private readonly cryptoChipService: CryptoChipService,
+    private readonly httpService: HttpService
+  ) {}
 
   /**
    * Получает сертификат для устройства через CSR процесс
@@ -43,30 +53,28 @@ export class CertificateClientService {
     );
 
     try {
-      // 1. Генерируем ключевую пару на криптографическом чипе
-      this.logger.log('Генерация ключевой пары на криптографическом чипе...');
-      const keyPair = await this.cryptoChipService.generateKeyPair();
+      // Проверяем, что ключевая пара уже сгенерирована
+      const chipInfo = this.cryptoChipService.getChipInfo();
+      if (!chipInfo.hasKeyPair) {
+        throw new Error(
+          'Криптографический чип не инициализирован. Вызовите initializeChip() сначала.'
+        );
+      }
 
-      // 2. Создаем CSR
+      // Создаем CSR с существующей ключевой парой
       this.logger.log('Создание CSR...');
-      const csr = await this.cryptoChipService.createCSR(deviceId, keyPair);
+      const csrData = await this.cryptoChipService.generateCSR(deviceId);
 
-      // 3. Отправляем CSR на backend для подписания
+      // Отправляем CSR на backend для подписания
       this.logger.log('Отправка CSR на backend для подписания...');
       const signedCertificate = await this.signCSRWithBackend(
         deviceId,
-        csr,
+        csrData.csr, // Передаем строку CSR, а не весь объект
         backendUrl,
         {
           firmwareVersion,
           hardwareVersion,
         }
-      );
-
-      // 4. Сохраняем приватный ключ в чипе (он уже там, но можем обновить метаданные)
-      await this.cryptoChipService.storePrivateKey(
-        deviceId,
-        keyPair.privateKey
       );
 
       this.logger.log(`Сертификат успешно получен для устройства: ${deviceId}`);
@@ -104,28 +112,47 @@ export class CertificateClientService {
     this.logger.log(`Отправка запроса на: ${url}`);
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await firstValueFrom(
+        this.httpService.post(url, requestBody, {
+          httpsAgent: new (require('https').Agent)({
+            rejectUnauthorized: false, // Для тестовой среды игнорируем самоподписанные сертификаты
+          }),
+        })
+      );
 
-      if (!response.ok) {
-        const errorText = await response.text();
+      const result = response.data as BackendCertificateResponse;
+
+      // Преобразуем ответ backend в ожидаемый формат
+      const deviceCertificateResponse: DeviceCertificateResponse = {
+        deviceId,
+        clientCert: result.certificate,
+        caCert: result.caCertificate,
+        fingerprint: result.fingerprint,
+        // Для mTLS возвращаем правильный хост без порта
+        brokerUrl: backendUrl.replace('/api/', '').replace(':3000', ''),
+        mqttPort: 1883,
+        mqttSecurePort: 8883,
+        serialNumber: '', // Не входит в базовую схему ответа
+        validFrom: new Date().toISOString(),
+        validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      return deviceCertificateResponse;
+    } catch (error) {
+      this.logger.error('Ошибка при отправке CSR на backend:', error);
+
+      // Обрабатываем HTTP ошибки
+      if (error && typeof error === 'object' && 'response' in error) {
+        const httpError = error as {
+          response?: { status?: number; data?: unknown };
+        };
+        const status = httpError.response?.status;
+        const data = httpError.response?.data;
         throw new Error(
-          `Backend вернул ошибку ${response.status}: ${errorText}`
+          `Backend вернул ошибку ${status}: ${JSON.stringify(data)}`
         );
       }
 
-      const result = await response.json();
-
-      this.logger.log('CSR успешно подписан backend-ом');
-
-      return result as DeviceCertificateResponse;
-    } catch (error) {
-      this.logger.error('Ошибка при отправке CSR на backend:', error);
       throw new Error(
         `Не удалось подписать CSR: ${
           error instanceof Error ? error.message : 'Unknown error'
@@ -161,7 +188,7 @@ export class CertificateClientService {
         return false;
       }
 
-      const certificateInfo = await response.json();
+      const certificateInfo = (await response.json()) as { validTo: string };
 
       // Проверяем срок действия
       const validTo = new Date(certificateInfo.validTo);
@@ -201,7 +228,7 @@ export class CertificateClientService {
     backendUrl = 'http://localhost:3000'
   ): Promise<string> {
     try {
-      const url = `${backendUrl}/api/devices/certificates/ca`;
+      const url = `${backendUrl}/api/devices/certificates/ca-certificate`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -216,7 +243,7 @@ export class CertificateClientService {
         );
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as { caCert: string };
 
       this.logger.log('CA сертификат успешно получен от backend');
 

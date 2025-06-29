@@ -13,6 +13,7 @@ import { AutoUserSyncMiddleware } from '../common/middleware/auto-user-sync.midd
 import { ConfigModule } from '../config/config.module';
 import { CommonServicesModule } from '../common/services/common-services.module';
 import { MqttModule } from '../mqtt/mqtt.module';
+import { CommonConfigService } from '../common/config/common-config.service';
 
 @Module({
   imports: [
@@ -25,19 +26,85 @@ import { MqttModule } from '../mqtt/mqtt.module';
     ConfigModule,
     CommonServicesModule,
     MqttModule,
-    // Упрощенное логирование
-    LoggerModule.forRoot({
-      pinoHttp: {
-        level: 'info',
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            singleLine: true,
+    // Улучшенное логирование с множественными транспортами через CommonConfigService
+    LoggerModule.forRootAsync({
+      inject: [CommonConfigService],
+      useFactory: (commonConfig: CommonConfigService) => {
+        const loggingConfig = commonConfig.getLoggingConfig();
+        const lokiConfig = commonConfig.getLokiConfig();
+
+        // Формируем targets для множественного логирования
+        interface PinoTarget {
+          target: string;
+          level?: string;
+          options?: Record<string, unknown>;
+        }
+
+        const targets: PinoTarget[] = [
+          // 1. Консольный вывод с красивым форматированием
+          {
+            target: 'pino-pretty',
+            level: 'debug',
+            options: {
+              colorize: true,
+              singleLine: true,
+              translateTime: 'yyyy-mm-dd HH:MM:ss',
+              ignore: 'pid,hostname',
+            },
           },
-        },
-        autoLogging: true,
-        redact: ['req.headers.authorization'],
+        ];
+
+        // 2. Файловое логирование (если включено)
+        if (
+          loggingConfig.toFile &&
+          (commonConfig.isProduction() || loggingConfig.enableFileLoggingInDev)
+        ) {
+          targets.push({
+            target: 'pino-roll',
+            level: loggingConfig.level,
+            options: {
+              file: loggingConfig.filePath,
+              frequency: 'daily',
+              size: loggingConfig.fileMaxSize,
+              mkdir: true,
+            },
+          });
+        }
+
+        // 3. Loki логирование (если включено и настроено)
+        if (lokiConfig.enabled && lokiConfig.url) {
+          targets.push({
+            target: 'pino-loki',
+            level: loggingConfig.level,
+            options: {
+              host: lokiConfig.url,
+              labels: lokiConfig.labels,
+              timeout: lokiConfig.timeout,
+              silenceErrors: lokiConfig.silenceErrors,
+            },
+          });
+        }
+
+        return {
+          pinoHttp: {
+            level: loggingConfig.level,
+            transport: { targets },
+            autoLogging: loggingConfig.enableRequestLogging,
+            redact: ['req.headers.authorization', 'req.headers.cookie'],
+            serializers: {
+              req: (req) => ({
+                method: req.method,
+                url: req.url,
+                userAgent: req.headers['user-agent'],
+                ip: req.ip || req.connection?.remoteAddress,
+              }),
+              res: (res) => ({
+                statusCode: res.statusCode,
+                responseTime: res.responseTime,
+              }),
+            },
+          },
+        };
       },
     }),
   ],

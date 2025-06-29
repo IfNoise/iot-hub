@@ -79,6 +79,27 @@ export class MqttDeviceService implements OnModuleInit, OnModuleDestroy {
   async configure(config: MqttDeviceConfig): Promise<void> {
     this.config = config;
     this.logger.log(`Настройка MQTT для устройства ${config.deviceId}`);
+    this.logger.debug(
+      `Полученная конфигурация MQTT: ${JSON.stringify(
+        {
+          ...config,
+          tls: config.tls
+            ? {
+                ...config.tls,
+                ca: `[CA cert ${
+                  config.tls.ca?.toString().length || 0
+                } символов]`,
+                cert: `[Client cert ${
+                  config.tls.cert?.toString().length || 0
+                } символов]`,
+                key: `[Key ${config.tls.key?.toString().length || 0} символов]`,
+              }
+            : undefined,
+        },
+        null,
+        2
+      )}`
+    );
 
     try {
       const mqttOptions = {
@@ -96,12 +117,16 @@ export class MqttDeviceService implements OnModuleInit, OnModuleDestroy {
         tls: config.tls,
       };
 
+      this.logger.log(
+        `Создание MqttRpcClient с опциями: brokerUrl=${mqttOptions.brokerUrl}, useTls=${mqttOptions.useTls}`
+      );
       this.mqttClient = new MqttRpcClient(mqttOptions);
 
       // Настраиваем обработчики событий
       this.setupEventHandlers();
 
       // Подключаемся к брокеру
+      this.logger.log('Попытка подключения к MQTT брокеру...');
       await this.mqttClient.connect();
       this.isConnected = true;
 
@@ -125,6 +150,23 @@ export class MqttDeviceService implements OnModuleInit, OnModuleDestroy {
       await this.mqttClient.disconnect();
       this.isConnected = false;
     }
+  }
+
+  /**
+   * Переподключение к MQTT брокеру
+   */
+  async reconnect(): Promise<void> {
+    this.logger.log('Переподключение к MQTT брокеру...');
+
+    if (!this.config) {
+      throw new Error('MQTT не сконфигурирован');
+    }
+
+    // Сначала отключаемся
+    await this.disconnect();
+
+    // Затем подключаемся заново
+    await this.configure(this.config);
   }
 
   /**

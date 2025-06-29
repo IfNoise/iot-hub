@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   Get,
-  Put,
   Body,
   Logger,
   HttpException,
@@ -34,6 +33,12 @@ export interface ConfigureDeviceDto {
 
 export interface BindDeviceDto {
   userId: string;
+}
+
+export interface SaveCertificatesDto {
+  certificate: string;
+  caCertificate: string;
+  fingerprint: string;
 }
 
 /**
@@ -128,21 +133,20 @@ export class DeviceSimulatorController {
   /**
    * Привязка устройства к пользователю
    */
-  @Put('bind')
-  async bindDevice(@Body() dto: BindDeviceDto) {
+  @Post('bind')
+  async bindDevice(@Body() bindData: { userId: string }) {
     try {
-      this.logger.log(`Привязка устройства к пользователю: ${dto.userId}`);
-      await this.deviceSimulator.bindToUser(dto.userId);
+      this.logger.log(`Привязка устройства к пользователю: ${bindData.userId}`);
+      await this.deviceSimulator.bindToUser(bindData.userId);
 
       return {
         success: true,
         message: 'Устройство успешно привязано к пользователю',
-        userId: dto.userId,
       };
     } catch (error) {
       this.logger.error('Ошибка привязки устройства:', error);
       throw new HttpException(
-        'Ошибка привязки устройства',
+        error instanceof Error ? error.message : 'Ошибка привязки устройства',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
@@ -265,6 +269,31 @@ export class DeviceSimulatorController {
   }
 
   /**
+   * Принудительное переподключение к MQTT брокеру
+   */
+  @Post('mqtt/reconnect')
+  async reconnectMqtt() {
+    try {
+      this.logger.log('Запрос на переподключение к MQTT брокеру');
+      await this.deviceSimulator.reconnectMqtt();
+
+      return {
+        success: true,
+        message: 'Переподключение к MQTT брокеру завершено',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error('Ошибка переподключения к MQTT:', error);
+      throw new HttpException(
+        error instanceof Error
+          ? error.message
+          : 'Ошибка переподключения к MQTT',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
    * Автоматическая конфигурация устройства из переменных окружения
    */
   @Post('auto-configure')
@@ -314,6 +343,99 @@ export class DeviceSimulatorController {
         `Ошибка автоматической конфигурации: ${
           error instanceof Error ? error.message : 'Unknown error'
         }`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Запрос сертификатов для устройства
+   */
+  @Post('certificates/request')
+  async requestCertificates() {
+    try {
+      this.logger.log('Запрос сертификатов для устройства');
+      await this.deviceSimulator.requestCertificate();
+
+      return {
+        success: true,
+        message: 'Сертификаты успешно получены',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error('Ошибка получения сертификатов:', error);
+      throw new HttpException(
+        'Ошибка получения сертификатов',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Сохранение полученных сертификатов
+   */
+  @Post('certificates/save')
+  async saveCertificates(@Body() certificatesDto: SaveCertificatesDto) {
+    try {
+      this.logger.log('Сохранение полученных сертификатов');
+      await this.deviceSimulator.saveCertificates(
+        certificatesDto.certificate,
+        certificatesDto.caCertificate,
+        certificatesDto.fingerprint
+      );
+
+      return {
+        success: true,
+        message: 'Сертификаты успешно сохранены',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error('Ошибка сохранения сертификатов:', error);
+      throw new HttpException(
+        'Ошибка сохранения сертификатов',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Автоконфигурация устройства для быстрого старта
+   */
+  @Post('quick-start')
+  async quickStart() {
+    try {
+      this.logger.log('Автоконфигурация устройства для быстрого старта');
+
+      // Устанавливаем базовую конфигурацию устройства с mTLS
+      const baseConfig: DeviceConfig = {
+        deviceId: 'mTLS-test-device-' + Date.now(),
+        model: 'QuickStartModel',
+        firmwareVersion: '1.0.0',
+        backendUrl: 'http://localhost:3000',
+        autoRegister: true,
+        mqtt: {
+          brokerUrl: 'mqtts://localhost:8883',
+          userId: '550e8400-e29b-41d4-a716-446655440000',
+          token: 'quickstart-token',
+          qos: 1,
+          useTls: true,
+          securePort: 8883,
+          autoObtainCertificates: true,
+          certsDir: './certs',
+        },
+      };
+
+      await this.deviceSimulator.configureDevice(baseConfig);
+
+      return {
+        success: true,
+        message: 'Устройство успешно сконфигурировано для быстрого старта',
+        deviceId: baseConfig.deviceId,
+      };
+    } catch (error) {
+      this.logger.error('Ошибка автоконфигурации для быстрого старта:', error);
+      throw new HttpException(
+        'Ошибка автоконфигурации для быстрого старта',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

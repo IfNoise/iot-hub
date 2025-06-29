@@ -80,7 +80,7 @@ export class MqttRpcClient extends BaseMqttClient {
         ca: options.tls.ca,
         cert: options.tls.cert,
         key: options.tls.key,
-        rejectUnauthorized: options.tls.rejectUnauthorized ?? true,
+        rejectUnauthorized: options.tls.rejectUnauthorized ?? false, // По умолчанию false для тестовой среды с самоподписанными сертификатами
         servername: options.tls.servername,
       };
 

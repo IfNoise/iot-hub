@@ -81,6 +81,18 @@ export class CryptoChipService {
   }
 
   /**
+   * Получение приватного ключа для установки mTLS соединения
+   * В реальном криптографическом чипе приватный ключ может не покидать чип,
+   * но для симулятора мы возвращаем его для тестирования
+   */
+  getPrivateKey(): string {
+    if (!this.keyPair) {
+      throw new Error('Ключевая пара не инициализирована');
+    }
+    return this.keyPair.privateKey;
+  }
+
+  /**
    * Создание Certificate Signing Request (CSR)
    */
   async generateCSR(
@@ -124,6 +136,15 @@ export class CryptoChipService {
 
       // Конвертируем в PEM формат
       const csrPem = forge.pki.certificationRequestToPem(csr);
+
+      // Детальное логирование созданного CSR
+      this.logger.log(`CSR создан для устройства ${deviceId}:`);
+      this.logger.log(`CSR длина: ${csrPem.length}`);
+      this.logger.log(`CSR первые 100 символов: ${csrPem.substring(0, 100)}`);
+      this.logger.log(
+        `CSR последние 100 символов: ${csrPem.substring(csrPem.length - 100)}`
+      );
+      this.logger.log(`CSR количество строк: ${csrPem.split('\n').length}`);
 
       const csrData: CsrData = {
         csr: csrPem,

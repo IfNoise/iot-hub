@@ -30,7 +30,7 @@ export class MtlsConfigService {
   loadCertificatesFromFiles(certFiles: CertificateFiles): MtlsConfig | null {
     try {
       const config: MtlsConfig = {
-        rejectUnauthorized: true,
+        rejectUnauthorized: false, // Для локальной разработки разрешаем самоподписанные сертификаты
       };
 
       if (certFiles.caCertPath && fs.existsSync(certFiles.caCertPath)) {

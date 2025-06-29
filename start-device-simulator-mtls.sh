@@ -6,7 +6,7 @@
 set -e
 
 DEVICE_ID=${1:-"test-device-001"}
-USER_ID=${2:-"test-user"}
+USER_ID=${2:-"550e8400-e29b-41d4-a716-446655440000"}
 BACKEND_URL=${3:-"http://localhost:3000"}
 MQTT_HOST=${4:-"localhost"}
 MQTT_SECURE_PORT=${5:-"8883"}
@@ -86,6 +86,7 @@ export MQTT_HOST="$MQTT_HOST"
 export MQTT_SECURE_PORT="$MQTT_SECURE_PORT"
 export USE_MTLS="true"
 export CERTS_DIR="$CERTS_DIR"
+export SENSOR_UPDATE_INTERVAL="60000"  # Интервал обновления сенсоров в миллисекундах
 
 echo "✅ Переменные окружения установлены:"
 echo "   DEVICE_ID=$DEVICE_ID"

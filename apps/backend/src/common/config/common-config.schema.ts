@@ -2,9 +2,7 @@ import { z } from 'zod';
 
 export const commonConfigSchema = z.object({
   // Application
-  nodeEnv: z
-    .enum(['development', 'production', 'test'])
-    .default('development'),
+  nodeEnv: z.enum(['development', 'production', 'test']).default('development'),
   port: z.coerce.number().default(3000),
 
   // CORS Configuration
@@ -59,6 +57,29 @@ export const commonConfigSchema = z.object({
     .boolean()
     .default(false)
     .describe('Enable file logging in development mode'),
+
+  // Loki Configuration
+  lokiEnabled: z.coerce
+    .boolean()
+    .default(false)
+    .describe('Enable Loki logging'),
+  lokiUrl: z
+    .string()
+    .url()
+    .optional()
+    .describe('Loki server URL (e.g., http://localhost:3100)'),
+  lokiLabels: z
+    .string()
+    .optional()
+    .describe('Additional Loki labels as comma-separated key=value pairs'),
+  lokiTimeout: z.coerce
+    .number()
+    .default(30000)
+    .describe('Loki request timeout in milliseconds'),
+  lokiSilenceErrors: z.coerce
+    .boolean()
+    .default(true)
+    .describe('Silence Loki errors to prevent app crashes'),
 });
 
 export type CommonConfig = z.infer<typeof commonConfigSchema>;

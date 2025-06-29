@@ -27,6 +27,12 @@ export class CommonConfigService {
       logEnableMetadata: env.LOG_ENABLE_METADATA,
       logEnableRequestLogging: env.LOG_ENABLE_REQUEST_LOGGING,
       enableFileLoggingInDev: env.ENABLE_FILE_LOGGING_IN_DEV,
+      // Loki configuration
+      lokiEnabled: env.LOKI_ENABLED,
+      lokiUrl: env.LOKI_URL,
+      lokiLabels: env.LOKI_LABELS,
+      lokiTimeout: env.LOKI_TIMEOUT,
+      lokiSilenceErrors: env.LOKI_SILENCE_ERRORS,
     });
   }
 
@@ -87,5 +93,43 @@ export class CommonConfigService {
       enableRequestLogging: this.config.logEnableRequestLogging,
       enableFileLoggingInDev: this.config.enableFileLoggingInDev,
     };
+  }
+
+  getLokiConfig() {
+    return {
+      enabled: this.config.lokiEnabled,
+      url: this.config.lokiUrl,
+      labels: this.parseLokiLabels(),
+      timeout: this.config.lokiTimeout,
+      silenceErrors: this.config.lokiSilenceErrors,
+    };
+  }
+
+  private parseLokiLabels(): Record<string, string> {
+    const defaultLabels = {
+      service: 'iot-hub-backend',
+      environment: this.config.nodeEnv,
+    };
+
+    if (!this.config.lokiLabels) {
+      return defaultLabels;
+    }
+
+    try {
+      // Парсим строку вида "key1=value1,key2=value2"
+      const customLabels = this.config.lokiLabels
+        .split(',')
+        .reduce((acc, pair) => {
+          const [key, value] = pair.split('=').map((s) => s.trim());
+          if (key && value) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {} as Record<string, string>);
+
+      return { ...defaultLabels, ...customLabels };
+    } catch {
+      return defaultLabels;
+    }
   }
 }

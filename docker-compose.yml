@@ -46,72 +46,72 @@ services:
       - iot-network
 
   # IoT Hub Backend - optimized
-  iot-backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile.backend
-    container_name: iot-hub-backend
-    restart: unless-stopped
+  # iot-backend:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/backend/Dockerfile.backend
+  #   container_name: iot-hub-backend
+  #   restart: unless-stopped
 
-    ports:
-      - '3000:3000'
+  #   ports:
+  #     - '3000:3000'
 
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=iot_user
-      - DATABASE_PASSWORD=iot_password
-      - DATABASE_NAME=iot_hub
-      - DB_SSL=false
-      - JWT_SECRET=your-super-secret-jwt-key-for-production
-      - MQTT_BROKER_URL=mqtt://emqx:1883
-      - MQTT_HOST=emqx
-      - MQTT_PORT=1883
-      - MQTT_SECURE_PORT=8883
-      - MQTT_CONNECT_TIMEOUT=30000
-      - MQTT_RECONNECT_PERIOD=5000
-      - MQTT_MAX_RECONNECT_ATTEMPTS=10
-      - KEYCLOAK_URL=
-      - KEYCLOAK_REALM=
+  #   environment:
+  #     - NODE_ENV=production
+  #     - PORT=3000
+  #     - DATABASE_HOST=postgres
+  #     - DATABASE_PORT=5432
+  #     - DATABASE_USER=iot_user
+  #     - DATABASE_PASSWORD=iot_password
+  #     - DATABASE_NAME=iot_hub
+  #     - DB_SSL=false
+  #     - JWT_SECRET=your-super-secret-jwt-key-for-production
+  #     - MQTT_BROKER_URL=mqtt://emqx:1883
+  #     - MQTT_HOST=emqx
+  #     - MQTT_PORT=1883
+  #     - MQTT_SECURE_PORT=8883
+  #     - MQTT_CONNECT_TIMEOUT=30000
+  #     - MQTT_RECONNECT_PERIOD=5000
+  #     - MQTT_MAX_RECONNECT_ATTEMPTS=10
+  #     - KEYCLOAK_URL=
+  #     - KEYCLOAK_REALM=
 
-    volumes:
-      - ./apps/backend/certs:/app/certs:ro
+  #   volumes:
+  #     - ./apps/backend/certs:/app/certs:ro
 
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
+  # Resource limits
+  # deploy:
+  #   resources:
+  #     limits:
+  #       cpus: '1.0'
+  #       memory: 512M
+  #     reservations:
+  #       cpus: '0.25'
+  #       memory: 128M
 
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
+  # depends_on:
+  #   postgres:
+  #     condition: service_healthy
+  #   redis:
+  #     condition: service_started
 
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'wget',
-          '--no-verbose',
-          '--tries=1',
-          '--spider',
-          'http://localhost:3000/health',
-        ]
-      interval: 60s
-      timeout: 15s
-      retries: 3
-      start_period: 120s
+  # healthcheck:
+  #   test:
+  #     [
+  #       'CMD',
+  #       'wget',
+  #       '--no-verbose',
+  #       '--tries=1',
+  #       '--spider',
+  #       'http://localhost:3000/api/health',
+  #     ]
+  #   interval: 60s
+  #   timeout: 15s
+  #   retries: 3
+  #   start_period: 120s
 
-    networks:
-      - iot-network
+  # networks:
+  #   - iot-network
 
   # PostgreSQL Database - optimized
   postgres:
