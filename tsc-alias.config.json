@@ -1,0 +1,14 @@
+{
+  "resolveFullPaths": true,
+  "resolveFullExtension": ".js",
+  "verbose": false,
+  "replacers": {
+    "@iot-hub/contracts": "libs/contracts/dist/index.js",
+    "@iot-hub/auth": "libs/contracts/auth/dist/index.js",
+    "@iot-hub/crypto": "libs/contracts/crypto/dist/index.js",
+    "@iot-hub/devices": "libs/contracts/devices/dist/index.js",
+    "@iot-hub/mqtt": "libs/contracts/mqtt/dist/index.js",
+    "@iot-hub/shared": "libs/shared/dist/index.js",
+    "@iot-hub/users": "libs/contracts/users/dist/index.js"
+  }
+}

@@ -1,6 +1,6 @@
 // src/common/decorator/current-user.decorator.ts
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { AuthenticatedUser } from '../types/keycloak-user.interface';
+import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
 
 /**
  * Decorator для получения текущего аутентифицированного пользователя

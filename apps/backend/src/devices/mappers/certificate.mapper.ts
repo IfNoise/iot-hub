@@ -5,7 +5,7 @@ import type {
   CertificateResponseSchema,
 } from '@iot-hub/devices';
 import { z } from 'zod';
-import type { DeviceCertificateResponse } from '../certificate-mtls.service';
+import type { DeviceCertificateResponse } from '../certificate-mtls.service.js';
 
 // Типы для сопоставления с контрактами
 export type CertificateInfo = z.infer<typeof CertificateInfoSchema>;

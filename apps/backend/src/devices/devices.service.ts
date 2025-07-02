@@ -1,18 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Device } from './entities/device.entity';
-import { Certificate } from './entities/certificate.entity';
-import { CreateDeviceDto } from './dto/create-device.dto';
-import { CryptoService } from '../crypto/crypto.service';
-import { BindDeviceWithOwnerDto } from './dto/bind-device.dto';
+import { Device } from './entities/device.entity.js';
+import { CreateDeviceDto } from './dto/create-device.dto.js';
+import { BindDeviceWithOwnerDto } from './dto/bind-device.dto.js';
 
 @Injectable()
 export class DevicesService {
   constructor(
-    @InjectRepository(Device) private deviceRepo: Repository<Device>,
-    @InjectRepository(Certificate) private certRepo: Repository<Certificate>,
-    private crypto: CryptoService
+    @InjectRepository(Device) private deviceRepo: Repository<Device>
   ) {}
 
   /**

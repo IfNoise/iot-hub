@@ -1,5 +1,5 @@
 import type { Device } from '@iot-hub/devices';
-import { Device as DeviceEntity } from '../entities/device.entity';
+import { Device as DeviceEntity } from '../entities/device.entity.js';
 
 /**
  * Маппер для преобразования сущности Device в DTO

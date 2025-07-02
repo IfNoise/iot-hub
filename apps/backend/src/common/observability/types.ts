@@ -1,5 +1,5 @@
 // Types for OpenTelemetry observability
-export * from './config.types';
+export * from './config.types.js';
 
 export interface MetricLabels {
   [key: string]: string | number;

@@ -28,9 +28,6 @@
       "path": "./libs/shared"
     },
     {
-      "path": "./packages/iot-core"
-    },
-    {
       "path": "./libs/contracts"
     },
     {

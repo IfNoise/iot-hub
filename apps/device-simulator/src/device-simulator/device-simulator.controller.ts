@@ -10,7 +10,7 @@ import {
 import {
   DeviceSimulatorService,
   DeviceConfig,
-} from './device-simulator.service';
+} from './device-simulator.service.js';
 
 export interface ConfigureDeviceDto {
   deviceId: string;

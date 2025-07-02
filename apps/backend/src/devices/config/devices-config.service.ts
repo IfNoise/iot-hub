@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { devicesConfigSchema, DevicesConfig } from './devices-config.schema';
+import { devicesConfigSchema, DevicesConfig } from './devices-config.schema.js';
 
 @Injectable()
 export class DevicesConfigService {

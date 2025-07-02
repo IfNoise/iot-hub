@@ -8,13 +8,13 @@ import {
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
-import { ConfigService } from '../../config/config.service';
-import { UsersService } from '../../users/users.service';
+import { ConfigService } from '../../config/config.service.js';
+import { UsersService } from '../../users/users.service.js';
 import {
   KeycloakJwtPayload,
   AuthenticatedUser,
   OAuth2ProxyHeaders,
-} from '../types/keycloak-user.interface';
+} from '../types/keycloak-user.interface.js';
 
 @Injectable()
 export class KeycloakOAuth2Middleware implements NestMiddleware {

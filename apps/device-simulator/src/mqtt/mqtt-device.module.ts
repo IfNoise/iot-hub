@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
-import { MqttDeviceService } from './mqtt-device.service';
-import { MtlsConfigService } from './mtls-config.service';
-import { CertificateClientService } from './certificate-client.service';
-import { CryptoChipModule } from '../crypto-chip/crypto-chip.module';
+import { MqttDeviceService } from './mqtt-device.service.js';
+import { MtlsConfigService } from './mtls-config.service.js';
+import { CertificateClientService } from './certificate-client.service.js';
+import { CryptoChipModule } from '../crypto-chip/crypto-chip.module.js';
 
 /**
  * MQTT модуль для симулятора устройства

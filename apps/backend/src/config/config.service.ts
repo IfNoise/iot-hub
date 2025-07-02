@@ -1,19 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { envConfigSchema, AppConfig } from './config.schema';
+import { envConfigSchema, AppConfig } from './config.schema.js';
 
 // Import domain config services
-import { CommonConfigService } from '../common/config/common-config.service';
-import { AuthConfigService } from '../auth/config/auth-config.service';
-import { DatabaseConfigService } from '../database/config/database-config.service';
-import { MqttConfigService } from '../mqtt/config/mqtt-config.service';
-import { TelemetryConfigService } from '../common/config/telemetry-config.service';
-import { DevicesConfigService } from '../devices/config/devices-config.service';
-import { UsersConfigService } from '../users/config/users-config.service';
+import { CommonConfigService } from '../common/config/common-config.service.js';
+import { AuthConfigService } from '../auth/config/auth-config.service.js';
+import { DatabaseConfigService } from '../database/config/database-config.service.js';
+import { MqttConfigService } from '../mqtt/config/mqtt-config.service.js';
+import { TelemetryConfigService } from '../common/config/telemetry-config.service.js';
+import { DevicesConfigService } from '../devices/config/devices-config.service.js';
+import { UsersConfigService } from '../users/config/users-config.service.js';
 
 // Import types
-import type { LogRequest, LogResponse } from '../common/types/logging.types';
-import type { OpenTelemetryConfig } from '../common/observability/config.types';
+import type { LogRequest, LogResponse } from '../common/types/logging.types.js';
+import type { OpenTelemetryConfig } from '../common/observability/config.types.js';
 
 @Injectable()
 export class ConfigService {

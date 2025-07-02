@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '../config/config.module';
-import { MqttRpcService } from './mqtt-rpc.service';
-import { MqttRpcController } from './mqtt-rpc.controller';
+import { ConfigModule } from '../config/config.module.js';
+import { MqttRpcService } from './mqtt-rpc.service.js';
+import { MqttRpcController } from './mqtt-rpc.controller.js';
 
 /**
  * MQTT модуль для работы с IoT устройствами

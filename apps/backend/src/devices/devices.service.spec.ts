@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DevicesService } from './devices.service';
-import { Device } from './entities/device.entity';
-import { Certificate } from './entities/certificate.entity';
-import { CryptoService } from '../crypto/crypto.service';
+import { DevicesService } from './devices.service.js';
+import { Device } from './entities/device.entity.js';
+import { Certificate } from './entities/certificate.entity.js';
+import { CryptoService } from '../crypto/crypto.service.js';
 
 describe('DevicesService', () => {
   let service: DevicesService;

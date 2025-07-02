@@ -397,6 +397,12 @@ export class MqttRpcClient extends BaseMqttClient {
         });
     });
   }
+  /**
+   * Получить опции клиента
+   */
+  getOptions(): IClientOptions {
+    return this.options;
+  }
 
   /**
    * Получить статистику клиента

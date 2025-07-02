@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DevicesController } from './devices.controller';
-import { DevicesService } from './devices.service';
+import { DevicesController } from './devices.controller.js';
+import { DevicesService } from './devices.service.js';
 
 describe('DevicesController Service Layer Tests', () => {
   let controller: DevicesController;

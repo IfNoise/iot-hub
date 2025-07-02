@@ -3,11 +3,12 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DevicesController } from './devices.controller';
-import { DevicesService } from './devices.service';
-import { Device } from './entities/device.entity';
-import { Certificate } from './entities/certificate.entity';
-import { CryptoService } from '../crypto/crypto.service';
+import { DevicesController } from './devices.controller.js';
+import { DevicesService } from './devices.service.js';
+import { Device } from './entities/device.entity.js';
+import { Certificate } from './entities/certificate.entity.js';
+import { CryptoService } from '../crypto/crypto.service.js';
+import { RolesGuard } from '../common/guard/roles-guard.guard.js';
 
 describe('DevicesController (e2e)', () => {
   let app: INestApplication;
@@ -78,7 +79,7 @@ describe('DevicesController (e2e)', () => {
         },
       ],
     })
-      .overrideGuard(require('../common/guard/roles-guard.guard').RolesGuard)
+      .overrideGuard(RolesGuard)
       .useValue({ canActivate: () => true })
       .compile();
 

@@ -4,7 +4,7 @@ import {
   databaseConfigSchema,
   DatabaseConfig,
   createTypeOrmOptionsFromConfig,
-} from './database-config.schema';
+} from './database-config.schema.js';
 
 @Injectable()
 export class DatabaseConfigService {

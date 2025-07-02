@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { ConfigService } from '../config/config.service';
+import { ConfigService } from '../config/config.service.js';
 import { MqttRpcClient } from '@iot-hub/shared';
 import type { RpcResponse } from '@iot-hub/shared';
 
@@ -74,6 +74,7 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
     try {
       const mqttConfig = this.configService.getMqttConfig();
       const brokerUrl = this.configService.getMqttBrokerUrl();
+      const isProduction = this.configService.isProduction();
 
       this.logger.info(
         {
@@ -81,18 +82,35 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
           clientId: mqttConfig.clientId,
           keepalive: mqttConfig.keepalive,
           qos: mqttConfig.qos,
+          environment: isProduction ? 'production' : 'development',
+          connectionType: isProduction ? 'TLS' : 'TCP',
         },
-        'Инициализация MQTT клиента'
+        'Инициализация MQTT клиента для backend'
       );
+
+      // Получаем правильные опции подключения в зависимости от окружения
+      const clientOptions =
+        this.configService.mqtt.getBackendClientOptions(isProduction);
 
       this.mqttClient = new MqttRpcClient({
         brokerUrl,
         userId: 'backend-service',
         deviceId: 'backend',
-        username: mqttConfig.username,
-        token: mqttConfig.password,
+        username: clientOptions.username as string,
+        token: clientOptions.password as string,
         qos: mqttConfig.qos as 0 | 1 | 2,
         willPayload: mqttConfig.will?.payload,
+        useTls: isProduction, // В продакшне используем TLS
+        securePort: isProduction ? mqttConfig.securePort : undefined,
+        tls:
+          isProduction && mqttConfig.tls
+            ? {
+                ca: mqttConfig.tls.ca,
+                rejectUnauthorized: true, // В продакшне проверяем сертификат
+                servername: mqttConfig.tls.servername,
+                // НЕ передаем клиентские сертификаты для backend
+              }
+            : undefined,
         logger: {
           log: (...args) => this.logger.info({ args }, 'MQTT Client'),
           warn: (...args) => this.logger.warn({ args }, 'MQTT Client'),

@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { LoggingService } from '../services/logging.service';
+import { LoggingService } from '../services/logging.service.js';
 import { healthContract } from '@iot-hub/contracts';
 
 @ApiTags('System Health')

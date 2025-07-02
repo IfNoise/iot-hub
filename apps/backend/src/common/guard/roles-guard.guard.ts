@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthenticatedUser } from '../types/keycloak-user.interface';
+import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
 
 @Injectable()
 export class RolesGuard implements CanActivate {

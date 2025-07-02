@@ -1,1 +1,1 @@
-export * from './device-command.dto';
+export * from './device-command.dto.js';

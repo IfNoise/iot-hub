@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { telemetryConfigSchema, TelemetryConfig } from './telemetry-config.schema';
-import type { OpenTelemetryConfig } from '../observability/config.types';
+import { telemetryConfigSchema, TelemetryConfig } from './telemetry-config.schema.js';
+import type { OpenTelemetryConfig } from '../observability/config.types.js';
 
 @Injectable()
 export class TelemetryConfigService {

@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { of } from 'rxjs';
-import { DeviceSimulatorService } from './device-simulator.service';
-import { CryptoChipService } from '../crypto-chip/crypto-chip.service';
-import { MqttDeviceService } from '../mqtt/mqtt-device.service';
-import { CertificateClientService } from '../mqtt/certificate-client.service';
-import { MtlsConfigService } from '../mqtt/mtls-config.service';
+import { DeviceSimulatorService } from './device-simulator.service.js';
+import { CryptoChipService } from '../crypto-chip/crypto-chip.service.js';
+import { MqttDeviceService } from '../mqtt/mqtt-device.service.js';
+import { CertificateClientService } from '../mqtt/certificate-client.service.js';
+import { MtlsConfigService } from '../mqtt/mtls-config.service.js';
 
 // Mock HttpService
 const mockHttpService = {

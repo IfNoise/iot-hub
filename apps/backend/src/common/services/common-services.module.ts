@@ -1,12 +1,12 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ConfigModule } from '../../config/config.module';
-import { LoggingService } from './logging.service';
-import { LogMaintenanceService } from './log-maintenance.service';
-import { MetricsExampleService } from './metrics-example.service';
-import { HealthController } from '../controllers/health.controller';
-import { MetricsController } from '../controllers/metrics.controller';
-import { ObservabilityModule } from '../observability/observability.module';
+import { ConfigModule } from '../../config/config.module.js';
+import { LoggingService } from './logging.service.js';
+import { LogMaintenanceService } from './log-maintenance.service.js';
+import { MetricsExampleService } from './metrics-example.service.js';
+import { HealthController } from '../controllers/health.controller.js';
+import { MetricsController } from '../controllers/metrics.controller.js';
+import { ObservabilityModule } from '../observability/observability.module.js';
 
 @Module({
   imports: [ConfigModule, ScheduleModule.forRoot(), ObservabilityModule],

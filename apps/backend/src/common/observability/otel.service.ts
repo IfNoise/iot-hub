@@ -1,6 +1,11 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { ConfigService } from '../../config/config.service';
-import { OpenTelemetryConfig } from './types';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
+import { ConfigService } from '../../config/config.service.js';
+import { OpenTelemetryConfig } from './types.js';
 
 @Injectable()
 export class OtelService implements OnModuleInit, OnModuleDestroy {
@@ -14,25 +19,25 @@ export class OtelService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     // OpenTelemetry уже инициализирован в instrumentation.ts
     // Этот сервис предоставляет конфигурацию и утилиты
-    console.log(
+    this.logger.log(
       '📊 OtelService: конфигурация загружена из ConfigService, SDK уже инициализирован'
     );
-    console.log(`📍 Collector URL: ${this.config.collectorUrl}`);
-    console.log(`🏷️  Сервис: ${this.config.serviceName}`);
-    console.log(
+    this.logger.log(`📍 Collector URL: ${this.config.collectorUrl}`);
+    this.logger.log(`🏷️  Сервис: ${this.config.serviceName}`);
+    this.logger.log(
       `📊 Метрики: ${this.config.metrics.enabled ? 'включены' : 'отключены'}`
     );
-    console.log(
+    this.logger.log(
       `🔄 Трейсы: ${this.config.tracing.enabled ? 'включены' : 'отключены'}`
     );
-    console.log(
+    this.logger.log(
       `📝 Логи: ${this.config.logging.enabled ? 'включены' : 'отключены'}`
     );
   }
 
   async onModuleDestroy() {
     // Graceful shutdown обрабатывается в instrumentation.ts
-    console.log('📊 OtelService: завершение работы');
+    this.logger.log('📊 OtelService: завершение работы');
   }
 
   getConfig(): OpenTelemetryConfig {
@@ -78,7 +83,7 @@ export class OtelService implements OnModuleInit, OnModuleDestroy {
 
   async shutdown() {
     // Заглушка для совместимости
-    console.log(
+    this.logger.log(
       '📊 OtelService: shutdown вызван (обрабатывается в instrumentation.ts)'
     );
   }

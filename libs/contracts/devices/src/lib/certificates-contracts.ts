@@ -60,7 +60,6 @@ export const EMQXValidationRequestSchema = z.object({
   password: z.string().optional(),
   cert_subject: z.string().optional(),
   cert_common_name: z.string().optional(),
-  cert_fingerprint: z.string().optional(),
 });
 
 /**

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '../../config/config.service';
-import type { LogHealthCheck, LogHealthDetails } from '../types/logging.types';
+import { ConfigService } from '../../config/config.service.js';
+import type { LogHealthCheck, LogHealthDetails } from '../types/logging.types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 

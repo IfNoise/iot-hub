@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { commonConfigSchema, CommonConfig } from './common-config.schema';
+import { commonConfigSchema, CommonConfig } from './common-config.schema.js';
 
 @Injectable()
 export class CommonConfigService {

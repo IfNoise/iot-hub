@@ -15,16 +15,12 @@
       "build": {
         "executor": "nx:run-commands",
         "options": {
-          "command": "webpack-cli build",
-          "args": [
-            "node-env=production"
-          ]
+          "cwd": "apps/device-simulator",
+          "command": "webpack-cli build --mode=production"
         },
         "configurations": {
           "development": {
-            "args": [
-              "node-env=development"
-            ]
+            "command": "webpack-cli build --mode=development"
           }
         }
       },

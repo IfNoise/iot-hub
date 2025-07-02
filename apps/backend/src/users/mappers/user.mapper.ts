@@ -1,5 +1,5 @@
-import { User } from '../entities/user.entity';
-import { UserResponseDto } from '../dto/user-response.dto';
+import { User } from '../entities/user.entity.js';
+import { UserResponseDto } from '../dto/user-response.dto.js';
 
 /**
  * Мапперы для преобразования сущностей в DTO

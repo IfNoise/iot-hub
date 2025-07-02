@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { mqttConfigSchema, MqttConfig } from './mqtt-config.schema';
+import { mqttConfigSchema, MqttConfig } from './mqtt-config.schema.js';
 
 @Injectable()
 export class MqttConfigService {
@@ -181,6 +181,91 @@ export class MqttConfigService {
     // Ensure proper mTLS verification
     options.rejectUnauthorized = true;
     options.requestCert = true;
+
+    return options;
+  }
+
+  // Get backend client options based on environment
+  getBackendClientOptions(isProduction = false): Record<string, unknown> {
+    const options: Record<string, unknown> = {
+      host: this.config.host,
+      clientId: this.config.clientId,
+      keepalive: this.config.keepalive,
+      clean: this.config.clean,
+      protocolVersion: this.config.protocolVersion,
+      reconnectPeriod: this.config.reconnectPeriod,
+      connectTimeout: this.config.connectTimeout,
+      rejectUnauthorized: this.config.rejectUnauthorized,
+    };
+
+    if (this.hasAuthentication()) {
+      options.username = this.config.username;
+      options.password = this.config.password;
+    }
+
+    if (isProduction) {
+      // Production: использует TLS без клиентских сертификатов
+      options.protocol = 'mqtts';
+      options.port = this.config.securePort;
+      options.rejectUnauthorized = true; // В продакшне проверяем сертификат сервера
+
+      // Добавляем только CA сертификат для проверки сервера (не клиентские сертификаты)
+      if (this.config.tls?.ca) {
+        options.ca = this.config.tls.ca;
+      }
+      if (this.config.tls?.servername) {
+        options.servername = this.config.tls.servername;
+      }
+    } else {
+      // Development: использует обычный TCP
+      options.protocol = 'mqtt';
+      options.port = this.config.port;
+    }
+
+    if (this.hasWill()) {
+      options.will = this.config.will;
+    }
+
+    return options;
+  }
+
+  // Get device client options - ALWAYS mTLS
+  getDeviceClientOptions(
+    clientCert: string,
+    clientKey: string,
+    caCert: string,
+    passphrase?: string
+  ): Record<string, unknown> {
+    const options: Record<string, unknown> = {
+      host: this.config.host,
+      port: this.config.securePort, // ВСЕГДА безопасный порт
+      protocol: 'mqtts', // ВСЕГДА mTLS
+      clientId: this.config.clientId,
+      keepalive: this.config.keepalive,
+      clean: this.config.clean,
+      protocolVersion: this.config.protocolVersion,
+      reconnectPeriod: this.config.reconnectPeriod,
+      connectTimeout: this.config.connectTimeout,
+
+      // mTLS конфигурация - ОБЯЗАТЕЛЬНО
+      ca: caCert,
+      cert: clientCert,
+      key: clientKey,
+      rejectUnauthorized: true, // ВСЕГДА проверяем сертификаты
+      requestCert: true, // ВСЕГДА требуем клиентский сертификат
+    };
+
+    if (passphrase) {
+      options.passphrase = passphrase;
+    }
+
+    if (this.config.tls?.servername) {
+      options.servername = this.config.tls.servername;
+    }
+
+    if (this.hasWill()) {
+      options.will = this.config.will;
+    }
 
     return options;
   }

@@ -1,12 +1,12 @@
 import { Controller, UseGuards } from '@nestjs/common';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { DevicesService } from './devices.service';
+import { DevicesService } from './devices.service.js';
 import { devicesContract } from '@iot-hub/devices';
-import { DeviceMapper } from './mappers/device.mapper';
-import { CurrentUser } from '../common/decorator/current-user.decorator';
-import type { AuthenticatedUser } from '../common/types/keycloak-user.interface';
-import { RolesGuard } from '../common/guard/roles-guard.guard';
-import { Roles } from '../common/decorator/roles.decorator';
+import { DeviceMapper } from './mappers/device.mapper.js';
+import { CurrentUser } from '../common/decorator/current-user.decorator.js';
+import type { AuthenticatedUser } from '../common/types/keycloak-user.interface.js';
+import { RolesGuard } from '../common/guard/roles-guard.guard.js';
+import { Roles } from '../common/decorator/roles.decorator.js';
 
 @Controller()
 export class DevicesController {

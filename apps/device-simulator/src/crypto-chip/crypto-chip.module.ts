@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CryptoChipService } from './crypto-chip.service';
+import { CryptoChipService } from './crypto-chip.service.js';
 
 @Module({
   providers: [CryptoChipService],

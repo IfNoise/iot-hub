@@ -41,21 +41,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": [
-        "packages/iot-core/app/backend-e2e/**/*",
-        "apps/backend-e2e/**/*",
-        "apps/device-simulator-e2e/**/*"
-      ]
-    },
-    {
-      "plugin": "@nx/webpack/plugin",
-      "options": {
-        "buildTargetName": "build",
-        "serveTargetName": "serve",
-        "previewTargetName": "preview",
-        "buildDepsTargetName": "build-deps",
-        "watchDepsTargetName": "watch-deps"
-      }
+      "exclude": ["apps/backend-e2e/**/*", "apps/device-simulator-e2e/**/*"]
     }
   ],
   "targetDefaults": {

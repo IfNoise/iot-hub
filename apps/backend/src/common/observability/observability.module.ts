@@ -1,8 +1,8 @@
 import { Module, Global } from '@nestjs/common';
-import { ConfigModule } from '../../config/config.module';
-import { OtelService } from './otel.service';
-import { MetricsService } from './metrics.service';
-import { TelemetryService } from './telemetry.service';
+import { ConfigModule } from '../../config/config.module.js';
+import { OtelService } from './otel.service.js';
+import { MetricsService } from './metrics.service.js';
+import { TelemetryService } from './telemetry.service.js';
 
 @Global()
 @Module({

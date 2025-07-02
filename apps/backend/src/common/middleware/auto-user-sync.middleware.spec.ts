@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AutoUserSyncMiddleware } from './auto-user-sync.middleware';
-import { KeycloakUserService } from '../services/keycloak-user.service';
+import { AutoUserSyncMiddleware } from './auto-user-sync.middleware.js';
+import { KeycloakUserService } from '../services/keycloak-user.service.js';
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedUser } from '../types/keycloak-user.interface';
-import { User } from '../../users/entities/user.entity';
+import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
+import { User } from '../../users/entities/user.entity.js';
 
 describe('AutoUserSyncMiddleware', () => {
   let middleware: AutoUserSyncMiddleware;

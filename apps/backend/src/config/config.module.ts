@@ -1,14 +1,14 @@
 import { Module, Global } from '@nestjs/common';
-import { ConfigService } from './config.service';
+import { ConfigService } from './config.service.js';
 
 // Import domain config services
-import { CommonConfigService } from '../common/config/common-config.service';
-import { AuthConfigService } from '../auth/config/auth-config.service';
-import { DatabaseConfigService } from '../database/config/database-config.service';
-import { MqttConfigService } from '../mqtt/config/mqtt-config.service';
-import { TelemetryConfigService } from '../common/config/telemetry-config.service';
-import { DevicesConfigService } from '../devices/config/devices-config.service';
-import { UsersConfigService } from '../users/config/users-config.service';
+import { CommonConfigService } from '../common/config/common-config.service.js';
+import { AuthConfigService } from '../auth/config/auth-config.service.js';
+import { DatabaseConfigService } from '../database/config/database-config.service.js';
+import { MqttConfigService } from '../mqtt/config/mqtt-config.service.js';
+import { TelemetryConfigService } from '../common/config/telemetry-config.service.js';
+import { DevicesConfigService } from '../devices/config/devices-config.service.js';
+import { UsersConfigService } from '../users/config/users-config.service.js';
 
 @Global()
 @Module({

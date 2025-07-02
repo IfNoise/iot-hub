@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { MqttRpcService } from './mqtt-rpc.service';
+import { MqttRpcService } from './mqtt-rpc.service.js';
 import { mqttContract } from '@iot-hub/mqtt';
 
 /**

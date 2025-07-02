@@ -9,7 +9,7 @@
 import 'dotenv/config';
 import { Logger } from 'nestjs-pino';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app/app.module';
+import { AppModule } from './app/app.module.js';
 import { generateOpenApi } from '@ts-rest/open-api';
 import { contracts } from '@iot-hub/contracts';
 import * as swaggerUi from 'swagger-ui-express';
@@ -70,7 +70,7 @@ async function bootstrap() {
   );
 }
 
-bootstrap().catch(error => {
+bootstrap().catch((error) => {
   console.error('❌ Ошибка запуска приложения:', error);
   process.exit(1);
 });

@@ -126,9 +126,7 @@ export class DeviceSimulatorService
       brokerUrl: config.mqtt.brokerUrl,
       userId: config.mqtt.userId || 'simulator-user',
       deviceId: config.deviceId,
-      token: config.mqtt.token,
       qos: config.mqtt.qos || 1,
-      useTls: config.mqtt.useTls,
       securePort: config.mqtt.securePort,
     };
 
@@ -167,13 +165,33 @@ export class DeviceSimulatorService
         // Добавляем TLS конфигурацию к MQTT настройкам
         if (mtlsConfig && this.mtlsConfig.validateMtlsConfig(mtlsConfig)) {
           this.logger.log('Добавление TLS конфигурации к MQTT настройкам...');
-          mqttConfig.tls = {
-            ca: mtlsConfig.caCert,
-            cert: mtlsConfig.clientCert,
-            key: mtlsConfig.clientKey,
-            rejectUnauthorized: mtlsConfig.rejectUnauthorized,
-            servername: mtlsConfig.servername,
-          };
+
+          // Проверяем, что все необходимые сертификаты доступны
+          if (
+            mtlsConfig.caCert &&
+            mtlsConfig.clientCert &&
+            mtlsConfig.clientKey
+          ) {
+            mqttConfig.tls = {
+              ca: mtlsConfig.caCert,
+              cert: mtlsConfig.clientCert,
+              key: mtlsConfig.clientKey,
+              rejectUnauthorized: mtlsConfig.rejectUnauthorized,
+              servername: mtlsConfig.servername,
+            };
+          } else {
+            this.logger.error('Отсутствуют необходимые сертификаты для TLS');
+            throw new Error('Missing required certificates for TLS');
+          }
+
+          // Добавляем фингерпринт сертификата для HTTP-аутентификации
+          if (this.deviceState.certificateFingerprint) {
+            mqttConfig.certificateFingerprint =
+              this.deviceState.certificateFingerprint;
+            this.logger.log(
+              `Добавлен фингерпринт сертификата: ${this.deviceState.certificateFingerprint}`
+            );
+          }
 
           // Обновляем URL брокера для безопасного подключения
           // Извлекаем hostname из существующего URL
@@ -211,7 +229,6 @@ export class DeviceSimulatorService
                 : 'N/A'
             }`
           );
-          mqttConfig.useTls = false;
           // Возвращаем URL брокера к незащищенному варианту
           const regularUrl = config.mqtt.brokerUrl
             .replace('mqtts://', 'mqtt://')
@@ -221,7 +238,6 @@ export class DeviceSimulatorService
       } catch (error) {
         this.logger.error('Ошибка получения сертификатов mTLS:', error);
         this.logger.warn('Продолжение без mTLS...');
-        mqttConfig.useTls = false;
         // Возвращаем URL брокера к незащищенному варианту
         const regularUrl = config.mqtt.brokerUrl
           .replace('mqtts://', 'mqtt://')

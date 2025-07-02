@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { CryptoChipService } from '../crypto-chip/crypto-chip.service';
+import { CryptoChipService } from '../crypto-chip/crypto-chip.service.js';
 import { CertificateResponseSchema } from '@iot-hub/devices';
 import { z } from 'zod';
 

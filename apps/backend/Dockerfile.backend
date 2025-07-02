@@ -25,8 +25,8 @@ RUN npx nx build backend --configuration=production
 # Production stage
 FROM node:20-alpine AS production
 
-# Install necessary tools for healthcheck
-RUN apk add --no-cache wget
+# Install necessary tools for healthcheck and certificate operations
+RUN apk add --no-cache wget openssl
 
 # Set working directory
 WORKDIR /app

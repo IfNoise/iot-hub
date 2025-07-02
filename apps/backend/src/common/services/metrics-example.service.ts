@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { MetricsService } from '../observability/metrics.service';
-import { TelemetryService } from '../observability/telemetry.service';
+import { MetricsService } from '../observability/metrics.service.js';
+import { TelemetryService } from '../observability/telemetry.service.js';
 
 @Injectable()
 export class MetricsExampleService {

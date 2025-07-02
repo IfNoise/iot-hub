@@ -3,9 +3,9 @@ import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import {
   CertificateService,
   DeviceCertificateRequest,
-} from './certificate-mtls.service';
+} from './certificate-mtls.service.js';
 import { certificatesContract } from '@iot-hub/devices';
-import { CertificateMapper } from './mappers/certificate.mapper';
+import { CertificateMapper } from './mappers/certificate.mapper.js';
 
 /**
  * Контроллер для управления mTLS сертификатами устройств
@@ -237,17 +237,21 @@ export class CertificatesController {
       certificatesContract.validateCertificate,
       async ({ body }) => {
         try {
+          this.logger.log(
+            'EMQX запрос валидации сертификата - ПОЛНЫЙ BODY:',
+            body
+          );
           this.logger.log('EMQX запрос валидации сертификата:', {
             clientid: body.clientid,
             username: body.username,
             cert_common_name: body.cert_common_name,
-            cert_fingerprint: body.cert_fingerprint,
+            cert_fingerprint: body.password,
           });
 
           // Проверяем, предоставлен ли сертификат через mTLS
-          if (!body.cert_fingerprint || !body.cert_common_name) {
+          if (!body.password || !body.cert_common_name) {
             this.logger.warn(
-              'EMQX запрос без cert_fingerprint или cert_common_name - отклоняем'
+              'EMQX запрос без password или cert_common_name - отклоняем'
             );
             return {
               status: 200 as const,
@@ -261,7 +265,7 @@ export class CertificatesController {
           // Валидируем сертификат через сервис
           const isValid =
             await this.certificateService.validateCertificateForMQTT(
-              body.cert_fingerprint,
+              body.password,
               body.cert_common_name,
               body.clientid
             );

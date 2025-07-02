@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { KeycloakUserService } from '../services/keycloak-user.service';
-import { AuthenticatedUser } from '../types/keycloak-user.interface';
+import { KeycloakUserService } from '../services/keycloak-user.service.js';
+import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
 
 @Injectable()
 export class AutoUserSyncMiddleware implements NestMiddleware {

@@ -4,23 +4,26 @@ import {
   OnModuleInit,
   OnModuleDestroy,
 } from '@nestjs/common';
-import { MqttRpcClient } from '@iot-hub/shared';
+import { MqttDeviceClient } from '@iot-hub/shared';
 
 export interface MqttDeviceConfig {
   brokerUrl: string;
   userId: string;
   deviceId: string;
-  token?: string;
-  qos?: 0 | 1 | 2;
-  useTls?: boolean;
-  securePort?: number;
+  // Фингерпринт сертификата для передачи как password в MQTT
+  certificateFingerprint?: string;
+  // mTLS сертификаты - ОБЯЗАТЕЛЬНО для устройств
   tls?: {
-    ca?: string | Buffer;
-    cert?: string | Buffer;
-    key?: string | Buffer;
-    servername?: string;
+    ca: string | Buffer;
+    cert: string | Buffer;
+    key: string | Buffer;
+    passphrase?: string;
     rejectUnauthorized?: boolean;
+    servername?: string;
   };
+  qos?: 0 | 1 | 2;
+  securePort?: number;
+  servername?: string;
 }
 
 export interface RpcRequest {
@@ -53,7 +56,7 @@ export interface DeviceDataProvider {
 @Injectable()
 export class MqttDeviceService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MqttDeviceService.name);
-  private mqttClient?: MqttRpcClient;
+  private mqttClient?: MqttDeviceClient;
   private config?: MqttDeviceConfig;
   private isConnected = false;
   private dataProvider?: DeviceDataProvider;
@@ -78,14 +81,13 @@ export class MqttDeviceService implements OnModuleInit, OnModuleDestroy {
    */
   async configure(config: MqttDeviceConfig): Promise<void> {
     this.config = config;
-    this.logger.log(`Настройка MQTT для устройства ${config.deviceId}`);
+    this.logger.log(`Настройка mTLS MQTT для устройства ${config.deviceId}`);
     this.logger.debug(
       `Полученная конфигурация MQTT: ${JSON.stringify(
         {
           ...config,
           tls: config.tls
             ? {
-                ...config.tls,
                 ca: `[CA cert ${
                   config.tls.ca?.toString().length || 0
                 } символов]`,
@@ -94,7 +96,7 @@ export class MqttDeviceService implements OnModuleInit, OnModuleDestroy {
                 } символов]`,
                 key: `[Key ${config.tls.key?.toString().length || 0} символов]`,
               }
-            : undefined,
+            : 'не настроено',
         },
         null,
         2
@@ -102,41 +104,69 @@ export class MqttDeviceService implements OnModuleInit, OnModuleDestroy {
     );
 
     try {
-      const mqttOptions = {
+      // Проверяем наличие mTLS сертификатов
+      if (
+        !config.tls ||
+        !config.tls.ca ||
+        !config.tls.cert ||
+        !config.tls.key
+      ) {
+        throw new Error(
+          'mTLS сертификаты обязательны для устройств. Отсутствуют: ' +
+            [
+              !config.tls ? 'tls конфигурация' : null,
+              !config.tls?.ca ? 'CA сертификат' : null,
+              !config.tls?.cert ? 'клиентский сертификат' : null,
+              !config.tls?.key ? 'приватный ключ' : null,
+            ]
+              .filter(Boolean)
+              .join(', ')
+        );
+      }
+
+      const deviceOptions = {
         brokerUrl: config.brokerUrl,
         userId: config.userId,
         deviceId: config.deviceId,
-        token: config.token,
+        certificateFingerprint: config.certificateFingerprint,
         qos: config.qos ?? 1,
         willPayload: JSON.stringify({
           status: 'offline',
           timestamp: new Date().toISOString(),
         }),
-        useTls: config.useTls,
+        certificates: {
+          ca: config.tls.ca,
+          cert: config.tls.cert,
+          key: config.tls.key,
+          passphrase: config.tls.passphrase,
+        },
         securePort: config.securePort,
-        tls: config.tls,
+        servername: config.servername,
       };
 
       this.logger.log(
-        `Создание MqttRpcClient с опциями: brokerUrl=${mqttOptions.brokerUrl}, useTls=${mqttOptions.useTls}`
+        `Создание MqttDeviceClient с mTLS для устройства ${deviceOptions.deviceId}`
       );
-      this.mqttClient = new MqttRpcClient(mqttOptions);
+      this.mqttClient = new MqttDeviceClient(deviceOptions);
 
       // Настраиваем обработчики событий
       this.setupEventHandlers();
 
-      // Подключаемся к брокеру
-      this.logger.log('Попытка подключения к MQTT брокеру...');
+      // Подключаемся к брокеру с mTLS
+      this.logger.log('Попытка подключения к MQTT брокеру через mTLS...');
       await this.mqttClient.connect();
       this.isConnected = true;
 
       // Подписываемся на команды
       await this.subscribeToCommands();
 
-      const connectionType = config.useTls ? 'mTLS' : 'TCP';
-      this.logger.log(`MQTT клиент успешно подключен через ${connectionType}`);
+      this.logger.log(
+        `MQTT клиент успешно подключен через mTLS на порту ${
+          config.securePort || 8883
+        }`
+      );
     } catch (error) {
-      this.logger.error('Ошибка настройки MQTT клиента:', error);
+      this.logger.error('Ошибка настройки MQTT клиента с mTLS:', error);
       throw error;
     }
   }

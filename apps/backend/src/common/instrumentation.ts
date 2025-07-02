@@ -6,7 +6,7 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
-import { envConfigSchema } from '../config/config.schema';
+import { envConfigSchema } from '../config/config.schema.js';
 
 // Парсим конфигурацию из environment переменных
 const envConfig = envConfigSchema.parse(process.env);

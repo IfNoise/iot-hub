@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { MetricsService } from '../observability/metrics.service';
-import { OtelService } from '../observability/otel.service';
+import { MetricsService } from '../observability/metrics.service.js';
+import { OtelService } from '../observability/otel.service.js';
 import { metricsContract } from '@iot-hub/contracts';
 
 @Controller()

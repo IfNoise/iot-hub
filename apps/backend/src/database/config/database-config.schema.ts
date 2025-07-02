@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { Device } from '../../devices/entities/device.entity';
-import { Certificate } from '../../devices/entities/certificate.entity';
-import { User } from '../../users/entities/user.entity';
+import { Device } from '../../devices/entities/device.entity.js';
+import { Certificate } from '../../devices/entities/certificate.entity.js';
+import { User } from '../../users/entities/user.entity.js';
 
 // Define a more specific enum for database types compatible with TypeOrmModuleOptions
 export const DatabaseTypeEnum = z.enum([

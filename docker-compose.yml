@@ -17,10 +17,10 @@ services:
       - EMQX_NODE__COOKIE=emqxsecretcookie
       - EMQX_DASHBOARD__DEFAULT_USERNAME=admin
       - EMQX_DASHBOARD__DEFAULT_PASSWORD=iot-hub-admin
-      - EMQX_LOG__CONSOLE_HANDLER__LEVEL=warning
+      - EMQX_LOG__CONSOLE_HANDLER__LEVEL=debug
 
     volumes:
-      - ./apps/backend/certs:/opt/emqx/etc/certs:ro
+      - iot-hub-certs:/opt/emqx/etc/certs:ro
       - ./emqx-mtls.conf:/opt/emqx/etc/emqx.conf:ro
       - emqx-data:/opt/emqx/data
       - emqx-log:/opt/emqx/log
@@ -46,72 +46,85 @@ services:
       - iot-network
 
   # IoT Hub Backend - optimized
-  # iot-backend:
-  #   build:
-  #     context: .
-  #     dockerfile: apps/backend/Dockerfile.backend
-  #   container_name: iot-hub-backend
-  #   restart: unless-stopped
+  iot-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend.dev
+    container_name: iot-hub-backend
+    working_dir: /workspace
+    # user: '1000:1000' # Временно отключаем, пока не решим проблемы с правами
+    command:
+      [
+        'sh',
+        '-c',
+        'npx nx build @iot-hub/backend && node dist/apps/backend/src/main.js',
+      ]
+    ports:
+      - '3000:3000'
 
-  #   ports:
-  #     - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - DOCKER=true
+      - NODE_OPTIONS=--max-old-space-size=1536 --experimental-specifier-resolution=node
+      - PORT=3000
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=iot_user
+      - DATABASE_PASSWORD=iot_password
+      - DATABASE_NAME=iot_hub
+      - DB_SSL=false
+      - JWT_SECRET=your-super-secret-jwt-key-for-production
+      - LOG_LEVEL=debug
+      - MQTT_BROKER_URL=mqtt://emqx:1883
+      - MQTT_HOST=emqx
+      - MQTT_PORT=1883
+      - MQTT_SECURE_PORT=8883
+      - MQTT_CONNECT_TIMEOUT=30000
+      - MQTT_RECONNECT_PERIOD=5000
+      - MQTT_MAX_RECONNECT_ATTEMPTS=10
+      - KEYCLOAK_URL=
+      - KEYCLOAK_REALM=
+      - LOKI_ENABLED=true # Включаем Loki для логирования
+      - LOKI_LABELS=service:iot-hub-backend
 
-  #   environment:
-  #     - NODE_ENV=production
-  #     - PORT=3000
-  #     - DATABASE_HOST=postgres
-  #     - DATABASE_PORT=5432
-  #     - DATABASE_USER=iot_user
-  #     - DATABASE_PASSWORD=iot_password
-  #     - DATABASE_NAME=iot_hub
-  #     - DB_SSL=false
-  #     - JWT_SECRET=your-super-secret-jwt-key-for-production
-  #     - MQTT_BROKER_URL=mqtt://emqx:1883
-  #     - MQTT_HOST=emqx
-  #     - MQTT_PORT=1883
-  #     - MQTT_SECURE_PORT=8883
-  #     - MQTT_CONNECT_TIMEOUT=30000
-  #     - MQTT_RECONNECT_PERIOD=5000
-  #     - MQTT_MAX_RECONNECT_ATTEMPTS=10
-  #     - KEYCLOAK_URL=
-  #     - KEYCLOAK_REALM=
+    volumes:
+      - .:/workspace:cached
+      - /workspace/node_modules # ❗️Важно: НЕ перетираем node_modules
+      - nx-cache:/workspace/.nx
+      - iot-hub-certs:/workspace/certs
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
-  #   volumes:
-  #     - ./apps/backend/certs:/app/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
-  # Resource limits
-  # deploy:
-  #   resources:
-  #     limits:
-  #       cpus: '1.0'
-  #       memory: 512M
-  #     reservations:
-  #       cpus: '0.25'
-  #       memory: 128M
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:3000/api/health',
+        ]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
 
-  # depends_on:
-  #   postgres:
-  #     condition: service_healthy
-  #   redis:
-  #     condition: service_started
-
-  # healthcheck:
-  #   test:
-  #     [
-  #       'CMD',
-  #       'wget',
-  #       '--no-verbose',
-  #       '--tries=1',
-  #       '--spider',
-  #       'http://localhost:3000/api/health',
-  #     ]
-  #   interval: 60s
-  #   timeout: 15s
-  #   retries: 3
-  #   start_period: 120s
-
-  # networks:
-  #   - iot-network
+    networks:
+      - iot-network
 
   # PostgreSQL Database - optimized
   postgres:
@@ -188,6 +201,11 @@ volumes:
     driver: local
   redis-data:
     driver: local
+  nx-cache:
+    driver: local
+  iot-hub-certs:
+    external: true
+    name: iot-hub-certs
 
 networks:
   iot-network:

@@ -2,11 +2,11 @@
 import { Controller, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { CurrentUser } from '../common/decorator/current-user.decorator';
-import { Roles } from '../common/decorator/roles.decorator';
-import { RolesGuard } from '../common/guard/roles-guard.guard';
-import type { AuthenticatedUser } from '../common/types/keycloak-user.interface';
-import { KeycloakUserService } from '../common/services/keycloak-user.service';
+import { CurrentUser } from '../common/decorator/current-user.decorator.js';
+import { Roles } from '../common/decorator/roles.decorator.js';
+import { RolesGuard } from '../common/guard/roles-guard.guard.js';
+import type { AuthenticatedUser } from '../common/types/keycloak-user.interface.js';
+import { KeycloakUserService } from '../common/services/keycloak-user.service.js';
 import { authContract } from '@iot-hub/auth';
 
 @ApiTags('auth')

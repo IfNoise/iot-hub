@@ -7,7 +7,7 @@ import {
   AuthMetrics,
   ErrorMetrics,
   MetricLabels,
-} from './types';
+} from './types.js';
 
 @Injectable()
 export class MetricsService {

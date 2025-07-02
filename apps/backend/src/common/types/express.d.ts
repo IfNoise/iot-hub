@@ -1,5 +1,5 @@
 // src/common/types/express.d.ts
-import { AuthenticatedUser } from './keycloak-user.interface';
+import { AuthenticatedUser } from './keycloak-user.interface.js';
 
 declare global {
   namespace Express {

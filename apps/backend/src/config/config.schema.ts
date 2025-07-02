@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { commonConfigSchema } from '../common/config/common-config.schema';
-import { authConfigSchema } from '../auth/config/auth-config.schema';
-import { databaseConfigSchema } from '../database/config/database-config.schema';
-import { mqttConfigSchema } from '../mqtt/config/mqtt-config.schema';
-import { telemetryConfigSchema } from '../common/config/telemetry-config.schema';
-import { devicesConfigSchema } from '../devices/config/devices-config.schema';
-import { usersConfigSchema } from '../users/config/users-config.schema';
+import { commonConfigSchema } from '../common/config/common-config.schema.js';
+import { authConfigSchema } from '../auth/config/auth-config.schema.js';
+import { databaseConfigSchema } from '../database/config/database-config.schema.js';
+import { mqttConfigSchema } from '../mqtt/config/mqtt-config.schema.js';
+import { telemetryConfigSchema } from '../common/config/telemetry-config.schema.js';
+import { devicesConfigSchema } from '../devices/config/devices-config.schema.js';
+import { usersConfigSchema } from '../users/config/users-config.schema.js';
 
 // Environment variables schema - maps env vars to config sections
 export const envConfigSchema = z.object({

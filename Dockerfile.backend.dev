@@ -1,0 +1,36 @@
+# Dockerfile.dev
+FROM node:20
+
+# Устанавливаем необходимые инструменты для работы с сертификатами
+RUN apt-get update && apt-get install -y openssl && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+COPY package*.json ./
+RUN npm install -g nx
+# Установка зависимостей (будет кэшироваться, если не меняются package.json)
+RUN npm install
+
+# Копируем остальной код (после зависимостей, чтобы не ломать кеш)
+COPY . .
+
+# Пересоздаем символические ссылки в node_modules/@iot-hub/ для корректной работы импортов
+RUN rm -rf node_modules/@iot-hub && mkdir -p node_modules/@iot-hub && \
+    ln -sf ../../libs/contracts node_modules/@iot-hub/contracts && \
+    ln -sf ../../libs/contracts/auth node_modules/@iot-hub/auth && \
+    ln -sf ../../libs/contracts/crypto node_modules/@iot-hub/crypto && \
+    ln -sf ../../libs/contracts/devices node_modules/@iot-hub/devices && \
+    ln -sf ../../libs/contracts/mqtt node_modules/@iot-hub/mqtt && \
+    ln -sf ../../libs/contracts/users node_modules/@iot-hub/users && \
+    ln -sf ../../libs/shared node_modules/@iot-hub/shared
+
+# Создаем package.json файлы для всех алиасов
+RUN for lib in contracts auth crypto devices mqtt users shared; do \
+      echo "{ \"name\": \"@iot-hub/$lib\", \"version\": \"0.0.1\", \"type\": \"module\", \"main\": \"dist/index.js\", \"types\": \"dist/index.d.ts\", \"exports\": { \".\": { \"import\": \"./dist/index.js\", \"types\": \"./dist/index.d.ts\" } } }" > node_modules/@iot-hub/$lib/package.json; \
+    done
+
+# Собираем библиотеки в правильном порядке зависимостей
+RUN npx nx run-many --target=build --projects=auth,crypto,devices,mqtt,users,shared && \
+    npx nx build @iot-hub/contracts
+
+CMD ["nx", "serve", "@iot-hub/backend", "--host=0.0.0.0", "--watch"]

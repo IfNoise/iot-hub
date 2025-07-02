@@ -10,6 +10,7 @@
     "noEmitOnError": true,
     "baseUrl": ".",
     "paths": {
+      "@iot-hub/contracts": ["libs/contracts/src/index.ts"],
       "@iot-hub/auth": ["libs/contracts/auth/src/index.ts"],
       "@iot-hub/crypto": ["libs/contracts/crypto/src/index.ts"],
       "@iot-hub/devices": ["libs/contracts/devices/src/index.ts"],

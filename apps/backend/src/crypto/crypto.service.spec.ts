@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CryptoService } from './crypto.service';
-const forge = require('node-forge');
+import { CryptoService } from './crypto.service.js';
+import * as forge from 'node-forge';
 
 describe('CryptoService', () => {
   let service: CryptoService;

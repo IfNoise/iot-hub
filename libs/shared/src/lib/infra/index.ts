@@ -4,3 +4,4 @@
 
 export * from './mqtt/base-client.js';
 export * from './mqtt/rpc-client.js';
+export * from './mqtt/device-client.js';

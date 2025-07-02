@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from './config.service';
+import { ConfigService } from './config.service.js';
 
 describe('ConfigService (Decomposed)', () => {
   let service: ConfigService;

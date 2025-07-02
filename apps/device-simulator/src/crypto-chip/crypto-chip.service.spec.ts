@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CryptoChipService } from './crypto-chip.service';
+import { CryptoChipService } from './crypto-chip.service.js';
 
 describe('CryptoChipService', () => {
   let service: CryptoChipService;

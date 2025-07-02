@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { usersConfigSchema, UsersConfig } from './users-config.schema';
+import { usersConfigSchema, UsersConfig } from './users-config.schema.js';
 
 @Injectable()
 export class UsersConfigService {

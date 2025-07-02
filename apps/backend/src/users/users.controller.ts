@@ -1,8 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { UsersService } from './users.service';
-import { UserMapper } from './mappers/user.mapper';
+import { UsersService } from './users.service.js';
+import { UserMapper } from './mappers/user.mapper.js';
 import { usersContract } from '@iot-hub/users';
 
 @ApiTags('users')

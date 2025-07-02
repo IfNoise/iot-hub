@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { AppService } from './app.service';
+import { AppService } from './app.service.js';
 import { appContract } from '@iot-hub/contracts';
 
 @Controller()

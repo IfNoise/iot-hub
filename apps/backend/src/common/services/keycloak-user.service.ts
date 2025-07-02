@@ -1,8 +1,8 @@
 // src/common/services/keycloak-user.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { AuthenticatedUser } from '../types/keycloak-user.interface';
-import { UsersService } from '../../users/users.service';
-import { User } from '../../users/entities/user.entity';
+import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
+import { UsersService } from '../../users/users.service.js';
+import { User } from '../../users/entities/user.entity.js';
 
 @Injectable()
 export class KeycloakUserService {
