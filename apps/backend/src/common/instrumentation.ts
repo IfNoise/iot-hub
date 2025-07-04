@@ -19,14 +19,19 @@ if (debugMode) {
 
 // Проверяем, включен ли OpenTelemetry
 if (!envConfig.OTEL_ENABLED) {
-  console.log('📊 OpenTelemetry отключен через конфигурацию OTEL_ENABLED=false');
+  console.log(
+    '📊 OpenTelemetry отключен через конфигурацию OTEL_ENABLED=false'
+  );
 } else {
   // Настраиваем переменные окружения для автоматической отправки метрик
   const collectorUrl = envConfig.OTEL_COLLECTOR_URL;
-  const tracesEndpoint = envConfig.OTEL_COLLECTOR_TRACES_ENDPOINT || `${collectorUrl}/v1/traces`;
-  const metricsEndpoint = envConfig.OTEL_COLLECTOR_METRICS_ENDPOINT || `${collectorUrl}/v1/metrics`;
-  const logsEndpoint = envConfig.OTEL_COLLECTOR_LOGS_ENDPOINT || `${collectorUrl}/v1/logs`;
-  
+  const tracesEndpoint =
+    envConfig.OTEL_COLLECTOR_TRACES_ENDPOINT || `${collectorUrl}/v1/traces`;
+  const metricsEndpoint =
+    envConfig.OTEL_COLLECTOR_METRICS_ENDPOINT || `${collectorUrl}/v1/metrics`;
+  const logsEndpoint =
+    envConfig.OTEL_COLLECTOR_LOGS_ENDPOINT || `${collectorUrl}/v1/logs`;
+
   // Отладочный вывод для эндпоинтов
   console.log('📊 OTEL Endpoints:');
   console.log(`📈 Collector URL: ${collectorUrl}`);
@@ -67,11 +72,13 @@ if (!envConfig.OTEL_ENABLED) {
   }
 
   // Парсим resource attributes
-  const parseResourceAttributes = (attributesString?: string): Record<string, string> => {
+  const parseResourceAttributes = (
+    attributesString?: string
+  ): Record<string, string> => {
     const baseAttributes = {
       'service.name': envConfig.OTEL_SERVICE_NAME,
       'service.version': envConfig.OTEL_SERVICE_VERSION,
-      'environment': envConfig.NODE_ENV,
+      environment: envConfig.NODE_ENV,
       'deployment.environment': envConfig.NODE_ENV,
     };
 
@@ -80,7 +87,7 @@ if (!envConfig.OTEL_ENABLED) {
     }
 
     const customAttributes: Record<string, string> = {};
-    attributesString.split(',').forEach(pair => {
+    attributesString.split(',').forEach((pair) => {
       const [key, value] = pair.trim().split('=');
       if (key && value) {
         customAttributes[key.trim()] = value.trim();
@@ -90,7 +97,9 @@ if (!envConfig.OTEL_ENABLED) {
     return { ...baseAttributes, ...customAttributes };
   };
 
-  const resourceAttributes = parseResourceAttributes(envConfig.OTEL_RESOURCE_ATTRIBUTES);
+  const resourceAttributes = parseResourceAttributes(
+    envConfig.OTEL_RESOURCE_ATTRIBUTES
+  );
 
   // Настраиваем ресурсы через environment переменные
   const resourceAttributesString = Object.entries(resourceAttributes)
@@ -141,14 +150,22 @@ if (!envConfig.OTEL_ENABLED) {
   try {
     console.log('🔍 Инициализация OpenTelemetry из конфигурации...');
     console.log(`📍 Collector URL: ${collectorUrl}`);
-    console.log(`🏷️  Сервис: ${envConfig.OTEL_SERVICE_NAME} v${envConfig.OTEL_SERVICE_VERSION}`);
-    console.log(`📊 Метрики: ${envConfig.OTEL_ENABLE_METRICS ? 'включены' : 'отключены'}`);
-    console.log(`🔄 Трейсы: ${envConfig.OTEL_ENABLE_TRACING ? 'включены' : 'отключены'}`);
-    console.log(`📝 Логи: ${envConfig.OTEL_ENABLE_LOGGING ? 'включены' : 'отключены'}`);
+    console.log(
+      `🏷️  Сервис: ${envConfig.OTEL_SERVICE_NAME} v${envConfig.OTEL_SERVICE_VERSION}`
+    );
+    console.log(
+      `📊 Метрики: ${envConfig.OTEL_ENABLE_METRICS ? 'включены' : 'отключены'}`
+    );
+    console.log(
+      `🔄 Трейсы: ${envConfig.OTEL_ENABLE_TRACING ? 'включены' : 'отключены'}`
+    );
+    console.log(
+      `📝 Логи: ${envConfig.OTEL_ENABLE_LOGGING ? 'включены' : 'отключены'}`
+    );
     console.log(`🐛 Debug: ${debugMode ? 'включен' : 'отключен'}`);
-    
+
     sdk.start();
-    
+
     console.log('✅ OpenTelemetry успешно инициализирован из конфигурации');
     console.log('📈 Доступные типы метрик:');
     console.log('   • HTTP запросы (автоматические)');
@@ -193,7 +210,6 @@ if (!envConfig.OTEL_ENABLED) {
         }
       }
     });
-
   } catch (error) {
     console.error('❌ Ошибка инициализации OpenTelemetry:', error);
     // Не падаем, если OTel не удалось инициализировать
@@ -202,5 +218,7 @@ if (!envConfig.OTEL_ENABLED) {
 
 // Экспортируем функцию инициализации для совместимости
 export const initializeOpenTelemetry = () => {
-  console.log('📊 OpenTelemetry инициализация управляется из instrumentation.ts');
+  console.log(
+    '📊 OpenTelemetry инициализация управляется из instrumentation.ts'
+  );
 };
