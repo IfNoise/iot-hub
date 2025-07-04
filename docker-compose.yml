@@ -84,8 +84,24 @@ services:
       - MQTT_MAX_RECONNECT_ATTEMPTS=10
       - KEYCLOAK_URL=
       - KEYCLOAK_REALM=
-      - LOKI_ENABLED=true # Включаем Loki для логирования
-      - LOKI_LABELS=service:iot-hub-backend
+      # OpenTelemetry Configuration
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=iot-hub-backend
+      - OTEL_SERVICE_VERSION=1.0.0
+      - OTEL_COLLECTOR_URL=http://otel-collector:4318
+      - OTEL_COLLECTOR_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OTEL_COLLECTOR_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
+      - OTEL_COLLECTOR_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
+      - OTEL_ENABLE_TRACING=true
+      - OTEL_ENABLE_METRICS=true
+      - OTEL_ENABLE_LOGGING=true
+      - OTEL_DEBUG=true
+      # Loki Configuration
+      - LOKI_ENABLED=true
+      - LOKI_URL=http://loki:3100
+      - LOKI_LABELS=job=iot-hub-backend,version=1.0.0
+      - LOKI_TIMEOUT=30000
+      - LOKI_SILENCE_ERRORS=true
 
     volumes:
       - .:/workspace:cached
@@ -209,7 +225,5 @@ volumes:
 
 networks:
   iot-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+    external: true
+    name: iot-network

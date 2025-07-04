@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '3050:3000'
+    volumes:
+      - grafana-storage:/var/lib/grafana:rw
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - loki
+      - tempo
+      - victoriametrics
+    networks:
+      - default
+      - iot-network
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    ports:
+      - '8428:8428'
+    volumes:
+      - ./monitoring-config/victoria-data:/storage
+    networks:
+      - default
+      - iot-network
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ['-config.file=/etc/tempo/tempo.yaml']
+    volumes:
+      - ./monitoring-config/tempo/tempo.yaml:/etc/tempo/tempo.yaml
+    ports:
+      - '3200:3200'
+      - '4319:4319'
+      - '4320:4318'
+      - '9095:9095'
+    networks:
+      - default
+      - iot-network
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - '3100:3100'
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring-config/loki/local-config.yaml:/etc/loki/local-config.yaml
+    networks:
+      - default
+      - iot-network
+
+  promtail:
+    image: grafana/promtail:latest
+    command: -config.file=/etc/promtail/promtail.yaml
+    volumes:
+      - ./monitoring-config/promtail/promtail.yaml:/etc/promtail/promtail.yaml
+      - /var/log:/var/log
+    networks:
+      - default
+      - iot-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ['--config=/etc/otel/otel-config.yaml']
+    ports:
+      - '4317:4317'
+      - '4318:4318'
+    volumes:
+      - ./monitoring-config/otel-collector/otel-config.yaml:/etc/otel/otel-config.yaml
+    depends_on:
+      - loki
+      - tempo
+      - victoriametrics
+    networks:
+      - default
+      - iot-network
+
+volumes:
+  grafana-storage:
+
+networks:
+  default:
+  iot-network:
+    external: true

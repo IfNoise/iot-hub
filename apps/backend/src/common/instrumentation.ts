@@ -26,6 +26,13 @@ if (!envConfig.OTEL_ENABLED) {
   const tracesEndpoint = envConfig.OTEL_COLLECTOR_TRACES_ENDPOINT || `${collectorUrl}/v1/traces`;
   const metricsEndpoint = envConfig.OTEL_COLLECTOR_METRICS_ENDPOINT || `${collectorUrl}/v1/metrics`;
   const logsEndpoint = envConfig.OTEL_COLLECTOR_LOGS_ENDPOINT || `${collectorUrl}/v1/logs`;
+  
+  // Отладочный вывод для эндпоинтов
+  console.log('📊 OTEL Endpoints:');
+  console.log(`📈 Collector URL: ${collectorUrl}`);
+  console.log(`🔄 Трейсы: ${tracesEndpoint}`);
+  console.log(`📊 Метрики: ${metricsEndpoint}`);
+  console.log(`📝 Логи: ${logsEndpoint}`);
 
   process.env.OTEL_EXPORTER_OTLP_ENDPOINT = collectorUrl;
   process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = tracesEndpoint;

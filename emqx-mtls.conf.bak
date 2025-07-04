@@ -116,14 +116,8 @@ listeners.ssl.default.authentication = [ {
 }
 ]
 
-## Глобальная аутентификация - минимальная настройка для совместимости
-authentication = [
-  {
-    mechanism = password_based
-    backend = built_in_database
-    enable = false
-  }
-]
+## Глобальная аутентификация отключена - каждый слушатель настраивается отдельно
+authentication = []
 
 # =============================================================================
 # Logging Configuration
