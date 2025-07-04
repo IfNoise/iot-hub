@@ -46,13 +46,19 @@ export class MqttRpcService implements OnModuleInit, OnModuleDestroy {
    * Инициализация модуля и подключение к MQTT брокеру
    */
   async onModuleInit(): Promise<void> {
-    try {
-      await this.initializeMqttClient();
-      this.isInitialized = true;
-    } catch (error) {
-      this.logger.error({ error }, 'Ошибка инициализации MQTT RPC сервиса');
-      throw error;
-    }
+    // Запускаем инициализацию MQTT в фоне, не блокируя старт приложения
+    this.initializeMqttClient()
+      .then(() => {
+        this.isInitialized = true;
+        this.logger.info('MQTT RPC сервис успешно инициализирован');
+      })
+      .catch((error) => {
+        this.logger.error(
+          { error },
+          'Ошибка инициализации MQTT RPC сервиса. Сервис будет недоступен до успешного подключения.'
+        );
+        // Не выбрасываем ошибку, чтобы не блокировать старт приложения
+      });
   }
 
   /**

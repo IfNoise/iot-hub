@@ -1,4 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import {
+  Module,
+  MiddlewareConsumer,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { DatabaseModule } from '../database/database.module.js';
@@ -16,12 +21,12 @@ import { CommonConfigService } from '../common/config/common-config.service.js';
 
 @Module({
   imports: [
+    ConfigModule, // Сначала ConfigModule для предоставления конфигурационных сервисов
     DatabaseModule,
     DevicesModule,
     UsersModule,
     AuthModule,
     MiddlewareModule,
-    ConfigModule,
     CommonServicesModule,
     MqttModule,
     // Улучшенное логирование с множественными транспортами через CommonConfigService
@@ -115,11 +120,16 @@ export class AppModule implements NestModule {
     consumer
       .apply(KeycloakOAuth2Middleware)
       .exclude(
-        '/health/*path',
-        '/metrics/*path',
-        '/docs/*path',
-        '/manufacturing/*path', // Исключаем производственные endpoints
-        '/devices/certificates/*path' // Исключаем endpoints сертификатов для устройств
+        { path: 'health', method: RequestMethod.ALL },
+        { path: 'health/*', method: RequestMethod.ALL },
+        { path: 'metrics', method: RequestMethod.ALL },
+        { path: 'metrics/*', method: RequestMethod.ALL },
+        { path: 'docs', method: RequestMethod.ALL },
+        { path: 'docs/*', method: RequestMethod.ALL },
+        { path: 'manufacturing', method: RequestMethod.ALL },
+        { path: 'manufacturing/*', method: RequestMethod.ALL },
+        { path: 'devices/certificates', method: RequestMethod.ALL },
+        { path: 'devices/certificates/*', method: RequestMethod.ALL }
       )
       .forRoutes('*');
 
@@ -128,11 +138,16 @@ export class AppModule implements NestModule {
     consumer
       .apply(AutoUserSyncMiddleware)
       .exclude(
-        '/health/*path',
-        '/metrics/*path',
-        '/docs/*path',
-        '/manufacturing/*path', // Исключаем производственные endpoints
-        '/devices/certificates/*path' // Исключаем endpoints сертификатов для устройств
+        { path: 'health', method: RequestMethod.ALL },
+        { path: 'health/*', method: RequestMethod.ALL },
+        { path: 'metrics', method: RequestMethod.ALL },
+        { path: 'metrics/*', method: RequestMethod.ALL },
+        { path: 'docs', method: RequestMethod.ALL },
+        { path: 'docs/*', method: RequestMethod.ALL },
+        { path: 'manufacturing', method: RequestMethod.ALL },
+        { path: 'manufacturing/*', method: RequestMethod.ALL },
+        { path: 'devices/certificates', method: RequestMethod.ALL },
+        { path: 'devices/certificates/*', method: RequestMethod.ALL }
       )
       .forRoutes('*');
   }

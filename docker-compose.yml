@@ -1,7 +1,7 @@
 services:
   # EMQX MQTT Broker with mTLS support - optimized
   emqx:
-    image: emqx/emqx:5.3.0
+    image: emqx/emqx:latest
     container_name: emqx-mtls
     restart: unless-stopped
 

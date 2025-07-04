@@ -1,7 +1,6 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '../../config/config.module.js';
-import { CommonConfigService } from '../config/common-config.service.js';
 import { LoggingService } from './logging.service.js';
 import { LogMaintenanceService } from './log-maintenance.service.js';
 import { MetricsExampleService } from './metrics-example.service.js';
@@ -11,19 +10,9 @@ import { ObservabilityModule } from '../observability/observability.module.js';
 
 @Module({
   imports: [ConfigModule, ScheduleModule.forRoot(), ObservabilityModule],
-  providers: [
-    CommonConfigService,
-    LoggingService,
-    LogMaintenanceService,
-    MetricsExampleService,
-  ],
+  providers: [LoggingService, LogMaintenanceService, MetricsExampleService],
   controllers: [HealthController, MetricsController],
-  exports: [
-    CommonConfigService,
-    LoggingService,
-    LogMaintenanceService,
-    MetricsExampleService,
-  ],
+  exports: [LoggingService, LogMaintenanceService, MetricsExampleService],
 })
 export class CommonServicesModule implements OnModuleInit {
   constructor(private readonly loggingService: LoggingService) {}

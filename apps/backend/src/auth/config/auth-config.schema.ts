@@ -44,17 +44,14 @@ export const authConfigSchema = z.object({
   // Development User Configuration (только для разработки когда Keycloak отключен)
   devUserId: z
     .string()
-    .default('dev-user-id')
-    .describe('Development user ID'),
+    .default('550e8400-e29b-41d4-a716-446655440000')
+    .describe('Development user ID (должен быть валидный UUID)'),
   devUserEmail: z
     .string()
     .email()
     .default('dev@example.com')
     .describe('Development user email'),
-  devUserName: z
-    .string()
-    .default('Dev User')
-    .describe('Development user name'),
+  devUserName: z.string().default('Dev User').describe('Development user name'),
   devUserRole: z
     .enum(['admin', 'user'])
     .default('admin')
