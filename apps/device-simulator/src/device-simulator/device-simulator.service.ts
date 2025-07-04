@@ -9,6 +9,7 @@ import {
 } from '../mqtt/mqtt-device.service';
 import { CertificateClientService } from '../mqtt/certificate-client.service';
 import { MtlsConfigService } from '../mqtt/mtls-config.service';
+import { QRGeneratorService, QRCodeType } from './qr-generator.service.js';
 
 export interface DeviceConfig {
   deviceId: string;
@@ -64,7 +65,8 @@ export class DeviceSimulatorService
     private readonly cryptoChip: CryptoChipService,
     private readonly mqttDevice: MqttDeviceService,
     private readonly certificateClient: CertificateClientService,
-    private readonly mtlsConfig: MtlsConfigService
+    private readonly mtlsConfig: MtlsConfigService,
+    private readonly qrGenerator: QRGeneratorService
   ) {
     // Инициализация базового состояния устройства
     this.deviceState = {
@@ -308,6 +310,18 @@ export class DeviceSimulatorService
 
       this.logger.log('Устройство успешно зарегистрировано:', response.data);
       this.deviceState.status = 'registered';
+
+      // Генерируем и показываем QR-код устройства после успешной регистрации
+      try {
+        this.logger.log('Генерация QR-кода для привязки устройства...');
+        await this.generateAndShowQRCode('token'); // Используем рекомендуемый тип QR-кода
+        this.logger.log('QR-код устройства отображен в консоли для привязки');
+      } catch (error) {
+        this.logger.warn(
+          'Не удалось сгенерировать QR-код:',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
 
       // Запускаем процесс получения сертификата
       await this.requestCertificate();
@@ -563,5 +577,81 @@ export class DeviceSimulatorService
       this.logger.error('Ошибка сохранения сертификатов:', error);
       throw error;
     }
+  }
+
+  /**
+   * Генерирует и отображает QR-код устройства
+   */
+  async generateAndShowQRCode(type: QRCodeType = 'token'): Promise<void> {
+    if (!this.config?.deviceId) {
+      throw new Error(
+        'Устройство не сконфигурировано. Вызовите configureDevice() сначала.'
+      );
+    }
+
+    this.logger.log(`Генерация QR-кода для устройства ${this.config.deviceId}`);
+
+    // Получаем fingerprint сертификата для QR-кода
+    const fingerprint =
+      this.deviceState.certificateFingerprint || this.generateMockFingerprint();
+
+    // Генерируем данные в зависимости от типа QR-кода
+    const options = {
+      type,
+      deviceId: this.config.deviceId,
+      fingerprint: type !== 'token' ? fingerprint : undefined,
+      bindingToken:
+        type === 'token' ? this.qrGenerator.generateBindingToken() : undefined,
+      keyHash: type === 'hash' ? this.qrGenerator.generateKeyHash() : undefined,
+    };
+
+    // Генерируем QR-код
+    const qrResult = await this.qrGenerator.generateDeviceQR(options);
+
+    // Выводим QR-код в консоль
+    this.qrGenerator.printQRToConsole(qrResult);
+
+    this.logger.log(
+      `QR-код успешно сгенерирован (тип: ${type}, размер: ${qrResult.estimatedSize} символов)`
+    );
+  }
+
+  /**
+   * Генерирует QR-коды всех типов для демонстрации
+   */
+  async generateAllQRTypes(): Promise<void> {
+    if (!this.config?.deviceId) {
+      throw new Error(
+        'Устройство не сконфигурировано. Вызовите configureDevice() сначала.'
+      );
+    }
+
+    this.logger.log('Генерация QR-кодов всех типов для демонстрации...');
+
+    const types: QRCodeType[] = ['minimal', 'token', 'hash'];
+
+    for (const type of types) {
+      await this.generateAndShowQRCode(type);
+      // Небольшая задержка между выводами для читаемости
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    this.logger.log('Генерация всех типов QR-кодов завершена');
+  }
+
+  /**
+   * Генерирует мок-fingerprint для демонстрации
+   */
+  private generateMockFingerprint(): string {
+    const parts = [];
+    for (let i = 0; i < 6; i++) {
+      parts.push(
+        Math.floor(Math.random() * 256)
+          .toString(16)
+          .padStart(2, '0')
+          .toUpperCase()
+      );
+    }
+    return parts.join(':');
   }
 }

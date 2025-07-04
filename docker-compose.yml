@@ -52,7 +52,7 @@ services:
       dockerfile: Dockerfile.backend.dev
     container_name: iot-hub-backend
     working_dir: /workspace
-    # user: '1000:1000' # Временно отключаем, пока не решим проблемы с правами
+    #user: '1000:1000' # Временно отключаем, пока не решим проблемы с правами
     command:
       [
         'sh',

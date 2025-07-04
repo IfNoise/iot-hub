@@ -6,11 +6,13 @@ import {
   Logger,
   HttpException,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
   DeviceSimulatorService,
   DeviceConfig,
 } from './device-simulator.service.js';
+import { QRCodeType } from './qr-generator.service.js';
 
 export interface ConfigureDeviceDto {
   deviceId: string;
@@ -469,5 +471,87 @@ export class DeviceSimulatorController {
     }
 
     return 1; // Значение по умолчанию
+  }
+
+  /**
+   * Генерация QR-кода для устройства
+   */
+  @Post('generate-qr')
+  async generateQRCode(@Body() body: { type?: QRCodeType }) {
+    try {
+      const type = body.type || 'token';
+      this.logger.log(`Генерация QR-кода типа: ${type}`);
+
+      await this.deviceSimulator.generateAndShowQRCode(type);
+
+      return {
+        success: true,
+        message: `QR-код типа "${type}" сгенерирован и отображен в консоли`,
+        type,
+      };
+    } catch (error) {
+      this.logger.error('Ошибка генерации QR-кода:', error);
+      throw new HttpException(
+        'Ошибка генерации QR-кода',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Генерация QR-кодов всех типов для демонстрации
+   */
+  @Post('generate-all-qr-types')
+  async generateAllQRTypes() {
+    try {
+      this.logger.log('Генерация всех типов QR-кодов...');
+
+      await this.deviceSimulator.generateAllQRTypes();
+
+      return {
+        success: true,
+        message: 'Все типы QR-кодов сгенерированы и отображены в консоли',
+        types: ['minimal', 'token', 'hash'],
+      };
+    } catch (error) {
+      this.logger.error('Ошибка генерации всех типов QR-кодов:', error);
+      throw new HttpException(
+        'Ошибка генерации всех типов QR-кодов',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Получение информации о типах QR-кодов
+   */
+  @Get('qr-types')
+  getQRTypes() {
+    return {
+      success: true,
+      types: [
+        {
+          type: 'minimal',
+          description: 'Минимальный (deviceId + fingerprint)',
+          estimatedSize: '70-80 символов',
+          security: 'Средняя',
+          recommended: false,
+        },
+        {
+          type: 'token',
+          description: 'С токеном (deviceId + bindingToken)',
+          estimatedSize: '80-90 символов',
+          security: 'Очень высокая',
+          recommended: true,
+        },
+        {
+          type: 'hash',
+          description: 'С хешем (deviceId + fingerprint + keyHash)',
+          estimatedSize: '110-120 символов',
+          security: 'Высокая',
+          recommended: false,
+        },
+      ],
+    };
   }
 }

@@ -62,6 +62,7 @@ export class MqttRpcClient extends BaseMqttClient {
     const mqttOptions: IClientOptions = {
       username: options.username ?? 'jwt',
       password: options.token,
+      protocolVersion: 5,
       reconnectPeriod: options.reconnectPeriod ?? TIMEOUTS.MQTT_RECONNECT,
       connectTimeout: options.connectTimeout ?? TIMEOUTS.MQTT_CONNECT,
       keepalive: options.keepalive ?? 60,
