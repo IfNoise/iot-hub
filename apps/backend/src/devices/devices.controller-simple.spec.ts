@@ -4,7 +4,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Device } from './entities/device.entity.js';
 import { Certificate } from './entities/certificate.entity.js';
-import { CryptoService } from '../crypto/crypto.service.js';
 
 describe('DevicesController Simple Unit Tests', () => {
   let controller: DevicesController;
@@ -38,10 +37,6 @@ describe('DevicesController Simple Unit Tests', () => {
         },
         {
           provide: getRepositoryToken(Certificate),
-          useValue: {},
-        },
-        {
-          provide: CryptoService,
           useValue: {},
         },
       ],

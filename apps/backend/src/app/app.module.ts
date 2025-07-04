@@ -2,7 +2,6 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { DatabaseModule } from '../database/database.module.js';
-import { CryptoModule } from '../crypto/crypto.module.js';
 import { DevicesModule } from '../devices/devices.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { LoggerModule } from 'nestjs-pino';
@@ -18,7 +17,6 @@ import { CommonConfigService } from '../common/config/common-config.service.js';
 @Module({
   imports: [
     DatabaseModule,
-    CryptoModule,
     DevicesModule,
     UsersModule,
     AuthModule,

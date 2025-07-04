@@ -7,7 +7,6 @@ import { DevicesController } from './devices.controller.js';
 import { DevicesService } from './devices.service.js';
 import { Device } from './entities/device.entity.js';
 import { Certificate } from './entities/certificate.entity.js';
-import { CryptoService } from '../crypto/crypto.service.js';
 import { RolesGuard } from '../common/guard/roles-guard.guard.js';
 
 describe('DevicesController (e2e)', () => {
@@ -42,13 +41,6 @@ describe('DevicesController (e2e)', () => {
     createdAt: new Date(),
   };
 
-  const mockCryptoResult = {
-    clientCert: 'mock-client-cert',
-    caCert: 'mock-ca-cert',
-    fingerprint: 'mock-fingerprint',
-    publicKeyPem: 'mock-public-key',
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DevicesController],
@@ -69,12 +61,6 @@ describe('DevicesController (e2e)', () => {
           useValue: {
             create: jest.fn().mockReturnValue(mockCertificate),
             save: jest.fn().mockResolvedValue(mockCertificate),
-          },
-        },
-        {
-          provide: CryptoService,
-          useValue: {
-            signCertificate: jest.fn().mockReturnValue(mockCryptoResult),
           },
         },
       ],

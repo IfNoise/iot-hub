@@ -6,15 +6,10 @@ import { DevicesService } from './devices.service.js';
 import { CertificateService } from './certificate-mtls.service.js';
 import { Device } from './entities/device.entity.js';
 import { Certificate } from './entities/certificate.entity.js';
-import { CryptoModule } from '../crypto/crypto.module.js';
 import { ConfigModule } from '../config/config.module.js';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Device, Certificate]),
-    CryptoModule,
-    ConfigModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Device, Certificate]), ConfigModule],
   controllers: [DevicesController, CertificatesController],
   providers: [DevicesService, CertificateService],
   exports: [DevicesService, CertificateService],

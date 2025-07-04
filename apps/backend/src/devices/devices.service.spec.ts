@@ -3,7 +3,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DevicesService } from './devices.service.js';
 import { Device } from './entities/device.entity.js';
 import { Certificate } from './entities/certificate.entity.js';
-import { CryptoService } from '../crypto/crypto.service.js';
 
 describe('DevicesService', () => {
   let service: DevicesService;
@@ -17,10 +16,6 @@ describe('DevicesService', () => {
     delete: jest.fn(),
   };
 
-  const mockCryptoService = {
-    signCertificate: jest.fn(),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,10 +27,6 @@ describe('DevicesService', () => {
         {
           provide: getRepositoryToken(Certificate),
           useValue: mockRepository,
-        },
-        {
-          provide: CryptoService,
-          useValue: mockCryptoService,
         },
       ],
     }).compile();

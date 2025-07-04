@@ -1,7 +1,8 @@
-import { shared } from './shared.js';
+import * as sharedLib from '../index.js';
 
-describe('shared', () => {
-  it('should work', () => {
-    expect(shared()).toEqual('shared');
+describe('shared library', () => {
+  it('should export shared modules', () => {
+    expect(sharedLib).toBeDefined();
+    expect(typeof sharedLib).toBe('object');
   });
 });

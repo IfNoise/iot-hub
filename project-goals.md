@@ -51,8 +51,8 @@
 
 - TLS + mTLS (сервер требует клиентский сертификат)
 - Проверка по Common Name (`deviceId`)
-- ACL (настройка доступа к топикам)
-- Темы:
+- Аутентификация по клиентскому сертификату
+- Авторизация по user/password (user — deviceId, password — fingerprint)
 
 ### 5. Backend (NestJS)
 
@@ -64,6 +64,7 @@
 - `MqttModule` (интеграция с EMQX)
 - `ConfigModule` (конфигурация и окружение)
 - `DatabaseModule` (подключение к PostgreSQL)
+- `CryptoModule` (работа с криптографией и сертификатами)
 - Zod ,Nestjs-zod для DTO/валидации
 - Юнит-тесты через Jest
 - Логгирование -Pino
