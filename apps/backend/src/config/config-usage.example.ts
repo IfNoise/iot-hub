@@ -3,7 +3,7 @@ import { ConfigService } from '../config/config.service.js';
 
 /**
  * Пример использования декомпозированной конфигурации
- * 
+ *
  * Этот класс демонстрирует различные способы использования
  * новой модульной архитектуры конфигурации.
  */
@@ -59,10 +59,10 @@ export class ConfigUsageExample {
    */
   getBackwardCompatibility() {
     return {
-      // Старый способ - все еще работает
-      nodeEnv: this.configService.get('NODE_ENV'),
-      port: this.configService.get('PORT'),
-      dbHost: this.configService.get('DATABASE_HOST'),
+      // Новый способ - используем доменные сервисы
+      nodeEnv: this.configService.common.get('nodeEnv'),
+      port: this.configService.common.get('port'),
+      dbHost: this.configService.database.get('host'),
 
       // Старые convenience методы
       isDev: this.configService.isDevelopment(),
@@ -87,7 +87,8 @@ export class ConfigUsageExample {
       redisEnabled: this.configService.isRedisEnabled(),
       telemetryEnabled: this.configService.isOpenTelemetryEnabled(),
       userRegistrationEnabled: this.configService.isUserRegistrationEnabled(),
-      emailVerificationRequired: this.configService.isEmailVerificationRequired(),
+      emailVerificationRequired:
+        this.configService.isEmailVerificationRequired(),
     };
   }
 
@@ -107,7 +108,11 @@ export class ConfigUsageExample {
       return {
         database: this.configService.database.getProductionConfig(),
         logging: { level: 'warn', enableFileLogging: true },
-        cors: { origin: this.configService.get('ALLOWED_ORIGINS')?.split(',') || [], credentials: true },
+        cors: {
+          origin:
+            this.configService.common.get('allowedOrigins')?.split(',') || [],
+          credentials: true,
+        },
       };
     }
 
@@ -148,10 +153,15 @@ export class ConfigUsageExample {
     }
 
     // Проверка feature flags совместимости
-    if (this.configService.isKeycloakEnabled() && this.configService.isDevelopment()) {
+    if (
+      this.configService.isKeycloakEnabled() &&
+      this.configService.isDevelopment()
+    ) {
       const devUser = this.configService.auth.getDevUserConfig();
       if (!devUser.id || !devUser.email) {
-        errors.push('Development user configuration is incomplete when Keycloak is enabled');
+        errors.push(
+          'Development user configuration is incomplete when Keycloak is enabled'
+        );
       }
     }
 

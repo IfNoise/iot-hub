@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { commonConfigSchema, CommonConfig } from './common-config.schema.js';
 
+// Import types for logging
+import type { LogRequest, LogResponse } from '../types/logging.types.js';
+
 @Injectable()
 export class CommonConfigService {
   private readonly config: CommonConfig;
@@ -131,5 +134,32 @@ export class CommonConfigService {
     } catch {
       return defaultLabels;
     }
+  }
+
+  // Logging decision methods
+  shouldLogRequest(request: LogRequest): boolean {
+    if (!this.config.logEnableRequestLogging) {
+      return false;
+    }
+
+    // Skip health check endpoints
+    if (request.url?.includes('/health') || request.url?.includes('/metrics')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  shouldLogResponse(response: LogResponse): boolean {
+    if (!this.config.logEnableRequestLogging) {
+      return false;
+    }
+
+    // Log errors always
+    if (response.statusCode && response.statusCode >= 400) {
+      return true;
+    }
+
+    return true;
   }
 }

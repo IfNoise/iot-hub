@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '../../config/config.service.js';
-import type { LogHealthCheck, LogHealthDetails } from '../types/logging.types.js';
+import { CommonConfigService } from '../config/common-config.service.js';
+import type {
+  LogHealthCheck,
+  LogHealthDetails,
+} from '../types/logging.types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -11,15 +14,15 @@ import * as path from 'path';
 export class LoggingService {
   private readonly logger = new Logger(LoggingService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly commonConfigService: CommonConfigService) {}
 
   /**
    * Ensure log directory exists and is writable
    */
   async ensureLogDirectory(): Promise<void> {
     try {
-      const logPath = this.configService.get('LOG_FILE_PATH');
-      const logDir = path.dirname(logPath);
+      const loggingConfig = this.commonConfigService.getLoggingConfig();
+      const logDir = path.dirname(loggingConfig.filePath);
 
       // Create directory if it doesn't exist
       await fs.mkdir(logDir, { recursive: true });
@@ -48,8 +51,8 @@ export class LoggingService {
     lastModified: Date;
   } | null> {
     try {
-      const logPath = this.configService.get('LOG_FILE_PATH');
-      const stats = await fs.stat(logPath);
+      const loggingConfig = this.commonConfigService.getLoggingConfig();
+      const stats = await fs.stat(loggingConfig.filePath);
 
       return {
         exists: true,
@@ -70,17 +73,19 @@ export class LoggingService {
    */
   async cleanupOldLogs(): Promise<void> {
     try {
-      const logPath = this.configService.get('LOG_FILE_PATH');
-      const maxFiles = this.configService.get('LOG_FILE_MAX_FILES');
-      const logDir = path.dirname(logPath);
-      const logBaseName = path.basename(logPath, path.extname(logPath));
+      const loggingConfig = this.commonConfigService.getLoggingConfig();
+      const logDir = path.dirname(loggingConfig.filePath);
+      const logBaseName = path.basename(
+        loggingConfig.filePath,
+        path.extname(loggingConfig.filePath)
+      );
 
       const files = await fs.readdir(logDir);
       const logFiles = files
         .filter((file) => file.startsWith(logBaseName) && file.includes('.log'))
         .map((file) => path.join(logDir, file));
 
-      if (logFiles.length > maxFiles) {
+      if (logFiles.length > loggingConfig.fileMaxFiles) {
         // Sort by modification time (oldest first)
         const fileStats = await Promise.all(
           logFiles.map(async (file) => ({
@@ -94,7 +99,10 @@ export class LoggingService {
         );
 
         // Remove files beyond the limit
-        const filesToRemove = fileStats.slice(0, fileStats.length - maxFiles);
+        const filesToRemove = fileStats.slice(
+          0,
+          fileStats.length - loggingConfig.fileMaxFiles
+        );
 
         for (const fileInfo of filesToRemove) {
           await fs.unlink(fileInfo.path);
@@ -115,8 +123,8 @@ export class LoggingService {
    */
   async archiveLogs(olderThanDays = 30): Promise<void> {
     try {
-      const logPath = this.configService.get('LOG_FILE_PATH');
-      const logDir = path.dirname(logPath);
+      const loggingConfig = this.commonConfigService.getLoggingConfig();
+      const logDir = path.dirname(loggingConfig.filePath);
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
@@ -153,13 +161,12 @@ export class LoggingService {
 
     try {
       // Check if file logging is enabled
-      const logToFile = this.configService.get('LOG_TO_FILE');
-      details.fileLoggingEnabled = logToFile;
+      const loggingConfig = this.commonConfigService.getLoggingConfig();
+      details.fileLoggingEnabled = loggingConfig.toFile;
 
-      if (logToFile) {
+      if (loggingConfig.toFile) {
         // Check log directory
-        const logPath = this.configService.get('LOG_FILE_PATH');
-        const logDir = path.dirname(logPath);
+        const logDir = path.dirname(loggingConfig.filePath);
 
         try {
           await fs.access(logDir, fs.constants.W_OK);
@@ -182,10 +189,10 @@ export class LoggingService {
       }
 
       details.configuration = {
-        level: this.configService.get('LOG_LEVEL'),
-        path: this.configService.get('LOG_FILE_PATH'),
-        maxSize: this.configService.get('LOG_FILE_MAX_SIZE'),
-        maxFiles: this.configService.get('LOG_FILE_MAX_FILES'),
+        level: loggingConfig.level,
+        path: loggingConfig.filePath,
+        maxSize: loggingConfig.fileMaxSize,
+        maxFiles: loggingConfig.fileMaxFiles,
       };
     } catch (error: unknown) {
       status = 'error';

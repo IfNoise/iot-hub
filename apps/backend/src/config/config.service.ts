@@ -17,8 +17,6 @@ import type { OpenTelemetryConfig } from '../common/observability/config.types.j
 
 @Injectable()
 export class ConfigService {
-  private readonly env: ReturnType<typeof envConfigSchema.parse>;
-  
   // Domain config services
   public readonly common: CommonConfigService;
   public readonly auth: AuthConfigService;
@@ -29,14 +27,13 @@ export class ConfigService {
   public readonly users: UsersConfigService;
 
   constructor() {
-    // Validate environment variables
+    // Validate environment variables once
     const parsed = envConfigSchema.safeParse(process.env);
     if (!parsed.success) {
       throw new Error(
         `Invalid environment configuration: ${parsed.error.message}`
       );
     }
-    this.env = parsed.data;
 
     // Initialize domain config services - pass process.env directly
     this.common = new CommonConfigService(process.env);
@@ -46,11 +43,6 @@ export class ConfigService {
     this.telemetry = new TelemetryConfigService(process.env);
     this.devices = new DevicesConfigService(process.env);
     this.users = new UsersConfigService(process.env);
-  }
-
-  // Legacy compatibility - direct access to env values
-  get<T extends keyof typeof this.env>(key: T): (typeof this.env)[T] {
-    return this.env[key];
   }
 
   // Get all configuration as structured object
@@ -96,97 +88,6 @@ export class ConfigService {
     return this.database.getTypeOrmConfig();
   }
 
-  // Redis configuration (delegated to common config)
-  getRedisConfig() {
-    return this.common.getRedisConfig();
-  }
-
-  // MQTT configuration methods
-  getMqttBrokerUrl(): string {
-    return this.mqtt.getBrokerUrl();
-  }
-
-  // CORS configuration (delegated to common config)
-  getCorsConfig() {
-    return this.common.getCorsConfig();
-  }
-
-  // Rate limiting configuration (delegated to common config)
-  getRateLimitConfig() {
-    return this.common.getRateLimitConfig();
-  }
-
-  // JWT configuration (delegated to auth config)
-  getJwtConfig() {
-    return this.auth.getJwtConfig();
-  }
-
-  // Keycloak configuration (delegated to auth config)
-  getKeycloakConfig() {
-    return this.auth.getKeycloakConfig();
-  }
-
-  // OAuth2 Proxy configuration (delegated to auth config)
-  getOAuth2ProxyHeaders() {
-    return this.auth.getOAuth2ProxyHeaders();
-  }
-
-  // Development user configuration (delegated to auth config)
-  getDevUserConfig() {
-    return this.auth.getDevUserConfig();
-  }
-
-  // Logging configuration (delegated to common config)
-  getLoggingConfig() {
-    return this.common.getLoggingConfig();
-  }
-
-  // MQTT configuration (delegated to mqtt config)
-  getMqttConfig() {
-    return this.mqtt.getAll();
-  }
-
-  // MQTT client options (delegated to mqtt config)
-  getMqttClientOptions() {
-    return this.mqtt.getClientOptions();
-  }
-
-  // OpenTelemetry configuration (delegated to telemetry config)
-  getOpenTelemetryConfig(): OpenTelemetryConfig {
-    return this.telemetry.getOpenTelemetryConfig();
-  }
-
-  // Legacy method compatibility
-  shouldLogRequest(request: LogRequest): boolean {
-    const loggingConfig = this.getLoggingConfig();
-    
-    if (!loggingConfig.enableRequestLogging) {
-      return false;
-    }
-
-    // Skip health check endpoints
-    if (request.url?.includes('/health') || request.url?.includes('/metrics')) {
-      return false;
-    }
-
-    return true;
-  }
-
-  shouldLogResponse(response: LogResponse): boolean {
-    const loggingConfig = this.getLoggingConfig();
-    
-    if (!loggingConfig.enableRequestLogging) {
-      return false;
-    }
-
-    // Log errors always
-    if (response.statusCode && response.statusCode >= 400) {
-      return true;
-    }
-
-    return true;
-  }
-
   // Convenience methods for checking feature flags
   isKeycloakEnabled(): boolean {
     return this.auth.isKeycloakEnabled();
@@ -206,5 +107,109 @@ export class ConfigService {
 
   isEmailVerificationRequired(): boolean {
     return this.users.isEmailVerificationRequired();
+  }
+
+  // ===========================================
+  // DEPRECATED METHODS - Use domain services directly
+  // ===========================================
+
+  /**
+   * @deprecated Use this.common.getRedisConfig() instead
+   */
+  getRedisConfig() {
+    return this.common.getRedisConfig();
+  }
+
+  /**
+   * @deprecated Use this.mqtt.getBrokerUrl() instead
+   */
+  getMqttBrokerUrl(): string {
+    return this.mqtt.getBrokerUrl();
+  }
+
+  /**
+   * @deprecated Use this.common.getCorsConfig() instead
+   */
+  getCorsConfig() {
+    return this.common.getCorsConfig();
+  }
+
+  /**
+   * @deprecated Use this.common.getRateLimitConfig() instead
+   */
+  getRateLimitConfig() {
+    return this.common.getRateLimitConfig();
+  }
+
+  /**
+   * @deprecated Use this.auth.getJwtConfig() instead
+   */
+  getJwtConfig() {
+    return this.auth.getJwtConfig();
+  }
+
+  /**
+   * @deprecated Use this.auth.getKeycloakConfig() instead
+   */
+  getKeycloakConfig() {
+    return this.auth.getKeycloakConfig();
+  }
+
+  /**
+   * @deprecated Use this.auth.getOAuth2ProxyHeaders() instead
+   */
+  getOAuth2ProxyHeaders() {
+    return this.auth.getOAuth2ProxyHeaders();
+  }
+
+  /**
+   * @deprecated Use this.auth.getDevUserConfig() instead
+   */
+  getDevUserConfig() {
+    return this.auth.getDevUserConfig();
+  }
+
+  /**
+   * @deprecated Use this.common.getLoggingConfig() instead
+   */
+  getLoggingConfig() {
+    return this.common.getLoggingConfig();
+  }
+
+  /**
+   * @deprecated Use this.mqtt.getAll() instead
+   */
+  getMqttConfig() {
+    return this.mqtt.getAll();
+  }
+
+  /**
+   * @deprecated Use this.mqtt.getClientOptions() instead
+   */
+  getMqttClientOptions() {
+    return this.mqtt.getClientOptions();
+  }
+
+  /**
+   * @deprecated Use this.telemetry.getOpenTelemetryConfig() instead
+   */
+  getOpenTelemetryConfig(): OpenTelemetryConfig {
+    return this.telemetry.getOpenTelemetryConfig();
+  }
+
+  /**
+   * @deprecated Move logging logic to CommonConfigService or LoggingService
+   * Use this.common.shouldLogRequest() instead
+   */
+  shouldLogRequest(request: LogRequest): boolean {
+    return this.common.shouldLogRequest(request);
+  }
+
+  /**
+   * @deprecated Move logging logic to CommonConfigService or LoggingService
+   * Use this.common.shouldLogResponse() instead
+   */
+  shouldLogResponse(response: LogResponse): boolean {
+    return this.common.shouldLogResponse(response);
   }
 }

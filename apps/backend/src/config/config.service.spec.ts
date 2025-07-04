@@ -80,10 +80,12 @@ describe('ConfigService (Decomposed)', () => {
     expect(allConfig.users).toBeDefined();
   });
 
-  it('should provide backward compatibility', () => {
-    expect(service.get('NODE_ENV')).toBe('test');
-    expect(service.get('PORT')).toBe(3000);
-    expect(service.get('DATABASE_HOST')).toBe('localhost');
+  it('should provide backward compatibility (deprecated methods)', () => {
+    // Deprecated methods should still work but delegate to domain services
+    expect(service.getJwtConfig()).toBeDefined();
+    expect(service.getCorsConfig()).toBeDefined();
+    expect(service.getLoggingConfig()).toBeDefined();
+    expect(service.getMqttConfig()).toBeDefined();
   });
 
   it('should provide convenience methods', () => {

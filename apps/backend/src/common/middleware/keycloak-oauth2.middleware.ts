@@ -8,7 +8,7 @@ import {
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
-import { ConfigService } from '../../config/config.service.js';
+import { AuthConfigService } from '../../auth/config/auth-config.service.js';
 import { UsersService } from '../../users/users.service.js';
 import {
   KeycloakJwtPayload,
@@ -23,18 +23,17 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
   private isKeycloakEnabled = false;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly authConfigService: AuthConfigService,
     private readonly usersService: UsersService
   ) {
-    const keycloakUrl = this.configService.get('KEYCLOAK_URL');
-    const realm = this.configService.get('KEYCLOAK_REALM');
+    const keycloakConfig = this.authConfigService.getKeycloakConfig();
 
     // Если Keycloak не настроен, выводим предупреждение и отключаем middleware
     if (
-      !keycloakUrl ||
-      !realm ||
-      keycloakUrl.trim() === '' ||
-      realm.trim() === ''
+      !keycloakConfig.url ||
+      !keycloakConfig.realm ||
+      keycloakConfig.url.trim() === '' ||
+      keycloakConfig.realm.trim() === ''
     ) {
       this.logger.warn(
         'Keycloak не настроен. Middleware отключен. Установите KEYCLOAK_URL и KEYCLOAK_REALM для включения.'
@@ -45,7 +44,7 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
 
     this.isKeycloakEnabled = true;
     this.jwksClient = jwksClient({
-      jwksUri: `${keycloakUrl}/realms/${realm}/protocol/openid-connect/certs`,
+      jwksUri: `${keycloakConfig.url}/realms/${keycloakConfig.realm}/protocol/openid-connect/certs`,
       cache: true,
       cacheMaxAge: 12 * 60 * 60 * 1000, // 12 hours
     });
@@ -124,22 +123,15 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
    * Извлекает заголовки OAuth2 Proxy
    */
   private extractOAuth2ProxyHeaders(request: Request): OAuth2ProxyHeaders {
-    const userHeader = this.configService.get('OAUTH2_PROXY_USER_HEADER');
-    const emailHeader = this.configService.get('OAUTH2_PROXY_EMAIL_HEADER');
-    const usernameHeader = this.configService.get(
-      'OAUTH2_PROXY_PREFERRED_USERNAME_HEADER'
-    );
-    const tokenHeader = this.configService.get(
-      'OAUTH2_PROXY_ACCESS_TOKEN_HEADER'
-    );
+    const headers = this.authConfigService.getOAuth2ProxyHeaders();
 
     return {
-      user: request.headers[userHeader.toLowerCase()] as string,
-      email: request.headers[emailHeader.toLowerCase()] as string,
+      user: request.headers[headers.user.toLowerCase()] as string,
+      email: request.headers[headers.email.toLowerCase()] as string,
       preferredUsername: request.headers[
-        usernameHeader.toLowerCase()
+        headers.preferredUsername.toLowerCase()
       ] as string,
-      accessToken: request.headers[tokenHeader.toLowerCase()] as string,
+      accessToken: request.headers[headers.accessToken.toLowerCase()] as string,
     };
   }
 
@@ -150,11 +142,9 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
     token: string,
     proxyHeaders: OAuth2ProxyHeaders
   ): Promise<AuthenticatedUser> {
-    const keycloakUrl = this.configService.get('KEYCLOAK_URL');
-    const realm = this.configService.get('KEYCLOAK_REALM');
-    const clientId = this.configService.get('KEYCLOAK_CLIENT_ID');
+    const keycloakConfig = this.authConfigService.getKeycloakConfig();
 
-    if (!keycloakUrl || !realm) {
+    if (!keycloakConfig.url || !keycloakConfig.realm) {
       throw new UnauthorizedException('Keycloak не настроен');
     }
 
@@ -164,8 +154,8 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
         this.getSigningKey.bind(this),
         {
           algorithms: ['RS256'],
-          issuer: `${keycloakUrl}/realms/${realm}`,
-          audience: clientId || undefined,
+          issuer: `${keycloakConfig.url}/realms/${keycloakConfig.realm}`,
+          audience: keycloakConfig.clientId || undefined,
         },
         (err, decoded) => {
           if (err) {
@@ -290,7 +280,7 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
    * Определяет роль пользователя из токена
    */
   private extractUserRole(payload: KeycloakJwtPayload): 'admin' | 'user' {
-    const clientId = this.configService.get('KEYCLOAK_CLIENT_ID');
+    const keycloakConfig = this.authConfigService.getKeycloakConfig();
 
     // Проверяем роли в realm_access (общие роли realm)
     if (payload.realm_access?.roles) {
@@ -299,8 +289,12 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
     }
 
     // Проверяем роли в resource_access для конкретного клиента
-    if (clientId && payload.resource_access?.[clientId]?.roles) {
-      const clientRoles = payload.resource_access[clientId].roles;
+    if (
+      keycloakConfig.clientId &&
+      payload.resource_access?.[keycloakConfig.clientId]?.roles
+    ) {
+      const clientRoles =
+        payload.resource_access[keycloakConfig.clientId].roles;
       if (clientRoles.includes('admin')) return 'admin';
       if (clientRoles.includes('user')) return 'user';
     }
@@ -313,24 +307,15 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
    * Создает настраиваемого development пользователя
    */
   private createDevUser(): AuthenticatedUser {
-    // Возможность настройки через переменные окружения
-    const devUserId =
-      process.env.DEV_USER_ID || '550e8400-e29b-41d4-a716-446655440000';
-    const devUserEmail = process.env.DEV_USER_EMAIL || 'dev@example.com';
-    const devUserName = process.env.DEV_USER_NAME || 'Dev User';
-    const devUserRole =
-      (process.env.DEV_USER_ROLE as 'admin' | 'user') || 'admin';
-    const devUserAvatar = process.env.DEV_USER_AVATAR || undefined;
-    const devUserEmailVerified =
-      process.env.DEV_USER_EMAIL_VERIFIED !== 'false';
+    const devUserConfig = this.authConfigService.getDevUserConfig();
 
     return {
-      id: devUserId,
-      email: devUserEmail,
-      name: devUserName,
-      avatar: devUserAvatar,
-      role: devUserRole,
-      isEmailVerified: devUserEmailVerified,
+      id: devUserConfig.id,
+      email: devUserConfig.email,
+      name: devUserConfig.name,
+      avatar: devUserConfig.avatar,
+      role: devUserConfig.role,
+      isEmailVerified: devUserConfig.emailVerified,
       sessionState: 'dev-session',
     };
   }
