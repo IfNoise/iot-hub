@@ -6,11 +6,22 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module.js';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
+  const options = new DocumentBuilder()
+    .setTitle('Device Simulator API')
+    .setDescription('API для симуляции IoT устройств')
+    .setVersion('1.0')
+    .addTag('device-simulator')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, options);
+
+  SwaggerModule.setup(`${globalPrefix}/docs`, app, document);
   const port = 3001; // Используем 3001 чтобы не конфликтовать с backend
   await app.listen(port);
   Logger.log(

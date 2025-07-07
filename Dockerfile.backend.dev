@@ -1,18 +1,53 @@
-# Dockerfile.dev
-FROM node:20
+# Dockerfile для разработки backend в Nx workspace
+FROM node:20 AS development
 
 # Устанавливаем необходимые инструменты для работы с сертификатами
 RUN apt-get update && apt-get install -y openssl && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Аргументы для пользователя (передаются из docker-compose)
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Создаем группу и пользователя с теми же ID, что и на хосте
+RUN if ! getent group ${GROUP_ID} > /dev/null 2>&1; then \
+      groupadd -g ${GROUP_ID} devuser; \
+    fi && \
+    if ! getent passwd ${USER_ID} > /dev/null 2>&1; then \
+      useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash devuser; \
+    else \
+      # Если пользователь уже существует, создаем devuser как алиас или используем существующего
+      EXISTING_USER=$(getent passwd ${USER_ID} | cut -d: -f1); \
+      if [ "$EXISTING_USER" != "devuser" ]; then \
+        usermod -l devuser -d /home/devuser -m $EXISTING_USER 2>/dev/null || \
+        ln -sf /home/$EXISTING_USER /home/devuser; \
+      fi; \
+      usermod -g ${GROUP_ID} devuser 2>/dev/null || true; \
+    fi
+
 WORKDIR /workspace
 
-COPY package*.json ./
-RUN npm install -g nx
-# Установка зависимостей (будет кэшироваться, если не меняются package.json)
+# Создаем папку dist с нужными правами
+RUN mkdir -p /workspace/dist && chown -R ${USER_ID}:${GROUP_ID} /workspace/dist
+
+# Создаем папку .nx с нужными правами
+RUN mkdir -p /workspace/.nx && chown -R ${USER_ID}:${GROUP_ID} /workspace/.nx
+
+# Делаем владельцем рабочей директории пользователя с нужным UID
+RUN chown -R ${USER_ID}:${GROUP_ID} /workspace
+
+# Переключаемся на пользователя devuser
+USER devuser
+
+# Копируем файлы зависимостей
+COPY --chown=${USER_ID}:${GROUP_ID} package*.json ./
+COPY --chown=${USER_ID}:${GROUP_ID} nx.json ./
+COPY --chown=${USER_ID}:${GROUP_ID} tsconfig*.json ./
+
+# Устанавливаем зависимости (Nx будет установлен локально)
 RUN npm install
 
-# Копируем остальной код (после зависимостей, чтобы не ломать кеш)
-COPY . .
+# Копируем весь код
+COPY --chown=${USER_ID}:${GROUP_ID} . .
 
 # Пересоздаем символические ссылки в node_modules/@iot-hub/ для корректной работы импортов
 RUN rm -rf node_modules/@iot-hub && mkdir -p node_modules/@iot-hub && \
@@ -33,4 +68,8 @@ RUN for lib in contracts auth crypto devices mqtt users shared; do \
 RUN npx nx run-many --target=build --projects=auth,crypto,devices,mqtt,users,shared && \
     npx nx build @iot-hub/contracts
 
-CMD ["nx", "serve", "@iot-hub/backend", "--host=0.0.0.0", "--watch"]
+# Открываем порт для backend
+EXPOSE 3000
+
+# Команда запуска с hot reload
+CMD ["npx", "nx", "serve", "@iot-hub/backend", "--host=0.0.0.0", "--watch"]

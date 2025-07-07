@@ -50,14 +50,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend.dev
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
     container_name: iot-hub-backend
     working_dir: /workspace
-    #user: '1000:1000' # Временно отключаем, пока не решим проблемы с правами
     command:
       [
         'sh',
         '-c',
-        'npx nx build @iot-hub/backend && node dist/apps/backend/src/main.js',
+        'npx nx build @iot-hub/backend && npx nx serve @iot-hub/backend --host=0.0.0.0',
       ]
     ports:
       - '3000:3000'
@@ -65,6 +67,8 @@ services:
     environment:
       - NODE_ENV=development
       - DOCKER=true
+      - UID=1000
+      - GID=1000
       - NODE_OPTIONS=--max-old-space-size=1536 --experimental-specifier-resolution=node
       - PORT=3000
       - DATABASE_HOST=postgres
@@ -106,7 +110,7 @@ services:
     volumes:
       - .:/workspace:cached
       - /workspace/node_modules # ❗️Важно: НЕ перетираем node_modules
-      - nx-cache:/workspace/.nx
+      - ./.nx:/workspace/.nx:cached
       - iot-hub-certs:/workspace/certs
     # Resource limits
     deploy:
@@ -216,8 +220,6 @@ volumes:
   postgres-data:
     driver: local
   redis-data:
-    driver: local
-  nx-cache:
     driver: local
   iot-hub-certs:
     external: true
