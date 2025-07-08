@@ -48,7 +48,12 @@ export const UserBaseSchema = z
       .describe('Дата окончания подписки'),
     userType: UserTypeEnum.default('individual').describe('Тип пользователя'),
     // Enterprise поля (опциональные для обратной совместимости)
-    organizationId: z.string().uuid().nullable().optional().describe('ID организации'),
+    organizationId: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .describe('ID организации'),
     groupId: z.string().uuid().nullable().optional().describe('ID группы'),
     metadata: z.record(z.any()).optional().describe('Произвольные данные'),
   })

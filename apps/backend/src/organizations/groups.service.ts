@@ -189,10 +189,14 @@ export class GroupsService {
   async delete(id: string): Promise<void> {
     const group = await this.findById(id);
     await this.groupRepo.remove(group);
-  }  /**
+  }
+  /**
    * Получить устройства группы
    */
-  async getGroupDevices(groupId: string, query: Record<string, unknown>): Promise<{
+  async getGroupDevices(
+    groupId: string,
+    query: Record<string, unknown>
+  ): Promise<{
     devices: Array<{
       deviceId: string;
       model: string;
@@ -206,7 +210,7 @@ export class GroupsService {
     totalPages: number;
   }> {
     await this.findById(groupId);
-    
+
     // TODO: Реализовать получение устройств группы
     // Заглушка для совместимости с контрактом
     return {
@@ -221,7 +225,10 @@ export class GroupsService {
   /**
    * Получить пользователей группы
    */
-  async getGroupUsers(groupId: string, query: Record<string, unknown>): Promise<{
+  async getGroupUsers(
+    groupId: string,
+    query: Record<string, unknown>
+  ): Promise<{
     users: Array<{
       id: string;
       email: string;
@@ -235,7 +242,7 @@ export class GroupsService {
     totalPages: number;
   }> {
     await this.findById(groupId);
-    
+
     // TODO: Реализовать получение пользователей группы
     // Заглушка для совместимости с контрактом
     return {
