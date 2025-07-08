@@ -1,5 +1,8 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
+import { devicesContract } from '@iot-hub/devices';
+import { usersContract, organizationsContract } from '@iot-hub/users';
+import { authContract } from '@iot-hub/auth';
 
 const c = initContract();
 
@@ -46,4 +49,14 @@ export const appContract = c.router({
   },
 });
 
+// Главный API контракт, объединяющий все модули
+export const apiContract = c.router({
+  app: appContract,
+  devices: devicesContract,
+  users: usersContract,
+  organizations: organizationsContract,
+  auth: authContract,
+});
+
 export type AppContract = typeof appContract;
+export type ApiContract = typeof apiContract;

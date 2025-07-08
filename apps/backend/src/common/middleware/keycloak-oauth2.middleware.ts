@@ -355,6 +355,7 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
             role: keycloakUser.role,
             balance: 0,
             plan: 'free',
+            userType: 'individual',
           });
           this.logger.log(
             `Создан новый пользователь: ${keycloakUser.email} (ID: ${keycloakUser.id})`

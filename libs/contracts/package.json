@@ -9,5 +9,14 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
+  },
+  "dependencies": {
+    "@ts-rest/core": "*",
+    "zod": "*",
+    "@iot-hub/devices": "*",
+    "@iot-hub/users": "*",
+    "@iot-hub/auth": "*",
+    "@iot-hub/mqtt": "*",
+    "tslib": "*"
   }
 }

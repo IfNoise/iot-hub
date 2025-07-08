@@ -4,8 +4,12 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
-import { UserRoleEnum, PlanTypeEnum } from '@iot-hub/users';
+import { UserRoleEnum, PlanTypeEnum, UserTypeEnum } from '@iot-hub/users';
+import type { Organization } from './organization.entity.js';
+import type { Group } from './group.entity.js';
 
 /**
  * User entity based on user.schemas.ts from iot-core package
@@ -32,7 +36,7 @@ export class User {
     enum: UserRoleEnum.options,
     default: 'user',
   })
-  role!: 'admin' | 'user';
+  role!: 'admin' | 'user' | 'org_admin' | 'group_admin';
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   balance!: number;
@@ -42,10 +46,24 @@ export class User {
     enum: PlanTypeEnum.options,
     default: 'free',
   })
-  plan!: 'free' | 'pro';
+  plan!: 'free' | 'pro' | 'enterprise';
 
   @Column({ type: 'timestamp', nullable: true })
   planExpiresAt?: Date;
+
+  // Enterprise поля
+  @Column({
+    type: 'enum',
+    enum: UserTypeEnum.options,
+    default: 'individual',
+  })
+  userType!: 'individual' | 'organization';
+
+  @Column({ type: 'uuid', nullable: true })
+  organizationId?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  groupId?: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, unknown>;
@@ -55,4 +73,21 @@ export class User {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt!: Date;
+
+  // Relations
+  @ManyToOne(
+    'Organization',
+    (organization: Organization) => organization.users,
+    {
+      onDelete: 'SET NULL',
+    }
+  )
+  @JoinColumn({ name: 'organizationId' })
+  organization?: Organization | null;
+
+  @ManyToOne('Group', (group: Group) => group.users, {
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'groupId' })
+  group?: Group | null;
 }

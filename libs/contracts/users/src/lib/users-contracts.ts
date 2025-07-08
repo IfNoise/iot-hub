@@ -109,7 +109,7 @@ export const usersContract = c.router({
       id: z.string().uuid(),
     }),
     body: z.object({
-      plan: z.enum(['free', 'pro']),
+      plan: z.enum(['free', 'pro', 'enterprise']),
       expiresAt: z.date().optional(),
     }),
     responses: {
@@ -118,6 +118,75 @@ export const usersContract = c.router({
       401: z.object({ message: z.string() }),
     },
     summary: 'Обновить план пользователя',
+  },
+
+  // POST /users/:id/assign-to-organization - Назначить пользователя в организацию
+  assignToOrganization: {
+    method: 'POST',
+    path: '/users/:id/assign-to-organization',
+    pathParams: z.object({
+      id: z.string().uuid(),
+    }),
+    body: z.object({
+      organizationId: z.string().uuid(),
+      groupId: z.string().uuid().optional(),
+      role: z.enum(['user', 'group_admin', 'org_admin']).optional(),
+    }),
+    responses: {
+      200: UserBaseSchema,
+      404: z.object({ message: z.string() }),
+      401: z.object({ message: z.string() }),
+      403: z.object({ message: z.string() }),
+    },
+    summary: 'Назначить пользователя в организацию',
+    metadata: {
+      requiresAuth: true,
+      requiresRole: ['admin', 'org_admin'],
+    } as const,
+  },
+
+  // POST /users/:id/assign-to-group - Назначить пользователя в группу
+  assignToGroup: {
+    method: 'POST',
+    path: '/users/:id/assign-to-group',
+    pathParams: z.object({
+      id: z.string().uuid(),
+    }),
+    body: z.object({
+      groupId: z.string().uuid(),
+      role: z.enum(['user', 'group_admin']).optional(),
+    }),
+    responses: {
+      200: UserBaseSchema,
+      404: z.object({ message: z.string() }),
+      401: z.object({ message: z.string() }),
+      403: z.object({ message: z.string() }),
+    },
+    summary: 'Назначить пользователя в группу',
+    metadata: {
+      requiresAuth: true,
+      requiresRole: ['admin', 'org_admin', 'group_admin'],
+    } as const,
+  },
+
+  // DELETE /users/:id/remove-from-organization - Удалить пользователя из организации
+  removeFromOrganization: {
+    method: 'DELETE',
+    path: '/users/:id/remove-from-organization',
+    pathParams: z.object({
+      id: z.string().uuid(),
+    }),
+    responses: {
+      200: UserBaseSchema,
+      404: z.object({ message: z.string() }),
+      401: z.object({ message: z.string() }),
+      403: z.object({ message: z.string() }),
+    },
+    summary: 'Удалить пользователя из организации',
+    metadata: {
+      requiresAuth: true,
+      requiresRole: ['admin', 'org_admin'],
+    } as const,
   },
 });
 

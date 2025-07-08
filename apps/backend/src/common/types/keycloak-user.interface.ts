@@ -38,14 +38,14 @@ export interface AuthenticatedUser {
   email: string;
   name: string;
   avatar?: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'org_admin' | 'group_admin';
   isEmailVerified: boolean;
   sessionState?: string;
 
   // Дополнительные поля из локальной базы данных
   databaseId?: string; // ID записи в локальной БД
   balance?: number;
-  plan?: 'free' | 'pro';
+  plan?: 'free' | 'pro' | 'enterprise';
   planExpiresAt?: Date;
 }
 

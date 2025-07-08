@@ -130,7 +130,7 @@ export class UsersService {
    */
   async updatePlan(
     id: string,
-    plan: 'free' | 'pro',
+    plan: 'free' | 'pro' | 'enterprise',
     expiresAt?: Date
   ): Promise<User> {
     const user = await this.findOne(id);

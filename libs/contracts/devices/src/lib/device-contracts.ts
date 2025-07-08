@@ -283,6 +283,147 @@ export const adminDevicesContract = c.router({
 
 /**
  * ==============================================
+ * ENTERPRISE КОНТРАКТЫ
+ * ==============================================
+ */
+
+/**
+ * Контракты для работы с устройствами в рамках организаций и групп
+ */
+export const enterpriseDevicesContract = c.router({
+  // POST /devices/bind-to-group - Привязка устройства к группе
+  bindDeviceToGroup: {
+    method: 'POST',
+    path: '/devices/bind-to-group',
+    body: z.object({
+      deviceId: z.string(),
+      groupId: z.string().uuid(),
+    }),
+    responses: {
+      200: z.object({
+        message: z.string(),
+        device: BindDeviceResponseSchema,
+      }),
+      400: z.object({
+        message: z.string(),
+        code: z.enum(['INVALID_GROUP', 'DEVICE_NOT_FOUND']).optional(),
+      }),
+      401: z.object({
+        message: z.string(),
+        code: z.literal('UNAUTHORIZED').optional(),
+      }),
+      403: z.object({
+        message: z.string(),
+        code: z.literal('FORBIDDEN'),
+      }),
+      409: z.object({
+        message: z.string(),
+        code: z.literal('ALREADY_BOUND'),
+      }),
+    },
+    summary: 'Привязка устройства к группе',
+    description:
+      'Привязывает устройство к группе организации. Требует права администратора группы или организации.',
+    metadata: {
+      requiresAuth: true,
+      userIdFromToken: true,
+      requiresRole: ['org_admin', 'group_admin'],
+    } as const,
+  },
+
+  // POST /devices/transfer-to-group - Перенос устройства в группу
+  transferDeviceToGroup: {
+    method: 'POST',
+    path: '/devices/transfer-to-group',
+    body: z.object({
+      deviceId: z.string(),
+      fromGroupId: z.string().uuid().optional(),
+      toGroupId: z.string().uuid(),
+    }),
+    responses: {
+      200: z.object({
+        message: z.string(),
+        device: BindDeviceResponseSchema,
+      }),
+      400: z.object({
+        message: z.string(),
+        code: z.enum(['INVALID_GROUP', 'DEVICE_NOT_FOUND']).optional(),
+      }),
+      401: z.object({
+        message: z.string(),
+        code: z.literal('UNAUTHORIZED').optional(),
+      }),
+      403: z.object({
+        message: z.string(),
+        code: z.literal('FORBIDDEN'),
+      }),
+    },
+    summary: 'Перенос устройства между группами',
+    description:
+      'Переносит устройство из одной группы в другую в рамках организации.',
+    metadata: {
+      requiresAuth: true,
+      userIdFromToken: true,
+      requiresRole: ['org_admin', 'group_admin'],
+    } as const,
+  },
+
+  // GET /organizations/:orgId/devices - Получение устройств организации
+  getOrganizationDevices: {
+    method: 'GET',
+    path: '/organizations/:orgId/devices',
+    pathParams: z.object({
+      orgId: z.string().uuid(),
+    }),
+    query: z.object({
+      page: z.number().min(1).default(1),
+      limit: z.number().min(1).max(100).default(10),
+      groupId: z.string().uuid().optional(),
+      status: z.enum(['unbound', 'bound', 'revoked']).optional(),
+      model: z.string().optional(),
+    }),
+    responses: {
+      200: z.object({
+        devices: z.array(
+          z.object({
+            deviceId: z.string(),
+            model: z.string(),
+            status: z.enum(['unbound', 'bound', 'revoked']),
+            ownerType: z.enum(['user', 'group']),
+            ownerId: z.string().uuid().nullable(),
+            organizationId: z.string().uuid().nullable(),
+            groupId: z.string().uuid().nullable(),
+            lastSeenAt: z.string(),
+            boundAt: z.string().nullable(),
+          })
+        ),
+        total: z.number(),
+        page: z.number(),
+        limit: z.number(),
+        totalPages: z.number(),
+      }),
+      401: z.object({
+        message: z.string(),
+        code: z.literal('UNAUTHORIZED').optional(),
+      }),
+      403: z.object({
+        message: z.string(),
+        code: z.literal('FORBIDDEN'),
+      }),
+    },
+    summary: 'Получение списка устройств организации',
+    description:
+      'Возвращает список всех устройств организации с возможностью фильтрации по группе.',
+    metadata: {
+      requiresAuth: true,
+      userIdFromToken: true,
+      requiresRole: ['org_admin', 'group_admin'],
+    } as const,
+  },
+});
+
+/**
+ * ==============================================
  * ОСНОВНОЙ КОНТРАКТ
  * ==============================================
  */
@@ -295,6 +436,7 @@ export const devicesContract = c.router({
   manufacturing: manufacturingContract,
   user: userDevicesContract,
   admin: adminDevicesContract,
+  enterprise: enterpriseDevicesContract,
 });
 
 export type DevicesContract = typeof devicesContract;

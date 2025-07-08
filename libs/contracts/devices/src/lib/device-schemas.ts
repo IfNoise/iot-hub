@@ -214,6 +214,18 @@ export const DeviceSchema = z
       .string()
       .describe('Публичный ключ устройства в формате PEM'),
     ownerId: z.string().uuid().nullable().describe('ID владельца устройства'),
+    // Enterprise поля (опциональные для обратной совместимости)
+    organizationId: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .describe('ID организации'),
+    groupId: z.string().uuid().nullable().optional().describe('ID группы'),
+    ownerType: z
+      .enum(['user', 'group'])
+      .default('user')
+      .describe('Тип владельца'),
     status: z
       .enum(['unbound', 'bound', 'revoked'])
       .default('unbound')
@@ -369,6 +381,17 @@ export const CreateDeviceSchema = z
   .strict();
 
 /**
+ * Схема для привязки устройства к группе
+ */
+export const BindDeviceToGroupSchema = z
+  .object({
+    deviceId: z.string().describe('Уникальный ID устройства'),
+    groupId: z.string().uuid().describe('ID группы'),
+    // ownerId и организационные данные извлекаются из JWT токена
+  })
+  .strict();
+
+/**
  * Схема для привязки устройства
  *
  * ВАЖНО: userId (ownerId) НЕ передается в теле запроса!
@@ -423,6 +446,7 @@ export type DeviceInternalState = z.infer<typeof DeviceInternalStateSchema>;
 export type Certificate = z.infer<typeof CertificateSchema>;
 export type CreateDevice = z.infer<typeof CreateDeviceSchema>;
 export type BindDevice = z.infer<typeof BindDeviceSchema>;
+export type BindDeviceToGroup = z.infer<typeof BindDeviceToGroupSchema>;
 export type DeviceQuery = z.infer<typeof DeviceQuerySchema>;
 export type DevicesListResponse = z.infer<typeof DevicesListResponseSchema>;
 

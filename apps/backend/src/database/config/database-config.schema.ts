@@ -3,6 +3,8 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Device } from '../../devices/entities/device.entity.js';
 import { Certificate } from '../../devices/entities/certificate.entity.js';
 import { User } from '../../users/entities/user.entity.js';
+import { Organization } from '../../users/entities/organization.entity.js';
+import { Group } from '../../users/entities/group.entity.js';
 
 // Define a more specific enum for database types compatible with TypeOrmModuleOptions
 export const DatabaseTypeEnum = z.enum([
@@ -74,7 +76,7 @@ export const createTypeOrmOptionsFromConfig = (
     cache: config.cache,
     ssl: config.ssl,
     extra: config.extra,
-    entities: [Device, Certificate, User],
+    entities: [Device, Certificate, User, Organization, Group],
     autoLoadEntities: false, // Явно отключаем, так как предоставляем entities
   };
 };

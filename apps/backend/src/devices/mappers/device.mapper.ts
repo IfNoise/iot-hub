@@ -15,6 +15,7 @@ export class DeviceMapper {
       model: entity.model,
       publicKeyPem: entity.publicKey, // Маппинг publicKey -> publicKeyPem
       ownerId: entity.ownerId,
+      ownerType: entity.ownerType,
       status: entity.status as 'unbound' | 'bound' | 'revoked',
       lastSeenAt: entity.lastSeenAt,
       firmwareVersion: entity.firmwareVersion || undefined,

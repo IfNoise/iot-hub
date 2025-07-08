@@ -3,8 +3,14 @@ import { z } from 'zod';
 /**
  * Перечисления
  */
-export const UserRoleEnum = z.enum(['admin', 'user']);
-export const PlanTypeEnum = z.enum(['free', 'pro']);
+export const UserRoleEnum = z.enum([
+  'admin',
+  'user',
+  'org_admin',
+  'group_admin',
+]);
+export const PlanTypeEnum = z.enum(['free', 'pro', 'enterprise']);
+export const UserTypeEnum = z.enum(['individual', 'organization']);
 
 /**
  * Базовая схема пользователя
@@ -40,6 +46,10 @@ export const UserBaseSchema = z
         z.date().nullable()
       )
       .describe('Дата окончания подписки'),
+    userType: UserTypeEnum.default('individual').describe('Тип пользователя'),
+    // Enterprise поля (опциональные для обратной совместимости)
+    organizationId: z.string().uuid().nullable().optional().describe('ID организации'),
+    groupId: z.string().uuid().nullable().optional().describe('ID группы'),
     metadata: z.record(z.any()).optional().describe('Произвольные данные'),
   })
   .strict();
@@ -100,3 +110,4 @@ export type UserQuery = z.infer<typeof UserQuerySchema>;
 export type UsersListResponse = z.infer<typeof UsersListResponseSchema>;
 export type UserRole = z.infer<typeof UserRoleEnum>;
 export type PlanType = z.infer<typeof PlanTypeEnum>;
+export type UserType = z.infer<typeof UserTypeEnum>;

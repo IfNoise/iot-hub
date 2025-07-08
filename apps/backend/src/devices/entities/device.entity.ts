@@ -4,8 +4,12 @@ import {
   Column,
   CreateDateColumn,
   OneToOne,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import type { Certificate } from './certificate.entity.js';
+import type { Organization } from '../../users/entities/organization.entity.js';
+import type { Group } from '../../users/entities/group.entity.js';
 
 @Entity()
 export class Device {
@@ -20,6 +24,16 @@ export class Device {
 
   @Column({ nullable: true, type: 'uuid' })
   ownerId!: string | null;
+
+  // Enterprise поля
+  @Column({ nullable: true, type: 'uuid' })
+  organizationId?: string | null;
+
+  @Column({ nullable: true, type: 'uuid' })
+  groupId?: string | null;
+
+  @Column({ default: 'user' })
+  ownerType!: 'user' | 'group';
 
   @Column({ default: 'unbound' })
   status!: 'unbound' | 'bound' | 'revoked';
@@ -40,6 +54,23 @@ export class Device {
     cascade: true,
   })
   certificate?: Certificate;
+
+  // Relations
+  @ManyToOne(
+    'Organization',
+    (organization: Organization) => organization.devices,
+    {
+      onDelete: 'SET NULL',
+    }
+  )
+  @JoinColumn({ name: 'organizationId' })
+  organization?: Organization | null;
+
+  @ManyToOne('Group', (group: Group) => group.devices, {
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'groupId' })
+  group?: Group | null;
 
   @CreateDateColumn()
   createdAt!: Date;

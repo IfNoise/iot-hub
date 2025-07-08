@@ -11,10 +11,6 @@ import * as os from 'os';
 // crypto больше не используется, так как мы используем OpenSSL напрямую
 import { promisify } from 'util';
 // Удалены неиспользуемые импорты @peculiar/x509 и @peculiar/webcrypto
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Промисифицируем exec для выполнения команд OpenSSL
 const exec = promisify(child_process.exec);
@@ -78,7 +74,7 @@ export class CertificateService {
       this.logger.log(`Запуск в Docker. Путь к сертификатам: ${this.certsDir}`);
     } else {
       // Локальный запуск
-      this.certsDir = path.resolve(path.join(__dirname, '../../../../certs'));
+      this.certsDir = path.resolve(path.join(process.cwd(), 'certs'));
       this.logger.log(
         `Локальный запуск. Путь к сертификатам: ${this.certsDir}`
       );

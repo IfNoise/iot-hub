@@ -9,6 +9,7 @@ import { AppService } from './app.service.js';
 import { DatabaseModule } from '../database/database.module.js';
 import { DevicesModule } from '../devices/devices.module.js';
 import { UsersModule } from '../users/users.module.js';
+import { OrganizationsModule } from '../organizations/organizations.module.js';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from '../auth/auth.module.js';
 import { MiddlewareModule } from '../common/middleware/middleware.module.js';
@@ -25,6 +26,7 @@ import { CommonConfigService } from '../common/config/common-config.service.js';
     DatabaseModule,
     DevicesModule,
     UsersModule,
+    OrganizationsModule,
     AuthModule,
     MiddlewareModule,
     CommonServicesModule,
