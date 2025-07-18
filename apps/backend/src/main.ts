@@ -19,7 +19,7 @@ async function bootstrap() {
 
   // Enable logging
   app.useLogger(app.get(Logger));
-
+  const logger = app.get(Logger);
   // Set up global prefix for API routes
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
@@ -39,17 +39,51 @@ async function bootstrap() {
     ],
     components: {
       securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
+        keycloakAuth: {
+          type: 'oauth2',
+          flows: {
+            password: {
+              tokenUrl:
+                'http://localhost:8080/realms/iot-hub/protocol/openid-connect/token',
+              scopes: {
+                openid: 'Basic identity',
+                profile: 'User profile',
+                email: 'User email',
+              },
+            },
+          },
         },
       },
     },
+    security: [{ keycloakAuth: ['openid'] }],
   });
 
   // Setup Swagger UI with correct path
-  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(document));
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'none',
+        displayRequestDuration: true,
+        tryItOutEnabled: true,
+        // Enable the "Authorize" button
+        authAction: {
+          bearerAuth: {
+            name: 'bearerAuth',
+            schema: {
+              type: 'http',
+              in: 'header',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
+            value: 'Bearer ',
+          },
+        },
+      },
+    })
+  );
 
   // Enable CORS with security considerations
   app.enableCors({
@@ -62,10 +96,10 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  console.log(
+  logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`
   );
-  console.log(
+  logger.log(
     `📚 API Documentation: http://localhost:${port}/${globalPrefix}/docs`
   );
 }

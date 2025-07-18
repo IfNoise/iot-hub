@@ -156,13 +156,6 @@ export class ConfigService {
   }
 
   /**
-   * @deprecated Use this.auth.getOAuth2ProxyHeaders() instead
-   */
-  getOAuth2ProxyHeaders() {
-    return this.auth.getOAuth2ProxyHeaders();
-  }
-
-  /**
    * @deprecated Use this.auth.getDevUserConfig() instead
    */
   getDevUserConfig() {

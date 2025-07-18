@@ -1,14 +1,17 @@
 // src/common/services/keycloak-user.service.ts
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
 import { UsersService } from '../../users/users.service.js';
 import { User } from '../../users/entities/user.entity.js';
 
 @Injectable()
 export class KeycloakUserService {
-  private readonly logger = new Logger(KeycloakUserService.name);
-
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    @InjectPinoLogger(KeycloakUserService.name)
+    private readonly logger: PinoLogger
+  ) {}
 
   /**
    * Синхронизирует пользователя из Keycloak с локальной базой данных
@@ -24,17 +27,19 @@ export class KeycloakUserService {
         role: keycloakUser.role,
       });
 
-      this.logger.log(
+      this.logger.info(
         `Пользователь синхронизирован: ${user.email} (${user.id})`
       );
 
       return user;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Ошибка синхронизации пользователя ${keycloakUser.email}:`,
         error
       );
-      throw error;
+      throw new Error(
+        `Не удалось синхронизировать пользователя: ${error.message}`
+      );
     }
   }
 

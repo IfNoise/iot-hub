@@ -1,46 +1,13 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
+import {
+  AuthProfileSchema,
+  AuthUserInfoSchema,
+  AdminResponseSchema,
+  UserResponseSchema,
+} from './auth-schemas.js';
 
 const c = initContract();
-
-/**
- * Схема для информации о пользователе
- */
-export const AuthUserInfoSchema = z.object({
-  id: z.string(),
-  email: z.string().email(),
-  name: z.string(),
-  avatar: z.string().optional(),
-  role: z.string(),
-  isEmailVerified: z.boolean(),
-});
-
-/**
- * Схема для расширенного профиля пользователя
- */
-export const AuthProfileSchema = z.object({
-  message: z.string(),
-  data: z.record(z.any()), // Расширенная информация может быть любой
-});
-
-/**
- * Схема для админского ответа
- */
-export const AdminResponseSchema = z.object({
-  message: z.string(),
-  admin: z.string(),
-});
-
-/**
- * Схема для пользовательского ответа
- */
-export const UserResponseSchema = z.object({
-  message: z.string(),
-  user: z.object({
-    name: z.string(),
-    role: z.string(),
-  }),
-});
 
 /**
  * REST API контракты для аутентификации

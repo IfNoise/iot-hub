@@ -1,6 +1,44 @@
 import { z } from 'zod';
 
 /**
+ * Схема для информации о пользователе
+ */
+export const AuthUserInfoSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  name: z.string(),
+  avatar: z.string().optional(),
+  role: z.string(),
+  isEmailVerified: z.boolean(),
+});
+
+/**
+ * Схема для расширенного профиля пользователя
+ */
+export const AuthProfileSchema = z.object({
+  message: z.string(),
+  data: z.record(z.any()), // Расширенная информация может быть любой
+});
+
+/**
+ * Схема для админского ответа
+ */
+export const AdminResponseSchema = z.object({
+  message: z.string(),
+  admin: z.string(),
+});
+
+/**
+ * Схема для пользовательского ответа
+ */
+export const UserResponseSchema = z.object({
+  message: z.string(),
+  user: z.object({
+    name: z.string(),
+    role: z.string(),
+  }),
+});
+/**
  * Схема для входа в систему
  */
 export const LoginSchema = z.object({
@@ -167,3 +205,7 @@ export type OAuthLogin = z.infer<typeof OAuthLoginSchema>;
 export type TwoFactor = z.infer<typeof TwoFactorSchema>;
 export type EnableTwoFactor = z.infer<typeof EnableTwoFactorSchema>;
 export type Session = z.infer<typeof SessionSchema>;
+export type AuthUserInfo = z.infer<typeof AuthUserInfoSchema>;
+export type AuthProfile = z.infer<typeof AuthProfileSchema>;
+export type AdminResponse = z.infer<typeof AdminResponseSchema>;
+export type UserResponse = z.infer<typeof UserResponseSchema>;

@@ -3,350 +3,159 @@ import {
   Injectable,
   NestMiddleware,
   UnauthorizedException,
-  Logger,
 } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Request, Response, NextFunction } from 'express';
-import * as jwt from 'jsonwebtoken';
-import jwksClient from 'jwks-rsa';
+import { jwtVerify, createRemoteJWKSet, type JWTPayload } from 'jose';
 import { AuthConfigService } from '../../auth/config/auth-config.service.js';
 import { UsersService } from '../../users/users.service.js';
 import {
   KeycloakJwtPayload,
   AuthenticatedUser,
-  OAuth2ProxyHeaders,
 } from '../types/keycloak-user.interface.js';
 
 @Injectable()
 export class KeycloakOAuth2Middleware implements NestMiddleware {
-  private readonly logger = new Logger(KeycloakOAuth2Middleware.name);
-  private jwksClient?: jwksClient.JwksClient;
-  private isKeycloakEnabled = false;
+  private jwks!: ReturnType<typeof createRemoteJWKSet>;
+  private issuer!: string;
+  private audience?: string;
+  private isEnabled = false;
 
   constructor(
     private readonly authConfigService: AuthConfigService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
+    @InjectPinoLogger(KeycloakOAuth2Middleware.name)
+    private readonly logger: PinoLogger
   ) {
-    const keycloakConfig = this.authConfigService.getKeycloakConfig();
+    const cfg = this.authConfigService.getKeycloakConfig();
 
-    // Если Keycloak не настроен, выводим предупреждение и отключаем middleware
-    if (
-      !keycloakConfig.url ||
-      !keycloakConfig.realm ||
-      keycloakConfig.url.trim() === '' ||
-      keycloakConfig.realm.trim() === ''
-    ) {
-      this.logger.warn(
-        'Keycloak не настроен. Middleware отключен. Установите KEYCLOAK_URL и KEYCLOAK_REALM для включения.'
-      );
-      this.isKeycloakEnabled = false;
+    if (!cfg.url || !cfg.realm) {
+      this.logger.warn('Keycloak не настроен, middleware отключен.');
       return;
     }
 
-    this.isKeycloakEnabled = true;
-    this.jwksClient = jwksClient({
-      jwksUri: `${keycloakConfig.url}/realms/${keycloakConfig.realm}/protocol/openid-connect/certs`,
-      cache: true,
-      cacheMaxAge: 12 * 60 * 60 * 1000, // 12 hours
-    });
-  }
+    this.issuer = `${cfg.url}/realms/${cfg.realm}`;
+    this.audience = cfg.clientId;
+    const jwksUri = new URL(`${this.issuer}/protocol/openid-connect/certs`);
+    this.jwks = createRemoteJWKSet(jwksUri);
+    this.isEnabled = true;
 
-  async use(req: Request, res: Response, next: NextFunction): Promise<void> {
-    // Если Keycloak отключен, создаем заглушку для разработки
-    if (!this.isKeycloakEnabled) {
-      this.logger.debug(
-        'Keycloak отключен, используем заглушку для разработки'
-      );
-
-      // Создаем тестового пользователя для разработки с возможностью настройки
-      const devUser: AuthenticatedUser = this.createDevUser();
-
-      req.user = devUser;
-      this.logger.debug(
-        `Использована заглушка пользователя: ${devUser.email} (роль: ${devUser.role})`
-      );
-
-      next();
-      return;
-    }
-
-    try {
-      // Проверяем наличие токена в заголовке Authorization
-      const authToken = this.extractBearerToken(req);
-
-      // Проверяем заголовки OAuth2 Proxy
-      const proxyHeaders = this.extractOAuth2ProxyHeaders(req);
-
-      if (!authToken && !proxyHeaders.accessToken) {
-        throw new UnauthorizedException('Токен аутентификации не найден');
-      }
-
-      // Используем токен из заголовка Authorization или из OAuth2 Proxy
-      const token = authToken || (proxyHeaders.accessToken as string);
-
-      // Верифицируем и декодируем JWT токен
-      const user = await this.verifyAndExtractUser(token, proxyHeaders);
-
-      // Создаем или обновляем пользователя в базе данных
-      const enrichedUser = await this.ensureUserExists(user);
-
-      // Добавляем пользователя в request
-      req.user = enrichedUser;
-
-      this.logger.debug(
-        `Пользователь аутентифицирован: ${enrichedUser.email} (${enrichedUser.id})`
-      );
-
-      next();
-    } catch (error) {
-      this.logger.error('Ошибка аутентификации:', error);
-
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-
-      throw new UnauthorizedException('Недействительный токен аутентификации');
-    }
-  }
-
-  /**
-   * Извлекает Bearer токен из заголовка Authorization
-   */
-  private extractBearerToken(request: Request): string | null {
-    const authHeader = request.headers.authorization;
-    if (!authHeader) return null;
-
-    const [type, token] = authHeader.split(' ');
-    return type === 'Bearer' && token ? token : null;
-  }
-
-  /**
-   * Извлекает заголовки OAuth2 Proxy
-   */
-  private extractOAuth2ProxyHeaders(request: Request): OAuth2ProxyHeaders {
-    const headers = this.authConfigService.getOAuth2ProxyHeaders();
-
-    return {
-      user: request.headers[headers.user.toLowerCase()] as string,
-      email: request.headers[headers.email.toLowerCase()] as string,
-      preferredUsername: request.headers[
-        headers.preferredUsername.toLowerCase()
-      ] as string,
-      accessToken: request.headers[headers.accessToken.toLowerCase()] as string,
-    };
-  }
-
-  /**
-   * Верифицирует JWT токен и извлекает информацию о пользователе
-   */
-  private async verifyAndExtractUser(
-    token: string,
-    proxyHeaders: OAuth2ProxyHeaders
-  ): Promise<AuthenticatedUser> {
-    const keycloakConfig = this.authConfigService.getKeycloakConfig();
-
-    if (!keycloakConfig.url || !keycloakConfig.realm) {
-      throw new UnauthorizedException('Keycloak не настроен');
-    }
-
-    return new Promise((resolve, reject) => {
-      jwt.verify(
-        token,
-        this.getSigningKey.bind(this),
-        {
-          algorithms: ['RS256'],
-          issuer: `${keycloakConfig.url}/realms/${keycloakConfig.realm}`,
-          audience: keycloakConfig.clientId || undefined,
-        },
-        (err, decoded) => {
-          if (err) {
-            this.logger.error('JWT verification failed:', err);
-            reject(new UnauthorizedException('Недействительный JWT токен'));
-            return;
-          }
-
-          try {
-            const payload = decoded as KeycloakJwtPayload;
-            const user = this.extractUserFromPayload(payload, proxyHeaders);
-            resolve(user);
-          } catch (error) {
-            this.logger.error('Error extracting user from payload:', error);
-            reject(error);
-          }
-        }
-      );
-    });
-  }
-
-  /**
-   * Получает публичный ключ для верификации JWT
-   */
-  private getSigningKey(
-    header: jwt.JwtHeader,
-    callback: jwt.SigningKeyCallback
-  ): void {
-    if (!this.jwksClient) {
-      callback(new Error('JWKS client not initialized'));
-      return;
-    }
-
-    this.jwksClient.getSigningKey(
-      header.kid,
-      (err: Error | null, key: jwksClient.SigningKey | undefined) => {
-        if (err) {
-          this.logger.error('Error getting signing key:', err);
-          callback(err);
-          return;
-        }
-
-        const signingKey = key?.getPublicKey();
-        callback(null, signingKey);
-      }
+    this.logger.debug(
+      `KeycloakOAuth2Middleware инициализирован. Issuer: ${this.issuer}`
     );
   }
 
-  /**
-   * Извлекает данные пользователя из JWT payload
-   */
-  private extractUserFromPayload(
-    payload: KeycloakJwtPayload,
-    proxyHeaders: OAuth2ProxyHeaders
-  ): AuthenticatedUser {
-    // ID пользователя из Keycloak (sub claim)
-    if (!payload.sub) {
-      throw new UnauthorizedException(
-        'Отсутствует идентификатор пользователя в токене'
+  async use(req: Request, res: Response, next: NextFunction): Promise<void> {
+    if (!this.isEnabled) {
+      const devUser: AuthenticatedUser = this.createDevUser();
+      req.user = devUser;
+      this.logger.debug(`Dev mode: ${devUser.email} (${devUser.role})`);
+      return next();
+    }
+
+    try {
+      const token = this.extractBearerToken(req);
+      if (!token) throw new UnauthorizedException('Нет Bearer токена');
+
+      const payload = await this.verifyToken(token);
+      const user = this.extractUserFromPayload(payload);
+      const enriched = await this.ensureUserExists(user);
+
+      req.user = enriched;
+      this.logger.debug(
+        `Аутентификация успешна: ${enriched.email} (${enriched.id})`
       );
+      return next();
+    } catch (err) {
+      this.logger.error({ err }, 'Ошибка аутентификации');
+      throw new UnauthorizedException('Ошибка аутентификации');
+    }
+  }
+
+  private extractBearerToken(req: Request): string | null {
+    const auth = req.headers['authorization'];
+    if (!auth) return null;
+    const [type, token] = auth.split(' ');
+    return type === 'Bearer' && token ? token : null;
+  }
+
+  private async verifyToken(token: string): Promise<JWTPayload> {
+    const payload = await jwtVerify(token, this.jwks, {
+      //TODO :  Косяк с iss
+      issuer: 'http://localhost:8080/realms/iot-hub',
+      audience: this.audience,
+    });
+    return payload.payload;
+  }
+
+  private extractUserFromPayload(payload: JWTPayload): AuthenticatedUser {
+    if (!payload.sub || typeof payload.email !== 'string') {
+      throw new UnauthorizedException('Невалидный JWT payload');
     }
 
-    // Email пользователя (приоритет: JWT payload -> OAuth2 Proxy headers)
-    const email = payload.email || proxyHeaders.email;
-    if (!email) {
-      throw new UnauthorizedException('Отсутствует email пользователя');
-    }
+    const name =
+      (payload.name as string) ||
+      (payload.preferred_username as string) ||
+      (payload.email as string).split('@')[0];
 
-    // Имя пользователя (приоритет: name -> preferred_username -> given_name + family_name)
-    const name = this.extractUserName(payload, proxyHeaders);
-
-    // Avatar из picture claim
-    const avatar = payload.picture;
-
-    // Определение роли пользователя
-    const role = this.extractUserRole(payload);
-
-    // Проверка верификации email
-    const isEmailVerified = payload.email_verified ?? false;
+    const role = this.extractUserRole(payload as KeycloakJwtPayload);
 
     return {
       id: payload.sub,
-      email,
+      email: payload.email,
       name,
-      avatar,
+      avatar: payload.picture as string,
       role,
-      isEmailVerified,
-      sessionState: payload.session_state,
+      isEmailVerified:
+        typeof payload.email_verified === 'boolean'
+          ? payload.email_verified
+          : false,
+      sessionState: payload.session_state as string,
     };
   }
 
-  /**
-   * Извлекает имя пользователя из различных полей
-   */
-  private extractUserName(
-    payload: KeycloakJwtPayload,
-    proxyHeaders: OAuth2ProxyHeaders
-  ): string {
-    // Приоритет: name -> preferred_username -> given_name + family_name -> email
-    if (payload.name) return payload.name;
-
-    if (payload.preferred_username) return payload.preferred_username;
-
-    if (proxyHeaders.preferredUsername) return proxyHeaders.preferredUsername;
-
-    if (payload.given_name && payload.family_name) {
-      return `${payload.given_name} ${payload.family_name}`;
-    }
-
-    if (payload.given_name) return payload.given_name;
-
-    // В крайнем случае используем часть email до @
-    const email = payload.email || proxyHeaders.email;
-    if (email) {
-      return email.split('@')[0];
-    }
-
-    throw new UnauthorizedException('Не удалось определить имя пользователя');
-  }
-
-  /**
-   * Определяет роль пользователя из токена
-   */
   private extractUserRole(payload: KeycloakJwtPayload): 'admin' | 'user' {
-    const keycloakConfig = this.authConfigService.getKeycloakConfig();
+    const cfg = this.authConfigService.getKeycloakConfig();
 
-    // Проверяем роли в realm_access (общие роли realm)
-    if (payload.realm_access?.roles) {
-      if (payload.realm_access.roles.includes('admin')) return 'admin';
-      if (payload.realm_access.roles.includes('user')) return 'user';
+    const realmRoles = payload.realm_access?.roles || [];
+    const clientRoles =
+      payload.resource_access?.[cfg.clientId || '']?.roles || [];
+
+    if (realmRoles.includes('admin') || clientRoles.includes('admin')) {
+      return 'admin';
     }
-
-    // Проверяем роли в resource_access для конкретного клиента
-    if (
-      keycloakConfig.clientId &&
-      payload.resource_access?.[keycloakConfig.clientId]?.roles
-    ) {
-      const clientRoles =
-        payload.resource_access[keycloakConfig.clientId].roles;
-      if (clientRoles.includes('admin')) return 'admin';
-      if (clientRoles.includes('user')) return 'user';
-    }
-
-    // По умолчанию назначаем роль user
     return 'user';
   }
 
-  /**
-   * Создает настраиваемого development пользователя
-   */
   private createDevUser(): AuthenticatedUser {
-    const devUserConfig = this.authConfigService.getDevUserConfig();
-
+    const dev = this.authConfigService.getDevUserConfig();
     return {
-      id: devUserConfig.id,
-      email: devUserConfig.email,
-      name: devUserConfig.name,
-      avatar: devUserConfig.avatar,
-      role: devUserConfig.role,
-      isEmailVerified: devUserConfig.emailVerified,
+      id: dev.id,
+      email: dev.email,
+      name: dev.name,
+      avatar: dev.avatar,
+      role: dev.role,
+      isEmailVerified: dev.emailVerified,
       sessionState: 'dev-session',
     };
   }
 
-  /**
-   * Создает или обновляет пользователя в базе данных на основе данных Keycloak
-   */
   private async ensureUserExists(
     keycloakUser: AuthenticatedUser
   ): Promise<AuthenticatedUser> {
+    const logger = this.logger;
     try {
-      // Проверяем, существует ли пользователь в базе данных по Keycloak ID
       let dbUser = await this.usersService.findByKeycloakId(keycloakUser.id);
-
       if (!dbUser) {
-        // Проверяем по email на случай, если пользователь был создан ранее
         dbUser = await this.usersService.findByEmail(keycloakUser.email);
-
         if (dbUser) {
-          // Обновляем userId если пользователь найден по email
           dbUser = await this.usersService.update(dbUser.id, {
             userId: keycloakUser.id,
             name: keycloakUser.name,
             avatar: keycloakUser.avatar,
             role: keycloakUser.role,
           });
-          this.logger.log(
-            `Обновлен существующий пользователь: ${keycloakUser.email} (ID: ${keycloakUser.id})`
-          );
         } else {
-          // Создаем нового пользователя
           dbUser = await this.usersService.create({
             userId: keycloakUser.id,
             email: keycloakUser.email,
@@ -357,36 +166,27 @@ export class KeycloakOAuth2Middleware implements NestMiddleware {
             plan: 'free',
             userType: 'individual',
           });
-          this.logger.log(
-            `Создан новый пользователь: ${keycloakUser.email} (ID: ${keycloakUser.id})`
-          );
         }
       } else {
-        // Обновляем данные существующего пользователя из Keycloak
         dbUser = await this.usersService.update(dbUser.id, {
           name: keycloakUser.name,
           avatar: keycloakUser.avatar,
           role: keycloakUser.role,
         });
-        this.logger.debug(
-          `Обновлены данные пользователя: ${keycloakUser.email}`
-        );
       }
 
-      // Возвращаем обновленную информацию о пользователе
       return {
         ...keycloakUser,
-        databaseId: dbUser.id, // Добавляем ID из базы данных
+        databaseId: dbUser.id,
         balance: dbUser.balance,
         plan: dbUser.plan,
         planExpiresAt: dbUser.planExpiresAt,
       };
-    } catch (error) {
-      this.logger.error(
-        `Ошибка при создании/обновлении пользователя ${keycloakUser.email}:`,
-        error
+    } catch (err) {
+      logger.error(
+        err,
+        `Ошибка при ensureUserExists для ${keycloakUser.email}`
       );
-      // В случае ошибки возвращаем пользователя без данных из БД
       return keycloakUser;
     }
   }

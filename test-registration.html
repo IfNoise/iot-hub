@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Hub Registration Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .card {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      h1,
+      h2 {
+        color: #333;
+        text-align: center;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        margin: 10px 0;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+      }
+      #result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+      }
+      .user-type-section {
+        border: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>🚀 IoT Hub Registration Test</h1>
+
+      <form id="registrationForm">
+        <div class="form-group">
+          <label for="userType">Тип аккаунта:</label>
+          <select
+            id="userType"
+            name="userType"
+            required
+            onchange="toggleOrganizationFields()"
+          >
+            <option value="">Выберите тип аккаунта</option>
+            <option value="personal">Личный аккаунт</option>
+            <option value="enterprise">Корпоративный аккаунт</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="username">Имя пользователя:</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+
+        <div class="form-group">
+          <label for="firstName">Имя:</label>
+          <input type="text" id="firstName" name="firstName" />
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Фамилия:</label>
+          <input type="text" id="lastName" name="lastName" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Пароль:</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+
+        <div id="organizationSection" class="user-type-section hidden">
+          <h3>Настройки организации</h3>
+          <div class="form-group">
+            <label for="organizationName">Название организации:</label>
+            <input type="text" id="organizationName" name="organizationName" />
+          </div>
+
+          <div class="form-group">
+            <label for="inviteCode">Код приглашения (опционально):</label>
+            <input
+              type="text"
+              id="inviteCode"
+              name="inviteCode"
+              placeholder="Введите код, если присоединяетесь к существующей организации"
+            />
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn">Зарегистрироваться</button>
+      </form>
+
+      <div id="result"></div>
+    </div>
+
+    <div class="card">
+      <h2>📧 Отправка приглашения</h2>
+
+      <form id="inviteForm">
+        <div class="form-group">
+          <label for="inviteEmail">Email для приглашения:</label>
+          <input type="email" id="inviteEmail" name="inviteEmail" required />
+        </div>
+
+        <div class="form-group">
+          <label for="inviteOrganizationId">ID организации:</label>
+          <input
+            type="text"
+            id="inviteOrganizationId"
+            name="inviteOrganizationId"
+            required
+            placeholder="Keycloak Group ID"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="inviteRole">Роль:</label>
+          <select id="inviteRole" name="inviteRole" required>
+            <option value="user">Пользователь</option>
+            <option value="admin">Администратор</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="inviteFirstName">Имя:</label>
+          <input type="text" id="inviteFirstName" name="inviteFirstName" />
+        </div>
+
+        <div class="form-group">
+          <label for="inviteLastName">Фамилия:</label>
+          <input type="text" id="inviteLastName" name="inviteLastName" />
+        </div>
+
+        <button type="submit" id="inviteBtn">Отправить приглашение</button>
+      </form>
+
+      <div id="inviteResult"></div>
+    </div>
+
+    <script>
+      const BACKEND_URL = 'http://localhost:3000';
+
+      function showResult(message, isError = false, elementId = 'result') {
+        const result = document.getElementById(elementId);
+        result.innerHTML = `<strong>${
+          isError ? '❌ Ошибка' : '✅ Результат'
+        }:</strong><br>${message}`;
+        result.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
+        result.style.borderColor = isError ? '#f5c6cb' : '#c3e6cb';
+      }
+
+      function toggleOrganizationFields() {
+        const userType = document.getElementById('userType').value;
+        const orgSection = document.getElementById('organizationSection');
+
+        if (userType === 'enterprise') {
+          orgSection.classList.remove('hidden');
+        } else {
+          orgSection.classList.add('hidden');
+        }
+      }
+
+      document
+        .getElementById('registrationForm')
+        .addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const submitBtn = document.getElementById('submitBtn');
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Регистрация...';
+
+          const formData = new FormData(e.target);
+          const data = Object.fromEntries(formData.entries());
+
+          try {
+            const response = await fetch(`${BACKEND_URL}/auth/register`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              showResult(`
+                        Пользователь успешно зарегистрирован!<br>
+                        <strong>User ID:</strong> ${result.userId}<br>
+                        ${
+                          result.organizationId
+                            ? `<strong>Organization ID:</strong> ${result.organizationId}<br>`
+                            : ''
+                        }
+                        <strong>Сообщение:</strong> ${result.message}
+                    `);
+              e.target.reset();
+              toggleOrganizationFields();
+            } else {
+              showResult(`Ошибка регистрации: ${result.message}`, true);
+            }
+          } catch (error) {
+            showResult(`Ошибка запроса: ${error.message}`, true);
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Зарегистрироваться';
+          }
+        });
+
+      document
+        .getElementById('inviteForm')
+        .addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const inviteBtn = document.getElementById('inviteBtn');
+          inviteBtn.disabled = true;
+          inviteBtn.textContent = 'Отправка...';
+
+          const formData = new FormData(e.target);
+          const data = Object.fromEntries(formData.entries());
+
+          try {
+            const response = await fetch(
+              `${BACKEND_URL}/auth/register/invite`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  email: data.inviteEmail,
+                  organizationId: data.inviteOrganizationId,
+                  role: data.inviteRole,
+                  firstName: data.inviteFirstName,
+                  lastName: data.inviteLastName,
+                }),
+              }
+            );
+
+            const result = await response.json();
+
+            if (result.success) {
+              showResult(
+                `
+                        Приглашение успешно отправлено!<br>
+                        <strong>User ID:</strong> ${result.userId}<br>
+                        <strong>Organization ID:</strong> ${result.organizationId}<br>
+                        <strong>Сообщение:</strong> ${result.message}
+                    `,
+                false,
+                'inviteResult'
+              );
+              e.target.reset();
+            } else {
+              showResult(
+                `Ошибка отправки приглашения: ${result.message}`,
+                true,
+                'inviteResult'
+              );
+            }
+          } catch (error) {
+            showResult(
+              `Ошибка запроса: ${error.message}`,
+              true,
+              'inviteResult'
+            );
+          } finally {
+            inviteBtn.disabled = false;
+            inviteBtn.textContent = 'Отправить приглашение';
+          }
+        });
+    </script>
+  </body>
+</html>

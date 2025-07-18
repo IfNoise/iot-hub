@@ -86,8 +86,6 @@ services:
       - MQTT_CONNECT_TIMEOUT=30000
       - MQTT_RECONNECT_PERIOD=5000
       - MQTT_MAX_RECONNECT_ATTEMPTS=10
-      - KEYCLOAK_URL=
-      - KEYCLOAK_REALM=
       # OpenTelemetry Configuration
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=iot-hub-backend
@@ -106,7 +104,17 @@ services:
       - LOKI_LABELS=job=iot-hub-backend,version=1.0.0
       - LOKI_TIMEOUT=30000
       - LOKI_SILENCE_ERRORS=true
-
+      # Pino Configuration
+      - LOG_ENABLE_REQUEST_LOGGING=true
+      - LOG_ENABLE_METADATA=true
+        # Keycloak Configuration
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=iot-hub
+      - KEYCLOAK_CLIENT_ID=iot-hub-backend
+      - KEYCLOAK_CLIENT_SECRET=iot-hub-backend-secret
+      - KEYCLOAK_ADMIN_URL=http://keycloak:8080
+      - KEYCLOAK_ADMIN_USERNAME=noise8301@gmail.com
+      - KEYCLOAK_ADMIN_PASSWORD=00000006
     volumes:
       - .:/workspace:cached
       - /workspace/node_modules # ❗️Важно: НЕ перетираем node_modules
@@ -212,6 +220,100 @@ services:
     networks:
       - iot-network
 
+  # Keycloak Database
+  keycloak-db:
+    image: postgres:15-alpine
+    container_name: keycloak-postgres
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak_password
+
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keycloak -d keycloak']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    networks:
+      - iot-network
+
+  # Keycloak Identity and Access Management
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: iot-keycloak
+    restart: unless-stopped
+
+    environment:
+      # Database
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak_password
+
+      # Admin user
+      # - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      # - KC_BOOTSTRAP_ADMIN_PASSWORD=iot-keycloak-admin
+
+      # Configuration
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_PORT=8080
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      - KC_PROXY=edge
+
+      # Logging
+      - KC_LOG_LEVEL=DEBUG
+      - KC_LOG_CONSOLE_LEVEL=DEBUG
+      - KC_LOG_CONSOLE_COLOR=true
+      # Metrics
+      - KC_METRICS_ENABLED=true
+
+    command: start-dev
+
+    ports:
+      - '8080:8080'
+      - '8443:8443'
+
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./keycloak/themes:/opt/keycloak/themes:ro # Включаем обновленную тему
+      # - ./keycloak/providers:/opt/keycloak/providers:ro  # Пока отключено
+
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    networks:
+      - iot-network
+
 volumes:
   emqx-data:
     driver: local
@@ -220,6 +322,10 @@ volumes:
   postgres-data:
     driver: local
   redis-data:
+    driver: local
+  keycloak-db-data:
+    driver: local
+  keycloak-data:
     driver: local
   iot-hub-certs:
     external: true

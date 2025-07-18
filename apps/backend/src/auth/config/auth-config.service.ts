@@ -12,10 +12,9 @@ export class AuthConfigService {
       keycloakUrl: env.KEYCLOAK_URL,
       keycloakRealm: env.KEYCLOAK_REALM,
       keycloakClientId: env.KEYCLOAK_CLIENT_ID,
-      oauth2ProxyUserHeader: env.OAUTH2_PROXY_USER_HEADER,
-      oauth2ProxyEmailHeader: env.OAUTH2_PROXY_EMAIL_HEADER,
-      oauth2ProxyPreferredUsernameHeader: env.OAUTH2_PROXY_PREFERRED_USERNAME_HEADER,
-      oauth2ProxyAccessTokenHeader: env.OAUTH2_PROXY_ACCESS_TOKEN_HEADER,
+      keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
+      keycloakAdminUsername: env.KEYCLOAK_ADMIN_USERNAME,
+      keycloakAdminPassword: env.KEYCLOAK_ADMIN_PASSWORD,
       devUserId: env.DEV_USER_ID,
       devUserEmail: env.DEV_USER_EMAIL,
       devUserName: env.DEV_USER_NAME,
@@ -35,7 +34,11 @@ export class AuthConfigService {
 
   // Convenience methods
   isKeycloakEnabled(): boolean {
-    return !!(this.config.keycloakUrl && this.config.keycloakRealm && this.config.keycloakClientId);
+    return !!(
+      this.config.keycloakUrl &&
+      this.config.keycloakRealm &&
+      this.config.keycloakClientId
+    );
   }
 
   getJwtConfig() {
@@ -50,15 +53,9 @@ export class AuthConfigService {
       url: this.config.keycloakUrl,
       realm: this.config.keycloakRealm,
       clientId: this.config.keycloakClientId,
-    };
-  }
-
-  getOAuth2ProxyHeaders() {
-    return {
-      user: this.config.oauth2ProxyUserHeader,
-      email: this.config.oauth2ProxyEmailHeader,
-      preferredUsername: this.config.oauth2ProxyPreferredUsernameHeader,
-      accessToken: this.config.oauth2ProxyAccessTokenHeader,
+      clientSecret: this.config.keycloakClientSecret,
+      adminUsername: this.config.keycloakAdminUsername,
+      adminPassword: this.config.keycloakAdminPassword,
     };
   }
 

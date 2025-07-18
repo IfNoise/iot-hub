@@ -1,0 +1,71 @@
+/* IoT Hub Custom Theme for Keycloak 26.3.1 */
+
+/* Общий background */
+body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Основная карточка */
+.card,
+.card-pf,
+#kc-content-wrapper {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+  max-width: 480px;
+  margin: 2rem auto !important;
+}
+
+/* Заголовки */
+h1, .login-pf-header h1 {
+  color: #4a5568 !important;
+  font-weight: 600 !important;
+  font-size: 24px !important;
+  text-align: center !important;
+}
+
+/* Поля ввода */
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  font-size: 16px !important;
+  transition: all 0.3s ease !important;
+}
+
+input:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+  outline: none !important;
+}
+
+/* Кнопки */
+.btn-primary,
+button[type="submit"] {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Ссылки */
+a {
+  color: #667eea !important;
+}
+
+a:hover {
+  color: #764ba2 !important;
+}

@@ -24,22 +24,24 @@ export const authConfigSchema = z.object({
     .optional()
     .or(z.literal(''))
     .describe('Keycloak client ID'),
-  oauth2ProxyUserHeader: z
+  keycloakClientSecret: z
     .string()
-    .default('X-Auth-Request-User')
-    .describe('OAuth2 proxy user header'),
-  oauth2ProxyEmailHeader: z
+    .min(1)
+    .optional()
+    .or(z.literal(''))
+    .describe('Keycloak client secret'),
+  keycloakAdminUsername: z
     .string()
-    .default('X-Auth-Request-Email')
-    .describe('OAuth2 proxy email header'),
-  oauth2ProxyPreferredUsernameHeader: z
+    .min(1)
+    .optional()
+    .or(z.literal(''))
+    .describe('Keycloak admin username'),
+  keycloakAdminPassword: z
     .string()
-    .default('X-Auth-Request-Preferred-Username')
-    .describe('OAuth2 proxy preferred username header'),
-  oauth2ProxyAccessTokenHeader: z
-    .string()
-    .default('X-Auth-Request-Access-Token')
-    .describe('OAuth2 proxy access token header'),
+    .min(1)
+    .optional()
+    .or(z.literal(''))
+    .describe('Keycloak admin password'),
 
   // Development User Configuration (только для разработки когда Keycloak отключен)
   devUserId: z

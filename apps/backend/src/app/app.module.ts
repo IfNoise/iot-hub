@@ -55,6 +55,8 @@ import { CommonConfigService } from '../common/config/common-config.service.js';
               singleLine: true,
               translateTime: 'yyyy-mm-dd HH:MM:ss',
               ignore: 'pid,hostname',
+              messageFormat: '{msg} - {err.name}: {err.message}',
+              errorLikeObjectKeys: ['err'], // <--- ключевой момент
             },
           },
         ];
@@ -123,13 +125,13 @@ export class AppModule implements NestModule {
       .apply(KeycloakOAuth2Middleware)
       .exclude(
         { path: 'health', method: RequestMethod.ALL },
-        { path: 'health/*', method: RequestMethod.ALL },
+        { path: 'health/*path', method: RequestMethod.ALL },
         { path: 'metrics', method: RequestMethod.ALL },
-        { path: 'metrics/*', method: RequestMethod.ALL },
+        { path: 'metrics/*path', method: RequestMethod.ALL },
         { path: 'docs', method: RequestMethod.ALL },
-        { path: 'docs/*', method: RequestMethod.ALL },
+        { path: 'docs/*path', method: RequestMethod.ALL },
         { path: 'manufacturing', method: RequestMethod.ALL },
-        { path: 'manufacturing/*', method: RequestMethod.ALL },
+        { path: 'manufacturing/*path', method: RequestMethod.ALL },
         { path: 'devices/certificates', method: RequestMethod.ALL },
         { path: 'devices/certificates/*', method: RequestMethod.ALL }
       )
@@ -141,15 +143,15 @@ export class AppModule implements NestModule {
       .apply(AutoUserSyncMiddleware)
       .exclude(
         { path: 'health', method: RequestMethod.ALL },
-        { path: 'health/*', method: RequestMethod.ALL },
+        { path: 'health/*path', method: RequestMethod.ALL },
         { path: 'metrics', method: RequestMethod.ALL },
-        { path: 'metrics/*', method: RequestMethod.ALL },
+        { path: 'metrics/*path', method: RequestMethod.ALL },
         { path: 'docs', method: RequestMethod.ALL },
-        { path: 'docs/*', method: RequestMethod.ALL },
+        { path: 'docs/*path', method: RequestMethod.ALL },
         { path: 'manufacturing', method: RequestMethod.ALL },
-        { path: 'manufacturing/*', method: RequestMethod.ALL },
+        { path: 'manufacturing/*path', method: RequestMethod.ALL },
         { path: 'devices/certificates', method: RequestMethod.ALL },
-        { path: 'devices/certificates/*', method: RequestMethod.ALL }
+        { path: 'devices/certificates/*path', method: RequestMethod.ALL }
       )
       .forRoutes('*');
   }

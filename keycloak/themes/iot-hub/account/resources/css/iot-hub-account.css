@@ -1,0 +1,54 @@
+/* IoT Hub Account Management Custom Theme */
+
+/* Modern styling for Keycloak Account Console */
+body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header styling */
+.pf-c-masthead {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Main content area */
+.pf-c-page__main {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  margin: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Cards and panels */
+.pf-c-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+.pf-c-button.pf-m-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.pf-c-button.pf-m-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Brand customization */
+.pf-c-brand {
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.pf-c-brand::after {
+  content: ' - IoT Hub';
+  color: #667eea;
+}
