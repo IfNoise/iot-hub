@@ -4,25 +4,25 @@ module.exports = {
   displayName: 'backend',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.ts'],
-  transform: {
-    '^.+\\.[jt]sx?$': [
-      'ts-jest',
-      {
-        useESM: true,
-        tsconfig: {
-          module: 'ES2020',
-          target: 'ES2020',
-          experimentalDecorators: true,
-          emitDecoratorMetadata: true,
-          allowSyntheticDefaultImports: true,
-          esModuleInterop: true,
-        },
+  // ...existing code...
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        module: 'CommonJS',
+        moduleResolution: 'node',
+        target: 'ES2022',
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true,
+        allowSyntheticDefaultImports: true,
+        esModuleInterop: true,
       },
-    ],
+    },
+  },
+  transform: {
+    '^.+\\.[tj]s$': 'ts-jest',
   },
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^(.{1,2}/.*).js$': '$1',
     '^@iot-hub/auth$': '<rootDir>/../../libs/contracts/auth/src/index.ts',
     '^@iot-hub/contracts$': '<rootDir>/../../libs/contracts/src/index.ts',
     '^@iot-hub/crypto$': '<rootDir>/../../libs/contracts/crypto/src/index.ts',
@@ -33,5 +33,5 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/apps/backend',
-  transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$)'],
+  // transformIgnorePatterns удалён для совместимости с ts-jest и NestJS
 };

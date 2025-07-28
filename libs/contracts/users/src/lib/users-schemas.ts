@@ -5,9 +5,12 @@ import { z } from 'zod';
  */
 export const UserRoleEnum = z.enum([
   'admin',
-  'user',
-  'org_admin',
-  'group_admin',
+  'personal-user',
+  'organization-user',
+  'group-user',
+  'organization-admin',
+  'group-admin',
+  'organization-owner',
 ]);
 export const PlanTypeEnum = z.enum(['free', 'pro', 'enterprise']);
 export const UserTypeEnum = z.enum(['individual', 'organization']);
@@ -17,13 +20,13 @@ export const UserTypeEnum = z.enum(['individual', 'organization']);
  */
 export const UserBaseSchema = z
   .object({
-    id: z.string().uuid().describe('Уникальный ID пользователя'),
-    userId: z.string().uuid().optional().describe('Keycloak ID пользователя'),
+    id: z.string().uuid().describe('Уникальный идентификатор пользователя'),
+    userId: z.string().uuid().describe('Keycloak ID пользователя'),
     email: z.string().email().describe('Электронная почта'),
     name: z
       .string()
       .min(2)
-      .max(100)
+      .max(32)
       .transform((v) => v.trim())
       .describe('Имя пользователя'),
     avatar: z.string().url().optional().describe('URL аватара пользователя'),
@@ -33,7 +36,10 @@ export const UserBaseSchema = z
     updatedAt: z
       .preprocess((v) => new Date(v as string), z.date())
       .describe('Дата обновления'),
-    role: UserRoleEnum.default('user').describe('Роль пользователя'),
+    roles: z
+      .array(UserRoleEnum)
+      .default(['personal-user'])
+      .describe('Роли пользователя'),
     balance: z
       .number()
       .nonnegative()
@@ -41,12 +47,10 @@ export const UserBaseSchema = z
       .describe('Баланс пользователя'),
     plan: PlanTypeEnum.default('free').describe('Тип подписки'),
     planExpiresAt: z
-      .preprocess(
-        (v) => (v ? new Date(v as string) : null),
-        z.date().nullable()
-      )
+      .preprocess((v) => (v ? new Date(v as string) : null), z.date())
+      .optional()
       .describe('Дата окончания подписки'),
-    userType: UserTypeEnum.default('individual').describe('Тип пользователя'),
+    accountType: UserTypeEnum.default('individual').describe('Тип аккаунта'),
     // Enterprise поля (опциональные для обратной совместимости)
     organizationId: z
       .string()
@@ -54,7 +58,11 @@ export const UserBaseSchema = z
       .nullable()
       .optional()
       .describe('ID организации'),
-    groupId: z.string().uuid().nullable().optional().describe('ID группы'),
+    groups: z
+      .array(z.string())
+      .optional()
+      .nullable()
+      .describe('Список ID групп пользователя'),
     metadata: z.record(z.any()).optional().describe('Произвольные данные'),
   })
   .strict();
@@ -68,7 +76,7 @@ export const CreateUserSchema = UserBaseSchema.omit({
   updatedAt: true,
 }).extend({
   planExpiresAt: z
-    .preprocess((v) => (v ? new Date(v as string) : undefined), z.date())
+    .preprocess((v) => (v ? new Date(v as string) : null), z.date())
     .optional()
     .describe('Дата окончания подписки'),
 });

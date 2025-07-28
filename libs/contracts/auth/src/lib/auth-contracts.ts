@@ -4,7 +4,6 @@ import {
   AuthProfileSchema,
   AuthUserInfoSchema,
   AdminResponseSchema,
-  UserResponseSchema,
 } from './auth-schemas.js';
 
 const c = initContract();
@@ -46,18 +45,6 @@ export const authContract = c.router({
       403: z.object({ message: z.string() }),
     },
     summary: 'Эндпоинт только для администраторов',
-  },
-
-  // GET /auth/user - Эндпоинт для пользователей и администраторов
-  userOrAdmin: {
-    method: 'GET',
-    path: '/auth/user',
-    responses: {
-      200: UserResponseSchema,
-      401: z.object({ message: z.string() }),
-      403: z.object({ message: z.string() }),
-    },
-    summary: 'Эндпоинт для пользователей и администраторов',
   },
 });
 

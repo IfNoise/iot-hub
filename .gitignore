@@ -49,3 +49,7 @@ logs/
 .github/instructions/nx.instructions.md
 
 test-output
+
+
+#Ignore vscode AI rules
+.github/copilot-instructions.md

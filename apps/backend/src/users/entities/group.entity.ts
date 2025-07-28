@@ -50,7 +50,7 @@ export class Group {
     }
   )
   @JoinColumn({ name: 'organizationId' })
-  organization!: Organization;
+  organization?: Organization | null;
 
   @ManyToOne('Group', (group: Group) => group.childGroups, {
     onDelete: 'SET NULL',
@@ -61,7 +61,7 @@ export class Group {
   @OneToMany('Group', (group: Group) => group.parentGroup)
   childGroups?: Group[];
 
-  @OneToMany('User', (user: User) => user.group)
+  @OneToMany('User', 'groups')
   users?: User[];
 
   @OneToMany('Device', (device: Device) => device.group)

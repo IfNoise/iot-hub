@@ -45,6 +45,54 @@ services:
     networks:
       - iot-network
 
+  # Zookeeper для Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: iot-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - '2181:2181'
+    networks:
+      - iot-network
+
+  # Kafka брокер
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: iot-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    ports:
+      - '9092:9092'
+      - '9093:9093'
+    networks:
+      - iot-network
+
+  # Kafdrop — UI для Kafka
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKER_CONNECT: kafka:9092
+    ports:
+      - '9000:9000'
+    networks:
+      - iot-network
+
   # IoT Hub Backend - optimized
   iot-backend:
     build:
@@ -109,11 +157,12 @@ services:
       - LOG_ENABLE_METADATA=true
         # Keycloak Configuration
       - KEYCLOAK_URL=http://keycloak:8080
+      - FRONT_END_URL=http://localhost:8080
       - KEYCLOAK_REALM=iot-hub
       - KEYCLOAK_CLIENT_ID=iot-hub-backend
-      - KEYCLOAK_CLIENT_SECRET=iot-hub-backend-secret
+      - KEYCLOAK_CLIENT_SECRET=DiAaPbYf4CT9bm7UcebriVX4WPobuMrD
       - KEYCLOAK_ADMIN_URL=http://keycloak:8080
-      - KEYCLOAK_ADMIN_USERNAME=noise8301@gmail.com
+      - KEYCLOAK_ADMIN_USERNAME=noise83
       - KEYCLOAK_ADMIN_PASSWORD=00000006
     volumes:
       - .:/workspace:cached
@@ -285,6 +334,7 @@ services:
       - KC_LOG_CONSOLE_COLOR=true
       # Metrics
       - KC_METRICS_ENABLED=true
+      - KC_FEATURES=scripts
 
     command: start-dev
 

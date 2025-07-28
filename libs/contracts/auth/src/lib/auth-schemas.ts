@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UserRoleEnum } from '@iot-hub/users';
 
 /**
  * Схема для информации о пользователе
@@ -8,8 +9,7 @@ export const AuthUserInfoSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   avatar: z.string().optional(),
-  role: z.string(),
-  isEmailVerified: z.boolean(),
+  roles: z.array(UserRoleEnum).default([]),
 });
 
 /**
@@ -133,79 +133,50 @@ export const RefreshTokenSchema = z.object({
  * Схема для информации о пользователе из токена
  */
 export const TokenPayloadSchema = z.object({
-  sub: z.string().uuid().describe('ID пользователя'),
-  email: z.string().email().describe('Email пользователя'),
-  name: z.string().describe('Имя пользователя'),
-  role: z.enum(['admin', 'user']).describe('Роль пользователя'),
-  iat: z.number().describe('Время создания токена'),
   exp: z.number().describe('Время истечения токена'),
-});
-
-/**
- * Схема для OAuth провайдеров
- */
-export const OAuthProviderSchema = z.enum(['google', 'github', 'facebook']);
-
-/**
- * Схема для OAuth входа
- */
-export const OAuthLoginSchema = z.object({
-  provider: OAuthProviderSchema.describe('OAuth провайдер'),
-  code: z.string().describe('Код авторизации от провайдера'),
-  state: z.string().optional().describe('Состояние для защиты от CSRF'),
-});
-
-/**
- * Схема для двухфакторной аутентификации
- */
-export const TwoFactorSchema = z.object({
-  code: z
-    .string()
-    .length(6)
-    .describe('6-значный код из приложения аутентификатора'),
-});
-
-/**
- * Схема для включения двухфакторной аутентификации
- */
-export const EnableTwoFactorSchema = z.object({
-  secret: z.string().describe('Секретный ключ для генерации QR кода'),
-  code: z.string().length(6).describe('6-значный код для подтверждения'),
-});
-
-/**
- * Схема для сессии пользователя
- */
-export const SessionSchema = z.object({
-  id: z.string().uuid().describe('ID сессии'),
-  userId: z.string().uuid().describe('ID пользователя'),
-  deviceInfo: z.string().optional().describe('Информация об устройстве'),
-  ipAddress: z.string().describe('IP адрес'),
-  userAgent: z.string().optional().describe('User Agent браузера'),
-  createdAt: z.date().describe('Время создания сессии'),
-  lastActivity: z.date().describe('Время последней активности'),
-  isActive: z.boolean().describe('Активна ли сессия'),
+  iat: z.number().describe('Время создания токена'),
+  jti: z.string().describe('JWT ID'),
+  iss: z.string().describe('Issuer'),
+  aud: z.string().describe('Audience'),
+  sub: z.string().uuid().describe('ID пользователя'),
+  typ: z.string().optional().describe('Тип токена'),
+  azp: z.string().optional().describe('Authorized party'),
+  sid: z.string().optional().describe('Session ID'),
+  realm_access: z
+    .object({
+      roles: z.array(z.string()).describe('Роли в realm'),
+    })
+    .optional(),
+  scope: z.string().optional().describe('Scope'),
+  role: z.array(z.string()).optional().describe('Роли пользователя'),
+  organization: z
+    .record(
+      z.object({
+        id: z.string().uuid().describe('ID организации'),
+      })
+    )
+    .optional()
+    .describe('Организации пользователя'),
+  groups: z.array(z.string()).optional().describe('Группы пользователя'),
+  preferred_username: z.string().optional().describe('Имя пользователя'),
+  type: z.string().optional().describe('Тип пользователя'),
+  email: z.string().email().describe('Email пользователя'),
 });
 
 /**
  * Типы TypeScript
  */
-export type Login = z.infer<typeof LoginSchema>;
-export type Register = z.infer<typeof RegisterSchema>;
-export type ChangePassword = z.infer<typeof ChangePasswordSchema>;
-export type ForgotPassword = z.infer<typeof ForgotPasswordSchema>;
-export type ResetPassword = z.infer<typeof ResetPasswordSchema>;
-export type VerifyEmail = z.infer<typeof VerifyEmailSchema>;
-export type ResendVerification = z.infer<typeof ResendVerificationSchema>;
-export type AccessToken = z.infer<typeof AccessTokenSchema>;
-export type RefreshToken = z.infer<typeof RefreshTokenSchema>;
-export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
-export type OAuthProvider = z.infer<typeof OAuthProviderSchema>;
-export type OAuthLogin = z.infer<typeof OAuthLoginSchema>;
-export type TwoFactor = z.infer<typeof TwoFactorSchema>;
-export type EnableTwoFactor = z.infer<typeof EnableTwoFactorSchema>;
-export type Session = z.infer<typeof SessionSchema>;
 export type AuthUserInfo = z.infer<typeof AuthUserInfoSchema>;
 export type AuthProfile = z.infer<typeof AuthProfileSchema>;
 export type AdminResponse = z.infer<typeof AdminResponseSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
+export type LoginData = z.infer<typeof LoginSchema>;
+export type RegisterData = z.infer<typeof RegisterSchema>;
+export type ChangePasswordData = z.infer<typeof ChangePasswordSchema>;
+export type ForgotPasswordData = z.infer<typeof ForgotPasswordSchema>;
+export type ResetPasswordData = z.infer<typeof ResetPasswordSchema>;
+export type VerifyEmailData = z.infer<typeof VerifyEmailSchema>;
+export type ResendVerificationData = z.infer<typeof ResendVerificationSchema>;
+export type AccessToken = z.infer<typeof AccessTokenSchema>;
+export type RefreshToken = z.infer<typeof RefreshTokenSchema>;
+export type TokenPayload = z.infer<typeof TokenPayloadSchema>;

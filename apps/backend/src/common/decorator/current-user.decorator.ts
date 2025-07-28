@@ -1,6 +1,6 @@
 // src/common/decorator/current-user.decorator.ts
+import { User } from '@iot-hub/users';
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
 
 /**
  * Decorator для получения текущего аутентифицированного пользователя
@@ -20,9 +20,9 @@ import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
  * ```
  */
 export const CurrentUser = createParamDecorator(
-  (data: keyof AuthenticatedUser | undefined, ctx: ExecutionContext) => {
+  (data: keyof User | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
-    const user = request.user as AuthenticatedUser;
+    const user = request.user as User;
 
     return data ? user?.[data] : user;
   }

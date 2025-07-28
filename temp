@@ -1,0 +1,6 @@
+export TOKEN=$(curl -s -X POST http://localhost:8080/realms/iot-hub/protocol/openid-connect/token \
+  -d "client_id=iot-hub-frontend" \
+  -d "username=noise8301" \
+  -d "password=00000006" \
+  -d "scope=openid profile email iot-hub" \
+  -d "grant_type=password" | jq -r .access_token)

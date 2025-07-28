@@ -4,6 +4,7 @@ export const authConfigSchema = z.object({
   // JWT Configuration
   jwtSecret: z.string().min(32).max(64),
   jwtExpiration: z.string().default('1h'),
+  frontEndUrl: z.string().url().describe('URL of the frontend application'),
 
   // Keycloak & OAuth2 Proxy Configuration
   keycloakUrl: z
@@ -55,7 +56,15 @@ export const authConfigSchema = z.object({
     .describe('Development user email'),
   devUserName: z.string().default('Dev User').describe('Development user name'),
   devUserRole: z
-    .enum(['admin', 'user'])
+    .enum([
+      'admin',
+      'personal-user',
+      'organization-user',
+      'group-user',
+      'organization-admin',
+      'group-admin',
+      'organization-owner',
+    ])
     .default('admin')
     .describe('Development user role'),
   devUserAvatar: z

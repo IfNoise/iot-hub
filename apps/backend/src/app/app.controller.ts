@@ -7,9 +7,9 @@ import { contracts } from '@iot-hub/contracts';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @TsRestHandler(contracts.health.checkHealth)
+  @TsRestHandler(contracts.checkHealth)
   getData() {
-    return tsRestHandler(contracts.health.checkHealth, async () => {
+    return tsRestHandler(contracts.checkHealth, async () => {
       const data = this.appService.getData();
       return {
         status: 200 as const,

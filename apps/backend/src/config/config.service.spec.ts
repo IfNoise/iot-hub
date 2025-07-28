@@ -14,6 +14,7 @@ describe('ConfigService (Decomposed)', () => {
     process.env.DATABASE_USER = 'testuser';
     process.env.DATABASE_NAME = 'testdb';
     process.env.JWT_SECRET = 'testsecretthatislongenoughforvalidation';
+    process.env.FRONT_END_URL = 'http://localhost:3000';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [ConfigService],

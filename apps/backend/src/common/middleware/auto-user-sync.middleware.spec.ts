@@ -2,13 +2,50 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AutoUserSyncMiddleware } from './auto-user-sync.middleware.js';
 import { KeycloakUserService } from '../services/keycloak-user.service.js';
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
-import { User } from '../../users/entities/user.entity.js';
+import { User as DbUser } from '../../users/entities/user.entity.js';
+import { User } from '@iot-hub/users';
 
 describe('AutoUserSyncMiddleware', () => {
   let middleware: AutoUserSyncMiddleware;
   let keycloakUserService: jest.Mocked<KeycloakUserService>;
+  const mockUser: User = {
+    id: 'keycloak-user-id',
+    email: 'test@example.com',
+    userId: 'keycloak-user-id',
+    name: 'Test User',
+    avatar: 'avatar-url',
+    roles: ['personal-user'],
+    accountType: 'individual',
+    balance: 0,
+    plan: 'free',
+    planExpiresAt: undefined,
+    metadata: {},
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
+  const mockDbUser: DbUser = {
+    id: 'db-user-id',
+    userId: 'keycloak-user-id',
+    email: 'test@example.com',
+    name: 'Test User',
+    avatar: 'avatar-url',
+    roles: ['personal-user'],
+    accountType: 'individual',
+    balance: 0,
+    plan: 'free',
+    planExpiresAt: undefined,
+    metadata: {},
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockRequest = {
+    user: mockUser,
+  } as Request;
+
+  const mockResponse = {} as Response;
+  const mockNext = jest.fn() as NextFunction;
   beforeEach(async () => {
     const mockKeycloakUserService = {
       syncUser: jest.fn(),
@@ -34,36 +71,6 @@ describe('AutoUserSyncMiddleware', () => {
 
   it('should call syncUser when user is present in request', async () => {
     // Arrange
-    const mockUser: AuthenticatedUser = {
-      id: 'keycloak-user-id',
-      email: 'test@example.com',
-      name: 'Test User',
-      avatar: 'avatar-url',
-      role: 'user',
-      isEmailVerified: true,
-    };
-
-    const mockDbUser: User = {
-      id: 'db-user-id',
-      userId: 'keycloak-user-id',
-      email: 'test@example.com',
-      name: 'Test User',
-      avatar: 'avatar-url',
-      role: 'user',
-      balance: 0,
-      plan: 'free',
-      planExpiresAt: undefined,
-      metadata: {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const mockRequest = {
-      user: mockUser,
-    } as Request;
-
-    const mockResponse = {} as Response;
-    const mockNext = jest.fn() as NextFunction;
 
     keycloakUserService.syncUser.mockResolvedValue(mockDbUser);
 
@@ -92,14 +99,6 @@ describe('AutoUserSyncMiddleware', () => {
 
   it('should continue execution even if syncUser throws error', async () => {
     // Arrange
-    const mockUser: AuthenticatedUser = {
-      id: 'keycloak-user-id',
-      email: 'test@example.com',
-      name: 'Test User',
-      avatar: 'avatar-url',
-      role: 'user',
-      isEmailVerified: true,
-    };
 
     const mockRequest = {
       user: mockUser,
@@ -122,35 +121,6 @@ describe('AutoUserSyncMiddleware', () => {
     // Arrange
     const loggerSpy = jest.spyOn(middleware['logger'], 'debug');
 
-    const mockUser: AuthenticatedUser = {
-      id: 'keycloak-user-id',
-      email: 'test@example.com',
-      name: 'Test User',
-      avatar: 'avatar-url',
-      role: 'user',
-      isEmailVerified: true,
-    };
-
-    const mockDbUser: User = {
-      id: 'db-user-id',
-      userId: 'keycloak-user-id',
-      email: 'test@example.com',
-      name: 'Test User',
-      avatar: 'avatar-url',
-      role: 'user',
-      balance: 0,
-      plan: 'free',
-      planExpiresAt: undefined,
-      metadata: {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const mockRequest = {
-      user: mockUser,
-    } as Request;
-
-    const mockResponse = {} as Response;
     const mockNext = jest.fn() as NextFunction;
 
     keycloakUserService.syncUser.mockResolvedValue(mockDbUser);

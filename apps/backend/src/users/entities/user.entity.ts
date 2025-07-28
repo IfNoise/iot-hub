@@ -4,12 +4,11 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  ManyToOne,
   JoinColumn,
+  ManyToOne,
 } from 'typeorm';
-import { UserRoleEnum, PlanTypeEnum, UserTypeEnum } from '@iot-hub/users';
-import type { Organization } from './organization.entity.js';
-import type { Group } from './group.entity.js';
+import { PlanTypeEnum, UserTypeEnum, UserRoleEnum } from '@iot-hub/users';
+import { Organization } from './organization.entity.js';
 
 /**
  * User entity based on user.schemas.ts from iot-core package
@@ -34,9 +33,10 @@ export class User {
   @Column({
     type: 'enum',
     enum: UserRoleEnum.options,
-    default: 'user',
+    array: true,
+    default: '{personal-user}',
   })
-  role!: 'admin' | 'user' | 'org_admin' | 'group_admin';
+  roles!: (typeof UserRoleEnum.options)[number][];
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   balance!: number;
@@ -46,7 +46,7 @@ export class User {
     enum: PlanTypeEnum.options,
     default: 'free',
   })
-  plan!: 'free' | 'pro' | 'enterprise';
+  plan!: (typeof PlanTypeEnum.options)[number];
 
   @Column({ type: 'timestamp', nullable: true })
   planExpiresAt?: Date;
@@ -57,13 +57,11 @@ export class User {
     enum: UserTypeEnum.options,
     default: 'individual',
   })
-  userType!: 'individual' | 'organization';
-
+  accountType!: 'individual' | 'organization';
   @Column({ type: 'uuid', nullable: true })
-  organizationId?: string | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  groupId?: string | null;
+  keycloakOrganizationId?: string;
+  @Column({ type: 'text', array: true, nullable: true })
+  groups?: string[] | null;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, unknown>;
@@ -74,20 +72,10 @@ export class User {
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt!: Date;
 
-  // Relations
-  @ManyToOne(
-    'Organization',
-    (organization: Organization) => organization.users,
-    {
-      onDelete: 'SET NULL',
-    }
-  )
+  @ManyToOne(() => Organization, { nullable: true })
   @JoinColumn({ name: 'organizationId' })
-  organization?: Organization | null;
+  organization?: Organization;
 
-  @ManyToOne('Group', (group: Group) => group.users, {
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'groupId' })
-  group?: Group | null;
+  @Column({ type: 'uuid', nullable: true })
+  organizationId?: string;
 }

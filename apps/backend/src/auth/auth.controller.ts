@@ -5,11 +5,13 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { CurrentUser } from '../common/decorator/current-user.decorator.js';
 import { Roles } from '../common/decorator/roles.decorator.js';
 import { RolesGuard } from '../common/guard/roles-guard.guard.js';
-import type { AuthenticatedUser } from '../common/types/keycloak-user.interface.js';
 import { KeycloakUserService } from '../common/services/keycloak-user.service.js';
 import { authContract } from '@iot-hub/auth';
+import type { AuthProfile, AuthUserInfo } from '@iot-hub/auth';
 import type { Response } from 'express';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import type { User } from '@iot-hub/users';
+
 
 interface CallbackQuery {
   code?: string;
@@ -29,7 +31,7 @@ export class AuthController {
   ) {}
 
   @TsRestHandler(authContract.getProfile)
-  async getProfile(@CurrentUser() user: AuthenticatedUser) {
+  async getProfile(@CurrentUser() user: User) {
     return tsRestHandler(authContract.getProfile, async () => {
       try {
         const enrichedUser = await this.keycloakUserService.getEnrichedUserInfo(
@@ -41,7 +43,7 @@ export class AuthController {
           body: {
             message: 'Профиль пользователя получен успешно',
             data: enrichedUser,
-          },
+          } as AuthProfile,
         };
       } catch {
         this.logger.error('Ошибка при получении профиля пользователя');
@@ -56,7 +58,7 @@ export class AuthController {
   }
 
   @TsRestHandler(authContract.getUserInfo)
-  getUserInfo(@CurrentUser() user: AuthenticatedUser) {
+  getUserInfo(@CurrentUser() user: User) {
     return tsRestHandler(authContract.getUserInfo, async () => {
       try {
         this.logger.debug('Получение информации о пользователе:', user.email);
@@ -67,9 +69,8 @@ export class AuthController {
             email: user.email,
             name: user.name,
             avatar: user.avatar,
-            role: user.role,
-            isEmailVerified: user.isEmailVerified,
-          },
+            roles: user.roles,
+          } as AuthUserInfo,
         };
       } catch (error) {
         this.logger.error(
@@ -102,35 +103,6 @@ export class AuthController {
         };
       } catch (error) {
         this.logger.error(error, 'Ошибка доступа администратора:');
-        return {
-          status: 403 as const,
-          body: {
-            message: 'Недостаточно прав',
-          },
-        };
-      }
-    });
-  }
-
-  @TsRestHandler(authContract.userOrAdmin)
-  @Roles('user', 'admin')
-  @UseGuards(RolesGuard)
-  userOrAdmin(@CurrentUser() user: AuthenticatedUser) {
-    return tsRestHandler(authContract.userOrAdmin, async () => {
-      try {
-        this.logger.debug('Проверка доступа пользователя:', user.email);
-        return {
-          status: 200 as const,
-          body: {
-            message: 'Привет, пользователь!',
-            user: {
-              name: user.name,
-              role: user.role,
-            },
-          },
-        };
-      } catch (error) {
-        this.logger.error(error, 'Ошибка доступа пользователя:');
         return {
           status: 403 as const,
           body: {

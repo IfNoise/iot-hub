@@ -1,4 +1,5 @@
 // src/common/guards/roles.guard.ts
+import { User } from '@iot-hub/users';
 import {
   Injectable,
   CanActivate,
@@ -6,7 +7,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -21,13 +21,15 @@ export class RolesGuard implements CanActivate {
     if (!requiredRoles) return true;
 
     const request = ctx.switchToHttp().getRequest();
-    const user: AuthenticatedUser = request.user;
+    const user: User = request.user;
 
     if (!user) {
       throw new ForbiddenException('Пользователь не аутентифицирован');
     }
 
-    const hasRole = requiredRoles.includes(user.role);
+    const hasRole = requiredRoles.some((role) =>
+      (user.roles as string[]).includes(role)
+    );
     if (!hasRole) {
       throw new ForbiddenException(
         `Требуется роль: ${requiredRoles.join(' или ')}`

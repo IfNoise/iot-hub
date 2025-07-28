@@ -9,6 +9,7 @@ export class AuthConfigService {
     this.config = authConfigSchema.parse({
       jwtSecret: env.JWT_SECRET,
       jwtExpiration: env.JWT_EXPIRATION,
+      frontEndUrl: env.FRONT_END_URL,
       keycloakUrl: env.KEYCLOAK_URL,
       keycloakRealm: env.KEYCLOAK_REALM,
       keycloakClientId: env.KEYCLOAK_CLIENT_ID,
@@ -51,6 +52,7 @@ export class AuthConfigService {
   getKeycloakConfig() {
     return {
       url: this.config.keycloakUrl,
+      frontEndUrl: this.config.frontEndUrl,
       realm: this.config.keycloakRealm,
       clientId: this.config.keycloakClientId,
       clientSecret: this.config.keycloakClientSecret,
@@ -61,7 +63,7 @@ export class AuthConfigService {
 
   getDevUserConfig() {
     return {
-      id: this.config.devUserId,
+      userId: this.config.devUserId,
       email: this.config.devUserEmail,
       name: this.config.devUserName,
       role: this.config.devUserRole,

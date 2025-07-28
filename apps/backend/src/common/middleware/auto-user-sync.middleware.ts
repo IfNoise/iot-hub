@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { KeycloakUserService } from '../services/keycloak-user.service.js';
-import { AuthenticatedUser } from '../types/keycloak-user.interface.js';
+import { User } from '@iot-hub/users';
 
 @Injectable()
 export class AutoUserSyncMiddleware implements NestMiddleware {
@@ -12,7 +12,7 @@ export class AutoUserSyncMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     try {
       // Проверяем, есть ли пользователь в запросе (после аутентификации Keycloak)
-      const keycloakUser = req.user as AuthenticatedUser;
+      const keycloakUser = req.user as User;
 
       if (keycloakUser) {
         this.logger.debug(`Синхронизация пользователя: ${keycloakUser.email}`);

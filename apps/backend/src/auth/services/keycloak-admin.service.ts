@@ -417,4 +417,31 @@ export class KeycloakAdminService {
       );
     }
   }
+  async getUserOrganizations(
+    userId: string
+  ): Promise<{ id: string; name: string }[]> {
+    const token = await this.getAdminToken();
+
+    const response = await fetch(
+      `${this.keycloakUrl}/admin/realms/${this.realm}/users/${userId}/organization-memberships`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      this.logger.error('Failed to get user organizations:', error);
+      throw new HttpException(
+        'Failed to get user organizations',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    const data = (await response.json()) as { id: string; name: string }[];
+    return data;
+  }
 }

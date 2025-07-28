@@ -4,9 +4,9 @@ import { DevicesService } from './devices.service.js';
 import { devicesContract } from '@iot-hub/devices';
 import { DeviceMapper } from './mappers/device.mapper.js';
 import { CurrentUser } from '../common/decorator/current-user.decorator.js';
-import type { AuthenticatedUser } from '../common/types/keycloak-user.interface.js';
 import { RolesGuard } from '../common/guard/roles-guard.guard.js';
 import { Roles } from '../common/decorator/roles.decorator.js';
+import type { User } from '@iot-hub/users';
 
 @Controller()
 export class DevicesController {
@@ -58,7 +58,7 @@ export class DevicesController {
   }
 
   @TsRestHandler(devicesContract.user.bindDeviceQR)
-  async bindDeviceQR(@CurrentUser() user: AuthenticatedUser) {
+  async bindDeviceQR(@CurrentUser() user: User) {
     return tsRestHandler(
       devicesContract.user.bindDeviceQR,
       async ({ body }) => {
@@ -114,7 +114,7 @@ export class DevicesController {
   }
 
   @TsRestHandler(devicesContract.user.unbindDevice)
-  async unbindDevice(@CurrentUser() user: AuthenticatedUser) {
+  async unbindDevice(@CurrentUser() user: User) {
     return tsRestHandler(
       devicesContract.user.unbindDevice,
       async ({ body }) => {
@@ -151,7 +151,7 @@ export class DevicesController {
   }
 
   @TsRestHandler(devicesContract.user.getMyDevices)
-  async getMyDevices(@CurrentUser() user: AuthenticatedUser) {
+  async getMyDevices(@CurrentUser() user: User) {
     return tsRestHandler(
       devicesContract.user.getMyDevices,
       async ({ query }) => {

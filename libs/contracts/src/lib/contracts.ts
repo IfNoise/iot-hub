@@ -9,12 +9,12 @@ import { initContract } from '@ts-rest/core';
 const c = initContract();
 
 export const contracts = c.router({
-  auth: authContract,
-  users: usersContract,
-  organizations: organizationsContract,
-  devices: devicesContract,
-  certificates: certificatesContract,
-  mqtt: mqttContract,
-  health: healthContract,
-  metrics: metricsContract,
+  ...authContract,
+  ...usersContract,
+  ...organizationsContract,
+  ...devicesContract,
+  ...certificatesContract,
+  ...mqttContract,
+  ...healthContract,
+  ...metricsContract,
 });

@@ -1,35 +1,38 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity.js';
+import { User as DbUser } from './entities/user.entity.js';
+
 import { CreateUserDto, UpdateUserDto } from './dto/index.js';
+import { userDtoToEntity } from './mappers/dto-to-entity.mapper.js';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    @InjectRepository(DbUser)
+    private readonly userRepository: Repository<DbUser>
   ) {}
 
   /**
    * Создание нового пользователя
    */
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.userRepository.create(createUserDto);
+  async create(createUserDto: CreateUserDto): Promise<DbUser> {
+    const entity = userDtoToEntity(createUserDto);
+    const user = this.userRepository.create(entity);
     return await this.userRepository.save(user);
   }
 
   /**
    * Получение всех пользователей
    */
-  async findAll(): Promise<User[]> {
+  async findAll(): Promise<DbUser[]> {
     return await this.userRepository.find();
   }
 
   /**
    * Получение пользователя по ID
    */
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string): Promise<DbUser> {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -40,14 +43,14 @@ export class UsersService {
   /**
    * Получение пользователя по email
    */
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<DbUser | null> {
     return await this.userRepository.findOne({ where: { email } });
   }
 
   /**
    * Получение пользователя по Keycloak ID (userId)
    */
-  async findByKeycloakId(userId: string): Promise<User | null> {
+  async findByKeycloakId(userId: string): Promise<DbUser | null> {
     return await this.userRepository.findOne({ where: { userId } });
   }
 
@@ -58,7 +61,7 @@ export class UsersService {
   async createOrUpdate(
     userId: string,
     userData: Partial<CreateUserDto>
-  ): Promise<User> {
+  ): Promise<DbUser> {
     const existingUser = await this.findByKeycloakId(userId);
 
     if (existingUser) {
@@ -66,21 +69,34 @@ export class UsersService {
       const needsUpdate = this.shouldUpdateUser(existingUser, userData);
 
       if (needsUpdate) {
-        Object.assign(existingUser, userData);
+        // Обновляем только разрешённые поля
+        if (userData.email) existingUser.email = userData.email;
+        if (userData.name) existingUser.name = userData.name;
+        if (userData.avatar !== undefined)
+          existingUser.avatar = userData.avatar;
+        if (userData.roles) existingUser.roles = userData.roles;
+        if (userData.accountType)
+          existingUser.accountType = userData.accountType;
+        if (userData.organizationId !== undefined)
+          existingUser.keycloakOrganizationId = userData.organizationId;
+        if (userData.groups !== undefined)
+          existingUser.groups = userData.groups;
+        if (userData.metadata !== undefined)
+          existingUser.metadata = userData.metadata;
         return await this.userRepository.save(existingUser);
       }
-
       return existingUser;
     }
 
     // Создаем нового пользователя
-    const newUser = this.userRepository.create({
+    const entity = userDtoToEntity({
       userId,
       ...userData,
       balance: userData.balance ?? 0,
       plan: userData.plan ?? 'free',
-    });
-
+      organizationId: userData.organizationId ?? undefined,
+    } as CreateUserDto);
+    const newUser = this.userRepository.create(entity);
     return await this.userRepository.save(newUser);
   }
 
@@ -88,23 +104,39 @@ export class UsersService {
    * Проверяет, нужно ли обновлять данные пользователя
    */
   private shouldUpdateUser(
-    dbUser: User,
+    dbUser: DbUser,
     updateData: Partial<CreateUserDto>
   ): boolean {
     return !!(
       (updateData.email && dbUser.email !== updateData.email) ||
       (updateData.name && dbUser.name !== updateData.name) ||
       (updateData.avatar && dbUser.avatar !== updateData.avatar) ||
-      (updateData.role && dbUser.role !== updateData.role)
+      (updateData.roles &&
+        JSON.stringify(dbUser.roles) !== JSON.stringify(updateData.roles)) ||
+      (updateData.accountType &&
+        dbUser.accountType !== updateData.accountType) ||
+      (updateData.organizationId &&
+        dbUser.keycloakOrganizationId !== updateData.organizationId) ||
+      (updateData.groups &&
+        JSON.stringify(dbUser.groups) !== JSON.stringify(updateData.groups))
     );
   }
 
   /**
    * Обновление пользователя
    */
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<DbUser> {
     const user = await this.findOne(id);
-    Object.assign(user, updateUserDto);
+    if (updateUserDto.email) user.email = updateUserDto.email;
+    if (updateUserDto.name) user.name = updateUserDto.name;
+    if (updateUserDto.avatar !== undefined) user.avatar = updateUserDto.avatar;
+    if (updateUserDto.roles) user.roles = updateUserDto.roles;
+    if (updateUserDto.accountType) user.accountType = updateUserDto.accountType;
+    if (updateUserDto.organizationId !== undefined)
+      user.keycloakOrganizationId = updateUserDto.organizationId;
+    if (updateUserDto.groups !== undefined) user.groups = updateUserDto.groups;
+    if (updateUserDto.metadata !== undefined)
+      user.metadata = updateUserDto.metadata;
     return await this.userRepository.save(user);
   }
 
@@ -119,7 +151,7 @@ export class UsersService {
   /**
    * Обновление баланса пользователя
    */
-  async updateBalance(id: string, amount: number): Promise<User> {
+  async updateBalance(id: string, amount: number): Promise<DbUser> {
     const user = await this.findOne(id);
     user.balance = amount;
     return await this.userRepository.save(user);
@@ -132,7 +164,7 @@ export class UsersService {
     id: string,
     plan: 'free' | 'pro' | 'enterprise',
     expiresAt?: Date
-  ): Promise<User> {
+  ): Promise<DbUser> {
     const user = await this.findOne(id);
     user.plan = plan;
     if (expiresAt) {
