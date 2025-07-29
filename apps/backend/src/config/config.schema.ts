@@ -78,7 +78,7 @@ export const envConfigSchema = z.object({
   LOG_ENABLE_REQUEST_LOGGING: z.coerce.boolean().default(true),
   ENABLE_FILE_LOGGING_IN_DEV: z.coerce.boolean().default(false),
 
-    // Loki Logging Configuration
+  // Loki Logging Configuration
   LOKI_URL: z.string().url().optional(),
   LOKI_USERNAME: z.string().optional(),
   LOKI_PASSWORD: z.string().optional(),

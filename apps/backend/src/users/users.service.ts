@@ -78,7 +78,8 @@ export class UsersService {
         if (userData.accountType)
           existingUser.accountType = userData.accountType;
         if (userData.organizationId !== undefined)
-          existingUser.keycloakOrganizationId = userData.organizationId || undefined;
+          existingUser.keycloakOrganizationId =
+            userData.organizationId || undefined;
         if (userData.groups !== undefined)
           existingUser.groups = userData.groups;
         if (userData.metadata !== undefined)
