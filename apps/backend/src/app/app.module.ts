@@ -4,7 +4,6 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { DatabaseModule } from '../database/database.module.js';
 import { DevicesModule } from '../devices/devices.module.js';
@@ -18,6 +17,8 @@ import { AutoUserSyncMiddleware } from '../common/middleware/auto-user-sync.midd
 import { ConfigModule } from '../config/config.module.js';
 import { CommonServicesModule } from '../common/services/common-services.module.js';
 import { CommonConfigService } from '../common/config/common-config.service.js';
+import { KafkaModule } from '../infrastructure/kafka/kafka.module.js';
+import { KafkaTestModule } from '../infrastructure/kafka/kafka-test.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,8 @@ import { CommonConfigService } from '../common/config/common-config.service.js';
     AuthModule,
     MiddlewareModule,
     CommonServicesModule,
+    KafkaModule,
+    KafkaTestModule,
     // Улучшенное логирование с множественными транспортами через CommonConfigService
     LoggerModule.forRootAsync({
       inject: [CommonConfigService],
@@ -113,7 +116,7 @@ import { CommonConfigService } from '../common/config/common-config.service.js';
       },
     }),
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
@@ -131,7 +134,9 @@ export class AppModule implements NestModule {
         { path: 'manufacturing', method: RequestMethod.ALL },
         { path: 'manufacturing/*path', method: RequestMethod.ALL },
         { path: 'devices/certificates', method: RequestMethod.ALL },
-        { path: 'devices/certificates/*', method: RequestMethod.ALL }
+        { path: 'devices/certificates/*', method: RequestMethod.ALL },
+        { path: 'kafka-test', method: RequestMethod.ALL },
+        { path: 'kafka-test/*path', method: RequestMethod.ALL }
       )
       .forRoutes('*');
 

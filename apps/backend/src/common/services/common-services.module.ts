@@ -7,9 +7,15 @@ import { MetricsExampleService } from './metrics-example.service.js';
 import { HealthController } from '../controllers/health.controller.js';
 import { MetricsController } from '../controllers/metrics.controller.js';
 import { ObservabilityModule } from '../observability/observability.module.js';
+import { KafkaModule } from '../../infrastructure/kafka/kafka.module.js';
 
 @Module({
-  imports: [ConfigModule, ScheduleModule.forRoot(), ObservabilityModule],
+  imports: [
+    ConfigModule,
+    ScheduleModule.forRoot(),
+    ObservabilityModule,
+    KafkaModule,
+  ],
   providers: [LoggingService, LogMaintenanceService, MetricsExampleService],
   controllers: [HealthController, MetricsController],
   exports: [LoggingService, LogMaintenanceService, MetricsExampleService],

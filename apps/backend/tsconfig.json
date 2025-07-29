@@ -4,6 +4,9 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
+      "path": "../../libs/contracts-kafka"
+    },
+    {
       "path": "../../libs/contracts/devices"
     },
     {

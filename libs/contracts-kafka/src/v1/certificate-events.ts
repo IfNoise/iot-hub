@@ -21,7 +21,7 @@ export const CertificateCreateCommandSchema = BaseKafkaCommandSchema.extend({
   payload: z.object({
     deviceId: DeviceIdSchema,
     certificateType: z.enum(['client', 'server', 'ca']),
-    keySize: z.enum([2048, 4096]).default(2048),
+    keySize: z.enum(['2048', '4096']).default('2048'),
     validityDays: z.number().int().min(1).max(3650).default(365),
     requestedBy: UserIdSchema,
     metadata: z.object({

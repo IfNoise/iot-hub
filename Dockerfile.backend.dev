@@ -49,9 +49,13 @@ RUN npm install
 # Копируем весь код
 COPY --chown=${USER_ID}:${GROUP_ID} . .
 
+# Переустанавливаем зависимости после копирования кода
+RUN npm install
+
 # Пересоздаем символические ссылки в node_modules/@iot-hub/ для корректной работы импортов
 RUN rm -rf node_modules/@iot-hub && mkdir -p node_modules/@iot-hub && \
     ln -sf ../../libs/contracts node_modules/@iot-hub/contracts && \
+    ln -sf ../../libs/contracts-kafka node_modules/@iot-hub/contracts-kafka && \
     ln -sf ../../libs/contracts/auth node_modules/@iot-hub/auth && \
     ln -sf ../../libs/contracts/crypto node_modules/@iot-hub/crypto && \
     ln -sf ../../libs/contracts/devices node_modules/@iot-hub/devices && \
@@ -60,13 +64,21 @@ RUN rm -rf node_modules/@iot-hub && mkdir -p node_modules/@iot-hub && \
     ln -sf ../../libs/shared node_modules/@iot-hub/shared
 
 # Создаем package.json файлы для всех алиасов
-RUN for lib in contracts auth crypto devices mqtt users shared; do \
+RUN for lib in contracts contracts-kafka auth crypto devices mqtt users shared; do \
       echo "{ \"name\": \"@iot-hub/$lib\", \"version\": \"0.0.1\", \"type\": \"module\", \"main\": \"dist/index.js\", \"types\": \"dist/index.d.ts\", \"exports\": { \".\": { \"import\": \"./dist/index.js\", \"types\": \"./dist/index.d.ts\" } } }" > node_modules/@iot-hub/$lib/package.json; \
     done
 
 # Собираем библиотеки в правильном порядке зависимостей
-RUN npx nx run-many --target=build --projects=auth,crypto,devices,mqtt,users,shared && \
+RUN npx nx run-many --target=build --projects=auth,crypto,devices,mqtt,users,shared,contracts-kafka && \
     npx nx build @iot-hub/contracts
+
+# Создаем package.json для каждой библиотеки с правильными типами
+RUN for lib in contracts contracts-kafka auth crypto devices mqtt users shared; do \
+      if [ -d "dist/libs/$lib" ]; then \
+        echo "{ \"name\": \"@iot-hub/$lib\", \"version\": \"0.0.1\", \"type\": \"module\", \"main\": \"dist/index.js\", \"types\": \"dist/index.d.ts\", \"exports\": { \".\": { \"import\": \"./dist/index.js\", \"types\": \"./dist/index.d.ts\" } } }" > node_modules/@iot-hub/$lib/package.json; \
+        cp -r dist/libs/$lib/* node_modules/@iot-hub/$lib/; \
+      fi; \
+    done
 
 # Открываем порт для backend
 EXPOSE 3000

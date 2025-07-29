@@ -2,6 +2,7 @@ import { Controller, Logger } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { LoggingService } from '../services/logging.service.js';
+import { KafkaHealthIndicator } from '../../infrastructure/kafka/kafka-health.indicator.js';
 import { healthContract } from '@iot-hub/contracts';
 
 @ApiTags('System Health')
@@ -9,7 +10,10 @@ import { healthContract } from '@iot-hub/contracts';
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
 
-  constructor(private readonly loggingService: LoggingService) {}
+  constructor(
+    private readonly loggingService: LoggingService,
+    private readonly kafkaHealthIndicator: KafkaHealthIndicator
+  ) {}
 
   @TsRestHandler(healthContract.checkHealth)
   async checkHealth() {
@@ -36,6 +40,22 @@ export class HealthController {
         };
       } catch (error) {
         services.logging = {
+          status: 'unhealthy' as const,
+          details: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        };
+      }
+
+      // Check Kafka service
+      try {
+        const kafkaHealth = await this.kafkaHealthIndicator.isHealthy();
+        services.kafka = {
+          status: kafkaHealth.kafka?.status ? 'healthy' : 'unhealthy',
+          details: kafkaHealth.kafka || {},
+        };
+      } catch (error) {
+        services.kafka = {
           status: 'unhealthy' as const,
           details: {
             error: error instanceof Error ? error.message : 'Unknown error',
