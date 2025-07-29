@@ -1,6 +1,5 @@
 import { authContract } from '@iot-hub/auth';
 import { certificatesContract, devicesContract } from '@iot-hub/devices';
-import { mqttContract } from '@iot-hub/mqtt';
 import { usersContract, organizationsContract } from '@iot-hub/users';
 import { healthContract } from './health-contracts.js';
 import { metricsContract } from './metrics-contracts.js';
@@ -14,7 +13,6 @@ export const contracts = c.router({
   ...organizationsContract,
   ...devicesContract,
   ...certificatesContract,
-  ...mqttContract,
   ...healthContract,
   ...metricsContract,
 });

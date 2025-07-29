@@ -241,13 +241,11 @@ export class CertificateService {
     let mqttSecurePort: number;
 
     try {
-      this.logger.log(`Получение конфигурации MQTT для mTLS устройства...`);
-      const mqttConfig = this.configService.getMqttConfig();
+      this.logger.log(`Получение конфигурации брокера для mTLS устройства...`);
+      const brokerConfig = this.configService.devices.getBrokerConfig();
 
-      // Извлекаем хост из brokerUrl
-      const url = new URL(mqttConfig?.brokerUrl || 'mqtt://localhost:1883');
-      brokerHost = url.hostname;
-      mqttSecurePort = mqttConfig?.securePort || 8883;
+      brokerHost = brokerConfig.host;
+      mqttSecurePort = brokerConfig.securePort;
 
       this.logger.log(
         `MQTT конфигурация для устройства: mqtts://${brokerHost}:${mqttSecurePort} (только mTLS)`

@@ -6,7 +6,6 @@ import { envConfigSchema, AppConfig } from './config.schema.js';
 import { CommonConfigService } from '../common/config/common-config.service.js';
 import { AuthConfigService } from '../auth/config/auth-config.service.js';
 import { DatabaseConfigService } from '../database/config/database-config.service.js';
-import { MqttConfigService } from '../mqtt/config/mqtt-config.service.js';
 import { TelemetryConfigService } from '../common/config/telemetry-config.service.js';
 import { DevicesConfigService } from '../devices/config/devices-config.service.js';
 import { UsersConfigService } from '../users/config/users-config.service.js';
@@ -21,7 +20,6 @@ export class ConfigService {
   public readonly common: CommonConfigService;
   public readonly auth: AuthConfigService;
   public readonly database: DatabaseConfigService;
-  public readonly mqtt: MqttConfigService;
   public readonly telemetry: TelemetryConfigService;
   public readonly devices: DevicesConfigService;
   public readonly users: UsersConfigService;
@@ -39,7 +37,6 @@ export class ConfigService {
     this.common = new CommonConfigService(process.env);
     this.auth = new AuthConfigService(process.env);
     this.database = new DatabaseConfigService(process.env);
-    this.mqtt = new MqttConfigService(process.env);
     this.telemetry = new TelemetryConfigService(process.env);
     this.devices = new DevicesConfigService(process.env);
     this.users = new UsersConfigService(process.env);
@@ -51,7 +48,6 @@ export class ConfigService {
       common: this.common.getAll(),
       auth: this.auth.getAll(),
       database: this.database.getAll(),
-      mqtt: this.mqtt.getAll(),
       telemetry: this.telemetry.getAll(),
       devices: this.devices.getAll(),
       users: this.users.getAll(),
@@ -121,13 +117,6 @@ export class ConfigService {
   }
 
   /**
-   * @deprecated Use this.mqtt.getBrokerUrl() instead
-   */
-  getMqttBrokerUrl(): string {
-    return this.mqtt.getBrokerUrl();
-  }
-
-  /**
    * @deprecated Use this.common.getCorsConfig() instead
    */
   getCorsConfig() {
@@ -167,20 +156,6 @@ export class ConfigService {
    */
   getLoggingConfig() {
     return this.common.getLoggingConfig();
-  }
-
-  /**
-   * @deprecated Use this.mqtt.getAll() instead
-   */
-  getMqttConfig() {
-    return this.mqtt.getAll();
-  }
-
-  /**
-   * @deprecated Use this.mqtt.getClientOptions() instead
-   */
-  getMqttClientOptions() {
-    return this.mqtt.getClientOptions();
   }
 
   /**

@@ -19,9 +19,6 @@
       "path": "./libs/contracts/devices"
     },
     {
-      "path": "./libs/contracts/mqtt"
-    },
-    {
       "path": "./libs/contracts/crypto"
     },
     {
@@ -35,6 +32,9 @@
     },
     {
       "path": "./apps/device-simulator"
+    },
+    {
+      "path": "./libs/contracts-kafka"
     }
   ]
 }

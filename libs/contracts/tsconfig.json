@@ -7,9 +7,6 @@
       "path": "users"
     },
     {
-      "path": "mqtt"
-    },
-    {
       "path": "devices"
     },
     {

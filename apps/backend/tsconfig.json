@@ -4,16 +4,10 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
-      "path": "../../libs/contracts/users"
-    },
-    {
-      "path": "../../libs/shared"
-    },
-    {
-      "path": "../../libs/contracts/mqtt"
-    },
-    {
       "path": "../../libs/contracts/devices"
+    },
+    {
+      "path": "../../libs/contracts/users"
     },
     {
       "path": "../../libs/contracts/auth"

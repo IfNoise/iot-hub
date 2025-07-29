@@ -5,7 +5,6 @@ import { ConfigService } from './config.service.js';
 import { CommonConfigService } from '../common/config/common-config.service.js';
 import { AuthConfigService } from '../auth/config/auth-config.service.js';
 import { DatabaseConfigService } from '../database/config/database-config.service.js';
-import { MqttConfigService } from '../mqtt/config/mqtt-config.service.js';
 import { TelemetryConfigService } from '../common/config/telemetry-config.service.js';
 import { DevicesConfigService } from '../devices/config/devices-config.service.js';
 import { UsersConfigService } from '../users/config/users-config.service.js';
@@ -32,11 +31,6 @@ import { UsersConfigService } from '../users/config/users-config.service.js';
       inject: [ConfigService],
     },
     {
-      provide: MqttConfigService,
-      useFactory: (configService: ConfigService) => configService.mqtt,
-      inject: [ConfigService],
-    },
-    {
       provide: TelemetryConfigService,
       useFactory: (configService: ConfigService) => configService.telemetry,
       inject: [ConfigService],
@@ -57,7 +51,6 @@ import { UsersConfigService } from '../users/config/users-config.service.js';
     CommonConfigService,
     AuthConfigService,
     DatabaseConfigService,
-    MqttConfigService,
     TelemetryConfigService,
     DevicesConfigService,
     UsersConfigService,

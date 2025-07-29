@@ -12,6 +12,8 @@ export class DevicesConfigService {
       maxDevicesPerUser: env.MAX_DEVICES_PER_USER,
       certificateValidityDays: env.CERTIFICATE_VALIDITY_DAYS,
       deviceDataRetentionDays: env.DEVICE_DATA_RETENTION_DAYS,
+      brokerHost: env.BROKER_HOST,
+      brokerSecurePort: env.BROKER_SECURE_PORT,
     });
   }
 
@@ -46,6 +48,13 @@ export class DevicesConfigService {
   getDataRetentionConfig() {
     return {
       retentionDays: this.config.deviceDataRetentionDays,
+    };
+  }
+
+  getBrokerConfig() {
+    return {
+      host: this.config.brokerHost,
+      securePort: this.config.brokerSecurePort,
     };
   }
 }

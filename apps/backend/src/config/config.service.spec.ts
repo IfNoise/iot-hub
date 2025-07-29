@@ -43,7 +43,6 @@ describe('ConfigService (Decomposed)', () => {
     expect(service.common).toBeDefined();
     expect(service.auth).toBeDefined();
     expect(service.database).toBeDefined();
-    expect(service.mqtt).toBeDefined();
     expect(service.telemetry).toBeDefined();
     expect(service.devices).toBeDefined();
     expect(service.users).toBeDefined();
@@ -75,7 +74,6 @@ describe('ConfigService (Decomposed)', () => {
     expect(allConfig.common).toBeDefined();
     expect(allConfig.auth).toBeDefined();
     expect(allConfig.database).toBeDefined();
-    expect(allConfig.mqtt).toBeDefined();
     expect(allConfig.telemetry).toBeDefined();
     expect(allConfig.devices).toBeDefined();
     expect(allConfig.users).toBeDefined();
@@ -86,7 +84,6 @@ describe('ConfigService (Decomposed)', () => {
     expect(service.getJwtConfig()).toBeDefined();
     expect(service.getCorsConfig()).toBeDefined();
     expect(service.getLoggingConfig()).toBeDefined();
-    expect(service.getMqttConfig()).toBeDefined();
   });
 
   it('should provide convenience methods', () => {

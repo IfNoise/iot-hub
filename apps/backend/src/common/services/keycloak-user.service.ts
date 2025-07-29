@@ -21,11 +21,22 @@ function normalizeNullToUndefined(obj: any, schema: ZodTypeAny): any {
         continue;
       }
       // Если поле допускает undefined, но не null — заменяем null на undefined
-      if (value === null && typeof fieldSchema.isOptional === 'function' && fieldSchema.isOptional()) {
+      if (
+        value === null &&
+        typeof fieldSchema.isOptional === 'function' &&
+        fieldSchema.isOptional()
+      ) {
         result[key] = undefined;
       } else if (Array.isArray(value) && fieldSchema.element) {
-        result[key] = value.map((item) => normalizeNullToUndefined(item, fieldSchema.element));
-      } else if (typeof value === 'object' && value !== null && fieldSchema._def && fieldSchema._def.typeName === 'ZodObject') {
+        result[key] = value.map((item) =>
+          normalizeNullToUndefined(item, fieldSchema.element)
+        );
+      } else if (
+        typeof value === 'object' &&
+        value !== null &&
+        fieldSchema._def &&
+        fieldSchema._def.typeName === 'ZodObject'
+      ) {
         result[key] = normalizeNullToUndefined(value, fieldSchema);
       } else {
         result[key] = value;

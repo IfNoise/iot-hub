@@ -5,7 +5,7 @@
   "scripts": {
     "postbuild": "tsc-alias",
     "build:backend": "nx build @iot-hub/backend && tsc-alias -p apps/backend/tsconfig.app.json",
-    "build:libs": "nx run-many --target=build --projects=contracts,auth,devices,mqtt,users,shared && find libs -name 'dist' -type d -exec tsc-alias -p {}/../tsconfig.json \\;",
+    "build:libs": "nx run-many --target=build --projects=contracts,auth,devices,users,shared && find libs -name 'dist' -type d -exec tsc-alias -p {}/../tsconfig.json \\;",
     "fix-aliases": "tsc-alias"
   },
   "devDependencies": {
@@ -63,7 +63,6 @@
     "@iot-hub/contracts": "libs/contracts/dist",
     "@iot-hub/auth": "libs/contracts/auth/dist",
     "@iot-hub/devices": "libs/contracts/devices/dist",
-    "@iot-hub/mqtt": "libs/contracts/mqtt/dist",
     "@iot-hub/users": "libs/contracts/users/dist",
     "@iot-hub/crypto": "libs/contracts/crypto/dist",
     "@iot-hub/shared": "libs/shared/dist"
@@ -73,6 +72,7 @@
     "@nestjs/common": "^11.1.3",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.3",
+    "@nestjs/microservices": "^11.1.5",
     "@nestjs/platform-express": "^11.1.3",
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "^11.2.0",
@@ -89,7 +89,6 @@
     "@peculiar/x509": "^1.12.4",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/nest": "^3.52.1",
-    "@types/mqtt": "^0.0.34",
     "@types/node-forge": "^1.3.11",
     "@types/qrcode": "^1.5.5",
     "axios": "^1.6.0",
@@ -97,8 +96,8 @@
     "jose": "^6.0.12",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.2.0",
+    "kafkajs": "^2.2.4",
     "module-alias": "^2.2.3",
-    "mqtt": "^5.13.1",
     "nestjs-pino": "^4.4.0",
     "nestjs-zod": "^4.3.1",
     "node-forge": "^1.3.1",
@@ -112,6 +111,6 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0",
     "typeorm": "^0.3.24",
-    "zod": "^3.25.46"
+    "zod": "^3.25.76"
   }
 }

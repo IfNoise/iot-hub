@@ -36,6 +36,18 @@ export const devicesConfigSchema = z.object({
     .min(1)
     .default(30)
     .describe('Device data retention period in days'),
+  
+  // Broker settings for certificate generation
+  brokerHost: z.string()
+    .default('localhost')
+    .describe('MQTT broker host for certificate generation'),
+    
+  brokerSecurePort: z.coerce
+    .number()
+    .min(1)
+    .max(65535)
+    .default(8883)
+    .describe('MQTT broker secure port for mTLS connections'),
 });
 
 export type DevicesConfig = z.infer<typeof devicesConfigSchema>;

@@ -25,16 +25,10 @@
   ],
   "references": [
     {
-      "path": "../../libs/contracts/users/tsconfig.lib.json"
-    },
-    {
-      "path": "../../libs/shared/tsconfig.lib.json"
-    },
-    {
-      "path": "../../libs/contracts/mqtt/tsconfig.lib.json"
-    },
-    {
       "path": "../../libs/contracts/devices/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/contracts/users/tsconfig.lib.json"
     },
     {
       "path": "../../libs/contracts/auth/tsconfig.lib.json"

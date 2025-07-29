@@ -17,7 +17,6 @@ import { KeycloakOAuth2Middleware } from '../common/middleware/keycloak-oauth2.m
 import { AutoUserSyncMiddleware } from '../common/middleware/auto-user-sync.middleware.js';
 import { ConfigModule } from '../config/config.module.js';
 import { CommonServicesModule } from '../common/services/common-services.module.js';
-import { MqttModule } from '../mqtt/mqtt.module.js';
 import { CommonConfigService } from '../common/config/common-config.service.js';
 
 @Module({
@@ -30,7 +29,6 @@ import { CommonConfigService } from '../common/config/common-config.service.js';
     AuthModule,
     MiddlewareModule,
     CommonServicesModule,
-    MqttModule,
     // Улучшенное логирование с множественными транспортами через CommonConfigService
     LoggerModule.forRootAsync({
       inject: [CommonConfigService],

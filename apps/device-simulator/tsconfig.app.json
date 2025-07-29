@@ -30,9 +30,6 @@
       "path": "../../libs/shared/tsconfig.lib.json"
     },
     {
-      "path": "../../libs/contracts/mqtt/tsconfig.lib.json"
-    },
-    {
       "path": "../../libs/contracts/crypto/tsconfig.lib.json"
     },
     {

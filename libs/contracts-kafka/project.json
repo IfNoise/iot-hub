@@ -1,0 +1,41 @@
+{
+  "name": "@iot-hub/contracts-kafka",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/contracts-kafka/src",
+  "projectType": "library",
+  "tags": ["npm:public", "domain:contracts", "type:kafka"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/contracts-kafka",
+        "tsConfig": "libs/contracts-kafka/tsconfig.lib.json",
+        "packageJson": "libs/contracts-kafka/package.json",
+        "main": "libs/contracts-kafka/src/index.ts",
+        "assets": ["libs/contracts-kafka/*.md"]
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/contracts-kafka/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/contracts-kafka/jest.config.ts"
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "tsConfig": "libs/contracts-kafka/tsconfig.lib.json",
+        "mode": "noEmit"
+      }
+    }
+  }
+}

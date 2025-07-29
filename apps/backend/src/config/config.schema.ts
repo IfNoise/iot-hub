@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { commonConfigSchema } from '../common/config/common-config.schema.js';
 import { authConfigSchema } from '../auth/config/auth-config.schema.js';
 import { databaseConfigSchema } from '../database/config/database-config.schema.js';
-import { mqttConfigSchema } from '../mqtt/config/mqtt-config.schema.js';
 import { telemetryConfigSchema } from '../common/config/telemetry-config.schema.js';
 import { devicesConfigSchema } from '../devices/config/devices-config.schema.js';
 import { usersConfigSchema } from '../users/config/users-config.schema.js';
@@ -79,30 +78,13 @@ export const envConfigSchema = z.object({
   LOG_ENABLE_REQUEST_LOGGING: z.coerce.boolean().default(true),
   ENABLE_FILE_LOGGING_IN_DEV: z.coerce.boolean().default(false),
 
-  // Loki Logging Configuration
+    // Loki Logging Configuration
   LOKI_URL: z.string().url().optional(),
   LOKI_USERNAME: z.string().optional(),
   LOKI_PASSWORD: z.string().optional(),
   LOKI_TIMEOUT: z.coerce.number().default(30000),
 
-  // MQTT
-  MQTT_HOST: z.string().default('localhost'),
-  MQTT_PORT: z.coerce.number().default(1883),
-  MQTT_SECURE_PORT: z.coerce.number().default(8883),
-  MQTT_USERNAME: z.string().optional(),
-  MQTT_PASSWORD: z.string().optional(),
-  MQTT_CLIENT_ID: z.string().default('iot-hub-backend'),
-  MQTT_KEEPALIVE: z.coerce.number().default(60),
-  MQTT_CLEAN_SESSION: z.coerce.boolean().default(true),
-  MQTT_RECONNECT_PERIOD: z.coerce.number().default(2000),
-  MQTT_CONNECT_TIMEOUT: z.coerce.number().default(30000),
-  MQTT_QOS: z.coerce.number().min(0).max(2).default(1),
-  MQTT_RETAIN: z.coerce.boolean().default(false),
-  MQTT_WILL_TOPIC: z.string().optional(),
-  MQTT_WILL_PAYLOAD: z.string().optional(),
-  MQTT_WILL_QOS: z.coerce.number().min(0).max(2).default(0),
-  MQTT_WILL_RETAIN: z.coerce.boolean().default(false),
-  MQTT_MAX_RECONNECT_ATTEMPTS: z.coerce.number().default(10),
+  // OpenTelemetry
 
   // OpenTelemetry
   OTEL_ENABLED: z.coerce.boolean().default(true),
@@ -137,6 +119,8 @@ export const envConfigSchema = z.object({
   MAX_DEVICES_PER_USER: z.coerce.number().min(1).default(100),
   CERTIFICATE_VALIDITY_DAYS: z.coerce.number().min(1).default(365),
   DEVICE_DATA_RETENTION_DAYS: z.coerce.number().min(1).default(30),
+  BROKER_HOST: z.string().default('localhost'),
+  BROKER_SECURE_PORT: z.coerce.number().min(1).max(65535).default(8883),
 
   // Users
   USER_SESSION_TIMEOUT_MS: z.coerce.number().min(60000).default(3600000),
@@ -158,7 +142,6 @@ export interface AppConfig {
   common: z.infer<typeof commonConfigSchema>;
   auth: z.infer<typeof authConfigSchema>;
   database: z.infer<typeof databaseConfigSchema>;
-  mqtt: z.infer<typeof mqttConfigSchema>;
   telemetry: z.infer<typeof telemetryConfigSchema>;
   devices: z.infer<typeof devicesConfigSchema>;
   users: z.infer<typeof usersConfigSchema>;

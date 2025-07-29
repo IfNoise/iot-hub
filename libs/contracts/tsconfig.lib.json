@@ -15,9 +15,6 @@
       "path": "users/tsconfig.lib.json"
     },
     {
-      "path": "mqtt/tsconfig.lib.json"
-    },
-    {
       "path": "devices/tsconfig.lib.json"
     },
     {
