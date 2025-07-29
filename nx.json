@@ -41,7 +41,21 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/backend-e2e/**/*", "apps/device-simulator-e2e/**/*"]
+      "exclude": [
+        "apps/backend-e2e/**/*",
+        "apps/device-simulator-e2e/**/*",
+        "apps/user-management-e2e/**/*"
+      ]
+    },
+    {
+      "plugin": "@nx/webpack/plugin",
+      "options": {
+        "buildTargetName": "webpack:build",
+        "serveTargetName": "webpack:serve",
+        "previewTargetName": "preview",
+        "buildDepsTargetName": "build-deps",
+        "watchDepsTargetName": "watch-deps"
+      }
     }
   ],
   "targetDefaults": {

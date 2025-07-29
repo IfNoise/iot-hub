@@ -89,15 +89,15 @@ export const UserUpdatedEventSchema = BaseDomainEventSchema.extend({
   eventType: z.literal('user.updated'),
   payload: z.object({
     userId: UserIdSchema,
-    previousData: z.record(z.any()),
-    newData: z.record(z.any()),
+    previousData: z.record(z.unknown()),
+    newData: z.record(z.unknown()),
     updatedBy: UserIdSchema,
     updatedAt: z.string().datetime(),
     changes: z.array(
       z.object({
         field: z.string(),
-        oldValue: z.any(),
-        newValue: z.any(),
+        oldValue: z.unknown(),
+        newValue: z.unknown(),
       })
     ),
   }),

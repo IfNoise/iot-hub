@@ -35,6 +35,12 @@
     },
     {
       "path": "./libs/contracts-kafka"
+    },
+    {
+      "path": "./apps/user-management-e2e"
+    },
+    {
+      "path": "./apps/user-management"
     }
   ]
 }
