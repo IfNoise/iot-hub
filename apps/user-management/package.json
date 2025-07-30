@@ -8,5 +8,8 @@
       "type:microservice",
       "domain:user-management"
     ]
+  },
+  "dependencies": {
+    "drizzle-zod": "^0.8.2"
   }
 }

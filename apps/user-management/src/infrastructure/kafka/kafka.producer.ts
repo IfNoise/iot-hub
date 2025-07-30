@@ -10,6 +10,7 @@ import {
   UserCreatedEvent,
   UserUpdatedEvent,
   UserDeletedEvent,
+  KafkaTopics,
 } from '@iot-hub/contracts-kafka';
 
 @Injectable()
@@ -58,7 +59,7 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
       payload,
     };
 
-    await this.publishEvent('user-events', event, payload.userId);
+    await this.publishEvent(KafkaTopics.UserEvents, event, payload.userId);
   }
 
   async publishUserUpdated(
@@ -77,7 +78,7 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
       payload,
     };
 
-    await this.publishEvent('user-events', event, payload.userId);
+    await this.publishEvent(KafkaTopics.UserEvents, event, payload.userId);
   }
 
   async publishUserDeleted(
@@ -96,7 +97,7 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
       payload,
     };
 
-    await this.publishEvent('user-events', event, payload.userId);
+    await this.publishEvent(KafkaTopics.UserEvents, event, payload.userId);
   }
 
   private async publishEvent(

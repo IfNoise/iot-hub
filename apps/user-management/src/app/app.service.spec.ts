@@ -12,9 +12,19 @@ describe('AppService', () => {
     service = app.get<AppService>(AppService);
   });
 
-  describe('getData', () => {
-    it('should return "Hello API"', () => {
-      expect(service.getData()).toEqual({ message: 'Hello API' });
+  describe('getServiceInfo', () => {
+    it('should return service information', () => {
+      const result = service.getServiceInfo();
+      expect(result).toEqual({
+        service: 'User Management Service',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: {
+          users: '/users',
+          health: '/health',
+          docs: '/api',
+        },
+      });
     });
   });
 });
