@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { KafkaProducer } from '../infrastructure/kafka/kafka.producer';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto, UserStatus } from './dto/update-user.dto';
@@ -13,7 +17,9 @@ export class UserService {
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     // Проверяем уникальность email
-    const existingUser = this.users.find(user => user.email === createUserDto.email);
+    const existingUser = this.users.find(
+      (user) => user.email === createUserDto.email
+    );
     if (existingUser) {
       throw new BadRequestException('User with this email already exists');
     }
@@ -53,7 +59,7 @@ export class UserService {
     if (options.search) {
       const searchLower = options.search.toLowerCase();
       filteredUsers = this.users.filter(
-        user =>
+        (user) =>
           user.email.toLowerCase().includes(searchLower) ||
           user.firstName.toLowerCase().includes(searchLower) ||
           user.lastName.toLowerCase().includes(searchLower)
@@ -73,7 +79,7 @@ export class UserService {
   }
 
   async findOne(id: string): Promise<User> {
-    const user = this.users.find(user => user.id === id);
+    const user = this.users.find((user) => user.id === id);
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -81,7 +87,7 @@ export class UserService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const userIndex = this.users.findIndex(user => user.id === id);
+    const userIndex = this.users.findIndex((user) => user.id === id);
     if (userIndex === -1) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -89,7 +95,7 @@ export class UserService {
     // Проверяем уникальность email при обновлении
     if (updateUserDto.email) {
       const existingUser = this.users.find(
-        user => user.email === updateUserDto.email && user.id !== id
+        (user) => user.email === updateUserDto.email && user.id !== id
       );
       if (existingUser) {
         throw new BadRequestException('User with this email already exists');
@@ -131,7 +137,7 @@ export class UserService {
   }
 
   async remove(id: string): Promise<void> {
-    const userIndex = this.users.findIndex(user => user.id === id);
+    const userIndex = this.users.findIndex((user) => user.id === id);
     if (userIndex === -1) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -150,11 +156,24 @@ export class UserService {
     });
   }
 
-  private calculateChanges(previous: User, updated: User): Array<{ field: string; oldValue: unknown; newValue: unknown }> {
-    const changes: Array<{ field: string; oldValue: unknown; newValue: unknown }> = [];
-    
-    const fieldsToCheck: (keyof User)[] = ['firstName', 'lastName', 'email', 'role', 'status'];
-    
+  private calculateChanges(
+    previous: User,
+    updated: User
+  ): Array<{ field: string; oldValue: unknown; newValue: unknown }> {
+    const changes: Array<{
+      field: string;
+      oldValue: unknown;
+      newValue: unknown;
+    }> = [];
+
+    const fieldsToCheck: (keyof User)[] = [
+      'firstName',
+      'lastName',
+      'email',
+      'role',
+      'status',
+    ];
+
     for (const field of fieldsToCheck) {
       if (previous[field] !== updated[field]) {
         changes.push({
@@ -164,7 +183,7 @@ export class UserService {
         });
       }
     }
-    
+
     return changes;
   }
 }

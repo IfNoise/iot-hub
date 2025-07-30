@@ -4,5 +4,5 @@ export const environment = {
   kafkaConfig: {
     brokers: ['localhost:9092'],
     clientId: 'user-management-service-dev',
-  }
+  },
 };

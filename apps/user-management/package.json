@@ -4,6 +4,9 @@
   "private": true,
   "main": "./src/main.ts",
   "nx": {
-    "tags": ["type:microservice", "domain:user-management"]
+    "tags": [
+      "type:microservice",
+      "domain:user-management"
+    ]
   }
 }

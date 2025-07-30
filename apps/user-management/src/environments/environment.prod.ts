@@ -4,5 +4,5 @@ export const environment = {
   kafkaConfig: {
     brokers: process.env.KAFKA_BROKERS?.split(',') || ['localhost:9092'],
     clientId: 'user-management-service-prod',
-  }
+  },
 };

@@ -29,9 +29,13 @@ export class UserController {
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 10,
-    @Query('search') search?: string,
+    @Query('search') search?: string
   ): Promise<{ users: User[]; total: number; page: number; limit: number }> {
-    return this.userService.findAll({ page: Number(page), limit: Number(limit), search });
+    return this.userService.findAll({
+      page: Number(page),
+      limit: Number(limit),
+      search,
+    });
   }
 
   @Get(':id')
@@ -40,7 +44,10 @@ export class UserController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto): Promise<User> {
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto
+  ): Promise<User> {
     return this.userService.update(id, updateUserDto);
   }
 

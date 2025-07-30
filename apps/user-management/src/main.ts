@@ -13,7 +13,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
-  
+
   // Global validation pipe with Zod
   app.useGlobalPipes(new ZodValidationPipe());
 
@@ -26,15 +26,19 @@ async function bootstrap() {
     .addTag('organizations')
     .addTag('health')
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup(`${globalPrefix}/docs`, app, document);
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  
-  Logger.log(`🚀 UserManagement Service is running on: http://localhost:${port}/${globalPrefix}`);
-  Logger.log(`📚 Swagger docs available at: http://localhost:${port}/${globalPrefix}/docs`);
+
+  Logger.log(
+    `🚀 UserManagement Service is running on: http://localhost:${port}/${globalPrefix}`
+  );
+  Logger.log(
+    `📚 Swagger docs available at: http://localhost:${port}/${globalPrefix}/docs`
+  );
 }
 
 bootstrap();

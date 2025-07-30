@@ -1,10 +1,15 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { Kafka, Producer } from 'kafkajs';
-import { 
+import {
   UserEvent,
   UserCreatedEvent,
   UserUpdatedEvent,
-  UserDeletedEvent 
+  UserDeletedEvent,
 } from '@iot-hub/contracts-kafka';
 
 @Injectable()
@@ -37,7 +42,9 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async publishUserCreated(payload: UserCreatedEvent['payload']): Promise<void> {
+  async publishUserCreated(
+    payload: UserCreatedEvent['payload']
+  ): Promise<void> {
     const event: UserCreatedEvent = {
       eventType: 'user.created',
       correlationId: this.generateCorrelationId(),
@@ -54,7 +61,9 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
     await this.publishEvent('user-events', event, payload.userId);
   }
 
-  async publishUserUpdated(payload: UserUpdatedEvent['payload']): Promise<void> {
+  async publishUserUpdated(
+    payload: UserUpdatedEvent['payload']
+  ): Promise<void> {
     const event: UserUpdatedEvent = {
       eventType: 'user.updated',
       correlationId: this.generateCorrelationId(),
@@ -71,7 +80,9 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
     await this.publishEvent('user-events', event, payload.userId);
   }
 
-  async publishUserDeleted(payload: UserDeletedEvent['payload']): Promise<void> {
+  async publishUserDeleted(
+    payload: UserDeletedEvent['payload']
+  ): Promise<void> {
     const event: UserDeletedEvent = {
       eventType: 'user.deleted',
       correlationId: this.generateCorrelationId(),
@@ -88,7 +99,11 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
     await this.publishEvent('user-events', event, payload.userId);
   }
 
-  private async publishEvent(topic: string, event: UserEvent, key: string): Promise<void> {
+  private async publishEvent(
+    topic: string,
+    event: UserEvent,
+    key: string
+  ): Promise<void> {
     try {
       const message = {
         key,
@@ -112,11 +127,15 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
         sourceId: event.source.id,
       });
     } catch (error) {
-      this.logger.error(`Failed to publish user event: ${event.eventType}`, error, {
-        correlationId: event.correlationId,
-        eventType: event.eventType,
-        sourceId: event.source.id,
-      });
+      this.logger.error(
+        `Failed to publish user event: ${event.eventType}`,
+        error,
+        {
+          correlationId: event.correlationId,
+          eventType: event.eventType,
+          sourceId: event.source.id,
+        }
+      );
       throw error;
     }
   }
