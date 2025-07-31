@@ -10,6 +10,7 @@
     ]
   },
   "dependencies": {
-    "drizzle-zod": "^0.8.2"
+    "drizzle-zod": "^0.8.2",
+    "@iot-hub/observability": "*"
   }
 }

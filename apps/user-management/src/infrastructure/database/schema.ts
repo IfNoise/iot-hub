@@ -23,7 +23,7 @@ export const users = pgTable(
   {
     // Primary identifiers
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: varchar('user_id', { length: 255 }).notNull().unique(), // Keycloak user ID (renamed from keycloakId to match contracts)
+    userId: varchar('userId', { length: 255 }).notNull().unique(), // Keycloak user ID - camelCase column name
     email: varchar('email', { length: 255 }).notNull().unique(),
 
     // Cached from Keycloak for performance (matching contracts)
@@ -33,19 +33,19 @@ export const users = pgTable(
     // Service-specific fields matching contracts
     balance: decimal('balance', { precision: 10, scale: 2 }).default('0.00'),
     plan: varchar('plan', { length: 20 }).notNull().default('free'), // free | pro | enterprise
-    planExpiresAt: timestamp('plan_expires_at'),
-    accountType: varchar('account_type', { length: 20 })
+    planExpiresAt: timestamp('planExpiresAt'),
+    accountType: varchar('accountType', { length: 20 })
       .notNull()
       .default('individual'), // individual | organization
 
     // Organization membership (matching contracts)
-    organizationId: uuid('organization_id'),
+    organizationId: uuid('organizationId'),
     groups: jsonb('groups').$type<string[]>(), // Array of group IDs
 
     // Usage tracking for billing
-    deviceLimit: integer('device_limit').default(5),
-    currentDeviceCount: integer('current_device_count').default(0),
-    monthlyDataUsage: decimal('monthly_data_usage', {
+    deviceLimit: integer('deviceLimit').default(5),
+    currentDeviceCount: integer('currentDeviceCount').default(0),
+    monthlyDataUsage: decimal('monthlyDataUsage', {
       precision: 15,
       scale: 2,
     }).default('0.00'),
@@ -54,11 +54,11 @@ export const users = pgTable(
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
 
     // Timestamps (matching contracts)
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
 
     // Soft delete for compliance
-    deletedAt: timestamp('deleted_at'),
+    deletedAt: timestamp('deletedAt'),
   },
   (table) => ({
     emailIdx: uniqueIndex('users_email_idx').on(table.email),
@@ -68,12 +68,7 @@ export const users = pgTable(
   })
 );
 
-// Zod schemas for database operations
-export const insertUserSchema = createInsertSchema(users);
-export const selectUserSchema = createSelectSchema(users);
-
-export type InsertUser = typeof insertUserSchema._type;
-export type SelectUser = typeof selectUserSchema._type;
+// Zod schemas will be defined at the end of the file with proper validation
 
 /**
  * Organizations table - Enterprise features
@@ -82,7 +77,7 @@ export const organizations = pgTable(
   'organizations',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    keycloakId: varchar('keycloak_id', { length: 255 }).notNull().unique(), // Keycloak organization ID
+    keycloakId: varchar('keycloakId', { length: 255 }).notNull().unique(), // Keycloak organization ID
 
     // Basic info (cached from Keycloak)
     name: varchar('name', { length: 255 }).notNull(),
@@ -91,26 +86,26 @@ export const organizations = pgTable(
 
     // Billing configuration
     plan: varchar('plan', { length: 20 }).notNull().default('free'),
-    planExpiresAt: timestamp('plan_expires_at'),
+    planExpiresAt: timestamp('planExpiresAt'),
 
     // Resource limits
-    maxUsers: integer('max_users').default(10),
-    maxDevices: integer('max_devices').default(100),
-    maxDataTransferMB: decimal('max_data_transfer_mb', {
+    maxUsers: integer('maxUsers').default(10),
+    maxDevices: integer('maxDevices').default(100),
+    maxDataTransferMB: decimal('maxDataTransferMB', {
       precision: 15,
       scale: 2,
     }).default('1000.00'),
 
     // Current usage
-    currentUserCount: integer('current_user_count').default(0),
-    currentDeviceCount: integer('current_device_count').default(0),
-    currentMonthDataUsage: decimal('current_month_data_usage', {
+    currentUserCount: integer('currentUserCount').default(0),
+    currentDeviceCount: integer('currentDeviceCount').default(0),
+    currentMonthDataUsage: decimal('currentMonthDataUsage', {
       precision: 15,
       scale: 2,
     }).default('0.00'),
 
     // Owner
-    ownerId: uuid('owner_id')
+    ownerId: uuid('ownerId')
       .notNull()
       .references(() => users.id),
 
@@ -121,9 +116,9 @@ export const organizations = pgTable(
     status: varchar('status', { length: 20 }).notNull().default('active'),
 
     // Timestamps
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
-    deletedAt: timestamp('deleted_at'),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+    deletedAt: timestamp('deletedAt'),
   },
   (table) => ({
     slugIdx: uniqueIndex('organizations_slug_idx').on(table.slug),
@@ -142,27 +137,27 @@ export const groups = pgTable(
   'groups',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    keycloakId: varchar('keycloak_id', { length: 255 }).notNull().unique(),
+    keycloakId: varchar('keycloakId', { length: 255 }).notNull().unique(),
 
-    organizationId: uuid('organization_id')
+    organizationId: uuid('organizationId')
       .notNull()
       .references(() => organizations.id),
-    parentGroupId: uuid('parent_group_id').references(() => groups.id), // Self-reference for hierarchy
+    parentGroupId: uuid('parentGroupId').references(() => groups.id), // Self-reference for hierarchy
 
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
 
     // Group-specific resource limits (inherit from parent if null)
-    maxUsers: integer('max_users'),
-    maxDevices: integer('max_devices'),
+    maxUsers: integer('maxUsers'),
+    maxDevices: integer('maxDevices'),
 
     // Permissions (stored as JSON for flexibility)
     permissions: jsonb('permissions').default({}),
 
     // Timestamps
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
-    deletedAt: timestamp('deleted_at'),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+    deletedAt: timestamp('deletedAt'),
   },
   (table) => ({
     keycloakIdIdx: uniqueIndex('groups_keycloak_id_idx').on(table.keycloakId),
@@ -182,10 +177,10 @@ export const userGroups = pgTable(
   'user_groups',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
+    userId: uuid('userId')
       .notNull()
       .references(() => users.id),
-    groupId: uuid('group_id')
+    groupId: uuid('groupId')
       .notNull()
       .references(() => groups.id),
 
@@ -193,8 +188,8 @@ export const userGroups = pgTable(
     role: varchar('role', { length: 20 }).notNull().default('member'),
 
     // Timestamps
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
   },
   (table) => ({
     userGroupIdx: uniqueIndex('user_groups_user_group_idx').on(
@@ -215,12 +210,12 @@ export const billingEvents = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     // Event details
-    eventType: varchar('event_type', { length: 50 }).notNull(), // plan_upgrade, plan_downgrade, payment, etc.
-    entityType: varchar('entity_type', { length: 20 }).notNull(), // user | organization
-    entityId: uuid('entity_id').notNull(),
+    eventType: varchar('eventType', { length: 50 }).notNull(), // plan_upgrade, plan_downgrade, payment, etc.
+    entityType: varchar('entityType', { length: 20 }).notNull(), // user | organization
+    entityId: uuid('entityId').notNull(),
 
     // Event data
-    eventData: jsonb('event_data').notNull(),
+    eventData: jsonb('eventData').notNull(),
 
     // Financial info
     amount: decimal('amount', { precision: 10, scale: 2 }),
@@ -230,7 +225,7 @@ export const billingEvents = pgTable(
     metadata: jsonb('metadata').default({}),
 
     // Timestamps
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
   },
   (table) => ({
     eventTypeIdx: index('billing_events_event_type_idx').on(table.eventType),
@@ -251,28 +246,28 @@ export const dataUsage = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     // Usage attribution
-    userId: uuid('user_id')
+    userId: uuid('userId')
       .notNull()
       .references(() => users.id),
-    organizationId: uuid('organization_id').references(() => organizations.id),
-    deviceId: uuid('device_id'), // Will be linked to DeviceManagement service
+    organizationId: uuid('organizationId').references(() => organizations.id),
+    deviceId: uuid('deviceId'), // Will be linked to DeviceManagement service
 
     // Usage metrics
-    dataTransferredMB: decimal('data_transferred_mb', {
+    dataTransferredMB: decimal('dataTransferredMB', {
       precision: 15,
       scale: 2,
     }).notNull(),
-    messageCount: integer('message_count').default(0),
+    messageCount: integer('messageCount').default(0),
 
     // Time period
-    periodStart: timestamp('period_start').notNull(),
-    periodEnd: timestamp('period_end').notNull(),
+    periodStart: timestamp('periodStart').notNull(),
+    periodEnd: timestamp('periodEnd').notNull(),
 
     // Billing info
-    billableAmount: decimal('billable_amount', { precision: 10, scale: 2 }),
+    billableAmount: decimal('billableAmount', { precision: 10, scale: 2 }),
 
     // Timestamps
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
   },
   (table) => ({
     userPeriodIdx: index('data_usage_user_period_idx').on(
@@ -299,6 +294,10 @@ export const insertUserSchema = createInsertSchema(users, {
 });
 
 export const selectUserSchema = createSelectSchema(users);
+
+// User types derived from schemas
+export type InsertUser = typeof insertUserSchema._type;
+export type SelectUser = typeof selectUserSchema._type;
 
 export const insertOrganizationSchema = createInsertSchema(organizations, {
   name: z.string().min(1).max(255),

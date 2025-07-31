@@ -20,9 +20,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     // Test connection
     try {
       console.log('🔄 Testing database connection...');
-      // Temporarily skip DB connection test
-      // await this.client`SELECT 1`;
-      console.log('⚠️ Database connection skipped for testing');
+      await this.client`SELECT 1`;
+      console.log('✅ Database connection successful');
     } catch (error) {
       console.error('❌ Database connection failed:', error);
       // Don't throw error for now, just log it
@@ -40,7 +39,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     const port = process.env.DB_PORT || '5432';
     const username = process.env.DB_USER || 'iot_user';
     const password = process.env.DB_PASSWORD || 'iot_password';
-    const database = process.env.DB_NAME || 'iot_hub';
+    const database = process.env.DB_NAME || 'user_management'; // отдельная база для микросервиса
 
     return `postgresql://${username}:${password}@${host}:${port}/${database}`;
   }

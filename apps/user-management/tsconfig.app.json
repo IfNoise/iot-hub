@@ -15,10 +15,13 @@
   "exclude": ["eslint.config.js", "eslint.config.cjs", "eslint.config.mjs"],
   "references": [
     {
+      "path": "../../libs/contracts-kafka/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/contracts/users/tsconfig.lib.json"
     },
     {
-      "path": "../../libs/contracts-kafka/tsconfig.lib.json"
+      "path": "../../libs/observability/tsconfig.lib.json"
     }
   ]
 }

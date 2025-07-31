@@ -1,0 +1,34 @@
+{
+  "name": "@iot-hub/observability",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.js",
+      "types": "./index.d.ts"
+    },
+    "./instrumentation": {
+      "require": "./instrumentation/index.js",
+      "import": "./instrumentation/index.js",
+      "types": "./instrumentation/index.d.ts"
+    }
+  },
+  "nx": {
+    "name": "observability",
+    "tags": [
+      "npm:public"
+    ]
+  },
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "zod": "*",
+    "@opentelemetry/api": "*",
+    "@opentelemetry/sdk-node": "*",
+    "@opentelemetry/exporter-trace-otlp-http": "*",
+    "@opentelemetry/auto-instrumentations-node": "*",
+    "@opentelemetry/sdk-trace-node": "*",
+    "@nestjs/common": "*"
+  }
+}

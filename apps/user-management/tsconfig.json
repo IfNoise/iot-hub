@@ -4,10 +4,13 @@
   "include": [],
   "references": [
     {
+      "path": "../../libs/contracts-kafka"
+    },
+    {
       "path": "../../libs/contracts/users"
     },
     {
-      "path": "../../libs/contracts-kafka"
+      "path": "../../libs/observability"
     },
     {
       "path": "./tsconfig.app.json"

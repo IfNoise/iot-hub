@@ -1,7 +1,11 @@
 /**
  * UserManagement Microservice
  * Handles user and organization management with event-driven architecture
+ * Connected to separate user_management database
  */
+
+// ВАЖНО: Инструментация должна быть первой!
+import './instrumentation';
 
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';

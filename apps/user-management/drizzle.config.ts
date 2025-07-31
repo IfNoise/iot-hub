@@ -10,6 +10,7 @@ export default defineConfig({
     user: process.env.DB_USER || 'iot_user',
     password: process.env.DB_PASSWORD || 'iot_password',
     database: process.env.DB_NAME || 'iot_hub',
+    ssl: false,
   },
   verbose: true,
   strict: true,
