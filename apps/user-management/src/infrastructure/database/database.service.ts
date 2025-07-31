@@ -1,19 +1,26 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { ConfigService } from '../../config/config.service.js';
+import * as postgres from 'postgres';
 import * as schema from './schema';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const postgres = require('postgres');
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
-  private client: any;
+  private client: postgres.Sql;
   public db: ReturnType<typeof drizzle<typeof schema>>;
 
-  constructor() {
-    const connectionString = this.buildConnectionString();
-    this.client = postgres(connectionString);
-    this.db = drizzle(this.client, { schema });
+  constructor(private readonly configService: ConfigService) {
+    const databaseConfig = this.configService.getDatabaseConfig();
+    this.client = postgres(this.configService.getDatabaseUrl(), {
+      max: databaseConfig.connection.max,
+      idle_timeout: databaseConfig.connection.idleTimeoutMillis,
+      debug: databaseConfig.debug,
+    });
+
+    this.db = drizzle(this.client, {
+      schema,
+      logger: databaseConfig.logging,
+    });
   }
 
   async onModuleInit() {
@@ -22,6 +29,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       console.log('🔄 Testing database connection...');
       await this.client`SELECT 1`;
       console.log('✅ Database connection successful');
+
+      // Log connection details in development
+      if (this.configService.isDevelopment()) {
+        const config = this.configService.database.getAll();
+        console.log(
+          `📊 Connected to: ${config.host}:${config.port}/${config.name}`
+        );
+      }
     } catch (error) {
       console.error('❌ Database connection failed:', error);
       // Don't throw error for now, just log it
@@ -34,13 +49,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     console.log('🔌 Database connection closed');
   }
 
-  private buildConnectionString(): string {
-    const host = process.env.DB_HOST || 'localhost';
-    const port = process.env.DB_PORT || '5432';
-    const username = process.env.DB_USER || 'iot_user';
-    const password = process.env.DB_PASSWORD || 'iot_password';
-    const database = process.env.DB_NAME || 'user_management'; // отдельная база для микросервиса
-
-    return `postgresql://${username}:${password}@${host}:${port}/${database}`;
+  // Getter for easy access to database config
+  get databaseConfig() {
+    return this.configService.getDatabaseConfig();
   }
 }

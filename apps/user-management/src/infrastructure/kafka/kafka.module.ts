@@ -1,17 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '../../config/config.service.js';
 import { KafkaProducer } from './kafka.producer';
 
 @Module({
-  imports: [ConfigModule],
   providers: [
     {
       provide: KafkaProducer,
       useFactory: (configService: ConfigService) => {
-        return new KafkaProducer({
-          clientId: 'user-management-service',
-          brokers: [configService.get('KAFKA_BROKER', 'localhost:9092')],
-        });
+        const kafkaConfig = configService.kafka.getKafkaOptions();
+        return new KafkaProducer(kafkaConfig);
       },
       inject: [ConfigService],
     },
