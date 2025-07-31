@@ -1,5 +1,6 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { LoggingService } from '../services/logging.service.js';
 import { KafkaHealthIndicator } from '../../infrastructure/kafka/kafka-health.indicator.js';
@@ -8,9 +9,9 @@ import { healthContract } from '@iot-hub/contracts';
 @ApiTags('System Health')
 @Controller()
 export class HealthController {
-  private readonly logger = new Logger(HealthController.name);
-
   constructor(
+    @InjectPinoLogger(HealthController.name)
+    private readonly logger: PinoLogger,
     private readonly loggingService: LoggingService,
     private readonly kafkaHealthIndicator: KafkaHealthIndicator
   ) {}
@@ -18,7 +19,7 @@ export class HealthController {
   @TsRestHandler(healthContract.checkHealth)
   async checkHealth() {
     return tsRestHandler(healthContract.checkHealth, async () => {
-      this.logger.log('🔍 Checking overall system health...');
+      this.logger.info('🔍 Checking overall system health...');
 
       const services: Record<
         string,
@@ -95,7 +96,7 @@ export class HealthController {
   @TsRestHandler(healthContract.checkLoggingHealth)
   async checkLoggingHealth() {
     return tsRestHandler(healthContract.checkLoggingHealth, async () => {
-      this.logger.log('🔍 Checking logging system health...');
+      this.logger.info('🔍 Checking logging system health...');
 
       const healthCheck = await this.loggingService.healthCheck();
 
@@ -112,7 +113,7 @@ export class HealthController {
   @TsRestHandler(healthContract.getLogStats)
   async getLogStats() {
     return tsRestHandler(healthContract.getLogStats, async () => {
-      this.logger.log('📊 Retrieving log statistics...');
+      this.logger.info('📊 Retrieving log statistics...');
 
       const rawStats = await this.loggingService.getLogFileStats();
       // Ensure stats is always a Record<string, unknown>, never null
@@ -130,7 +131,7 @@ export class HealthController {
 
   // Дополнительный метод для очистки логов (без TS-REST контракта)
   async triggerLogCleanup() {
-    this.logger.log('🧹 Triggering log cleanup...');
+    this.logger.info('🧹 Triggering log cleanup...');
 
     try {
       await this.loggingService.cleanupOldLogs();

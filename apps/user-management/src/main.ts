@@ -7,7 +7,8 @@
 // ВАЖНО: Инструментация должна быть первой!
 import './instrumentation';
 
-import { Logger } from '@nestjs/common';
+import 'dotenv/config';
+import { Logger } from 'nestjs-pino';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -15,6 +16,11 @@ import { AppModule } from './app/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable Pino logging
+  app.useLogger(app.get(Logger));
+  const logger = app.get(Logger);
+
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
 
@@ -37,12 +43,15 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
 
-  Logger.log(
+  logger.log(
     `🚀 UserManagement Service is running on: http://localhost:${port}/${globalPrefix}`
   );
-  Logger.log(
+  logger.log(
     `📚 Swagger docs available at: http://localhost:${port}/${globalPrefix}/docs`
   );
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('❌ Ошибка запуска UserManagement Service:', error);
+  process.exit(1);
+});

@@ -1,43 +1,42 @@
-import {
-  Injectable,
-  OnModuleInit,
-  OnModuleDestroy,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { ConfigService } from '../../config/config.service.js';
 import { OpenTelemetryConfig } from './types.js';
 
 @Injectable()
 export class OtelService implements OnModuleInit, OnModuleDestroy {
   private config: OpenTelemetryConfig;
-  private readonly logger = new Logger(OtelService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    @InjectPinoLogger(OtelService.name)
+    private readonly logger: PinoLogger,
+    private readonly configService: ConfigService
+  ) {
     this.config = this.configService.getOpenTelemetryConfig();
   }
 
   async onModuleInit() {
     // OpenTelemetry уже инициализирован в instrumentation.ts
     // Этот сервис предоставляет конфигурацию и утилиты
-    this.logger.log(
+    this.logger.info(
       '📊 OtelService: конфигурация загружена из ConfigService, SDK уже инициализирован'
     );
-    this.logger.log(`📍 Collector URL: ${this.config.collectorUrl}`);
-    this.logger.log(`🏷️  Сервис: ${this.config.serviceName}`);
-    this.logger.log(
+    this.logger.info(`📍 Collector URL: ${this.config.collectorUrl}`);
+    this.logger.info(`🏷️  Сервис: ${this.config.serviceName}`);
+    this.logger.info(
       `📊 Метрики: ${this.config.metrics.enabled ? 'включены' : 'отключены'}`
     );
-    this.logger.log(
+    this.logger.info(
       `🔄 Трейсы: ${this.config.tracing.enabled ? 'включены' : 'отключены'}`
     );
-    this.logger.log(
+    this.logger.info(
       `📝 Логи: ${this.config.logging.enabled ? 'включены' : 'отключены'}`
     );
   }
 
   async onModuleDestroy() {
     // Graceful shutdown обрабатывается в instrumentation.ts
-    this.logger.log('📊 OtelService: завершение работы');
+    this.logger.info('📊 OtelService: завершение работы');
   }
 
   getConfig(): OpenTelemetryConfig {
@@ -83,7 +82,7 @@ export class OtelService implements OnModuleInit, OnModuleDestroy {
 
   async shutdown() {
     // Заглушка для совместимости
-    this.logger.log(
+    this.logger.info(
       '📊 OtelService: shutdown вызван (обрабатывается в instrumentation.ts)'
     );
   }

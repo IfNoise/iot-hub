@@ -1,13 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { LoggingService } from './logging.service.js';
 import { ConfigService } from '../../config/config.service.js';
 
 @Injectable()
 export class LogMaintenanceService {
-  private readonly logger = new Logger(LogMaintenanceService.name);
-
   constructor(
+    @InjectPinoLogger(LogMaintenanceService.name)
+    private readonly logger: PinoLogger,
     private readonly loggingService: LoggingService,
     private readonly configService: ConfigService
   ) {}
@@ -22,11 +23,11 @@ export class LogMaintenanceService {
       return;
     }
 
-    this.logger.log('🌙 Starting daily log maintenance...');
+    this.logger.info('🌙 Starting daily log maintenance...');
 
     try {
       await this.loggingService.cleanupOldLogs();
-      this.logger.log('✅ Daily log cleanup completed successfully');
+      this.logger.info('✅ Daily log cleanup completed successfully');
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -44,11 +45,11 @@ export class LogMaintenanceService {
       return;
     }
 
-    this.logger.log('📦 Starting weekly log archival...');
+    this.logger.info('📦 Starting weekly log archival...');
 
     try {
       await this.loggingService.archiveLogs(30); // Archive logs older than 30 days
-      this.logger.log('✅ Weekly log archival completed successfully');
+      this.logger.info('✅ Weekly log archival completed successfully');
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
