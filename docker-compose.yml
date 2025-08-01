@@ -313,7 +313,9 @@ services:
 
   # Keycloak Identity and Access Management
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    build:
+      context: .
+      dockerfile: keycloak/Dockerfile.keycloak
     container_name: iot-keycloak
     restart: unless-stopped
 
@@ -325,8 +327,8 @@ services:
       - KC_DB_PASSWORD=keycloak_password
 
       # Admin user
-      # - KC_BOOTSTRAP_ADMIN_USERNAME=admin
-      # - KC_BOOTSTRAP_ADMIN_PASSWORD=iot-keycloak-admin
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=iot-keycloak-admin
 
       # Configuration
       - KC_HOSTNAME=localhost
@@ -334,7 +336,6 @@ services:
       - KC_HOSTNAME_STRICT=false
       - KC_HOSTNAME_STRICT_HTTPS=false
       - KC_HTTP_ENABLED=true
-      - KC_PROXY=edge
 
       # Logging
       - KC_LOG_LEVEL=DEBUG
@@ -342,10 +343,10 @@ services:
       - KC_LOG_CONSOLE_COLOR=true
       # Metrics
       - KC_METRICS_ENABLED=true
-      - KC_FEATURES=scripts
 
-    command: start-dev
-
+      # Event Listeners автоконфигурация
+      - KC_SPI_EVENTS_LISTENER_JBOSS_LOGGING_SUCCESS_LEVEL=info
+      - KC_SPI_EVENTS_LISTENER_JBOSS_LOGGING_ERROR_LEVEL=warn
     ports:
       - '8080:8080'
       - '8443:8443'
@@ -353,7 +354,7 @@ services:
     volumes:
       - keycloak-data:/opt/keycloak/data
       - ./keycloak/themes:/opt/keycloak/themes:ro # Включаем обновленную тему
-      # - ./keycloak/providers:/opt/keycloak/providers:ro  # Пока отключено
+      - ./keycloak/providers:/opt/keycloak/providers:ro # Пока отключено
 
     depends_on:
       keycloak-db:

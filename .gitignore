@@ -53,3 +53,4 @@ test-output
 
 #Ignore vscode AI rules
 .github/copilot-instructions.md
+keycloak/providers/keycloak-kafka-provider.jar
