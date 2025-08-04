@@ -55,7 +55,9 @@ export class UserController {
         email: createUserData.email,
       });
 
-      const invitation = await this.userService.createInvitation(createUserData);
+      const invitation = await this.userService.createInvitation(
+        createUserData
+      );
       const duration = Date.now() - startTime;
 
       // Записываем метрики успешного создания приглашения
@@ -138,12 +140,16 @@ export class UserController {
         durationMs: duration,
       });
 
-      this.loggingService.log('info', 'User synced from Keycloak successfully', {
-        operation: 'sync_user_from_keycloak',
-        userId: user.userId,
-        email: user.email,
-        duration,
-      });
+      this.loggingService.log(
+        'info',
+        'User synced from Keycloak successfully',
+        {
+          operation: 'sync_user_from_keycloak',
+          userId: user.userId,
+          email: user.email,
+          duration,
+        }
+      );
 
       span.setStatus({ code: 1 }); // SUCCESS
       span.end();

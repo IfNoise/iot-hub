@@ -1,4 +1,10 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Consumer, Kafka } from 'kafkajs';
 import { KafkaProducer } from './kafka.producer.js';
@@ -380,7 +386,9 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
   /**
    * Публикация события создания организации
    */
-  private async publishOrganizationCreatedEvent(event: KeycloakUserEvent): Promise<void> {
+  private async publishOrganizationCreatedEvent(
+    event: KeycloakUserEvent
+  ): Promise<void> {
     try {
       if (!event.details.organizationId || !event.details.organizationName) {
         return;
@@ -399,9 +407,13 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
       };
 
       // Публикуем через KafkaProducer
-      await this.kafkaProducer.publishOrganizationCreated(organizationCreatedPayload);
+      await this.kafkaProducer.publishOrganizationCreated(
+        organizationCreatedPayload
+      );
 
-      this.logger.info(`Published organization created event for organization ${event.details.organizationId}`);
+      this.logger.info(
+        `Published organization created event for organization ${event.details.organizationId}`
+      );
     } catch (error) {
       this.logger.error(`Error publishing organization created event:`, error);
       throw error;
@@ -411,7 +423,9 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
   /**
    * Публикация события добавления пользователя в организацию
    */
-  private async publishOrganizationMemberAddedEvent(event: KeycloakUserEvent): Promise<void> {
+  private async publishOrganizationMemberAddedEvent(
+    event: KeycloakUserEvent
+  ): Promise<void> {
     try {
       if (!event.details.organizationId) {
         return;
@@ -426,11 +440,18 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
       };
 
       // Публикуем через KafkaProducer
-      await this.kafkaProducer.publishOrganizationMemberAdded(memberAddedPayload);
+      await this.kafkaProducer.publishOrganizationMemberAdded(
+        memberAddedPayload
+      );
 
-      this.logger.info(`Published organization member added event for user ${event.userId} in organization ${event.details.organizationId}`);
+      this.logger.info(
+        `Published organization member added event for user ${event.userId} in organization ${event.details.organizationId}`
+      );
     } catch (error) {
-      this.logger.error(`Error publishing organization member added event:`, error);
+      this.logger.error(
+        `Error publishing organization member added event:`,
+        error
+      );
       throw error;
     }
   }

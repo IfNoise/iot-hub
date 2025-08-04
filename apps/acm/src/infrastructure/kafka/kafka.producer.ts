@@ -119,7 +119,11 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
       payload,
     };
 
-    await this.publishEvent(KafkaTopics.OrganizationEvents, event, payload.organizationId);
+    await this.publishEvent(
+      KafkaTopics.OrganizationEvents,
+      event,
+      payload.organizationId
+    );
   }
 
   async publishOrganizationMemberAdded(
@@ -138,7 +142,11 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
       payload,
     };
 
-    await this.publishEvent(KafkaTopics.OrganizationEvents, event, payload.organizationId);
+    await this.publishEvent(
+      KafkaTopics.OrganizationEvents,
+      event,
+      payload.organizationId
+    );
   }
 
   private async publishEvent(
@@ -169,15 +177,11 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
         sourceId: event.source.id,
       });
     } catch (error) {
-      this.logger.error(
-        `Failed to publish event: ${event.eventType}`,
-        error,
-        {
-          correlationId: event.correlationId,
-          eventType: event.eventType,
-          sourceId: event.source.id,
-        }
-      );
+      this.logger.error(`Failed to publish event: ${event.eventType}`, error, {
+        correlationId: event.correlationId,
+        eventType: event.eventType,
+        sourceId: event.source.id,
+      });
       throw error;
     }
   }

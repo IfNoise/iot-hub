@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   type User,
   type CreateUser,
@@ -30,40 +26,43 @@ export class UserService {
         .from(users)
         .where(and(eq(users.userId, userId), isNull(users.deletedAt)))
         .limit(1);
-      
+
       return user ? this.mapDbUserToContract(user, []) : null;
     },
-    
+
     findByEmail: async (email: string): Promise<User | null> => {
       const [user] = await this.databaseService.db
         .select()
         .from(users)
         .where(and(eq(users.email, email), isNull(users.deletedAt)))
         .limit(1);
-      
+
       return user ? this.mapDbUserToContract(user, []) : null;
     },
-    
+
     create: async (userData: InsertUser): Promise<User> => {
       const [insertedUser] = await this.databaseService.db
         .insert(users)
         .values(userData)
         .returning();
-      
+
       return this.mapDbUserToContract(insertedUser, []);
     },
-    
-    update: async (userId: string, updateData: Partial<InsertUser>): Promise<User> => {
+
+    update: async (
+      userId: string,
+      updateData: Partial<InsertUser>
+    ): Promise<User> => {
       const [updatedUser] = await this.databaseService.db
         .update(users)
         .set(updateData)
         .where(and(eq(users.userId, userId), isNull(users.deletedAt)))
         .returning();
-      
+
       if (!updatedUser) {
         throw new NotFoundException('User not found');
       }
-      
+
       return this.mapDbUserToContract(updatedUser, []);
     },
   };
@@ -83,15 +82,17 @@ export class UserService {
 
     try {
       // 1. Get user from Keycloak
-      const keycloakUser = await this.keycloakService.getUserById(keycloakUserId);
-      
+      const keycloakUser = await this.keycloakService.getUserById(
+        keycloakUserId
+      );
+
       if (!keycloakUser) {
         throw new Error(`User ${keycloakUserId} not found in Keycloak`);
       }
 
       // 2. Check if user already exists in local database
       const existingUser = await this.repository.findByUserId(keycloakUserId);
-      
+
       if (existingUser) {
         // Update existing user
         return this.updateFromKeycloak(keycloakUserId, keycloakUser);
@@ -101,23 +102,35 @@ export class UserService {
       const dbUser: InsertUser = {
         userId: keycloakUser.id,
         email: keycloakUser.email,
-        name: `${keycloakUser.firstName || ''} ${keycloakUser.lastName || ''}`.trim(),
+        name: `${keycloakUser.firstName || ''} ${
+          keycloakUser.lastName || ''
+        }`.trim(),
         avatar: undefined,
         balance: '0.00',
-        plan: keycloakUser.attributes?.plan?.[0] as 'free' | 'pro' | 'enterprise' || 'free',
+        plan:
+          (keycloakUser.attributes?.plan?.[0] as
+            | 'free'
+            | 'pro'
+            | 'enterprise') || 'free',
         planExpiresAt: undefined,
-        accountType: keycloakUser.attributes?.accountType?.[0] as 'individual' | 'organization' || 'individual',
+        accountType:
+          (keycloakUser.attributes?.accountType?.[0] as
+            | 'individual'
+            | 'organization') || 'individual',
         organizationId: keycloakUser.attributes?.organizationId?.[0] || null,
         groups: keycloakUser.groups || [],
         metadata: keycloakUser.attributes || {},
       };
 
       const createdUser = await this.repository.create(dbUser);
-      
+
       this.logger.log(`User synced from Keycloak: ${createdUser.email}`);
       return createdUser;
     } catch (error) {
-      this.logger.error(`Failed to sync user from Keycloak: ${keycloakUserId}`, error);
+      this.logger.error(
+        `Failed to sync user from Keycloak: ${keycloakUserId}`,
+        error
+      );
       throw error;
     }
   }
@@ -125,18 +138,31 @@ export class UserService {
   /**
    * Update local user from Keycloak data
    */
-  private async updateFromKeycloak(keycloakUserId: string, keycloakUser: KeycloakUserRepresentation): Promise<User> {
+  private async updateFromKeycloak(
+    keycloakUserId: string,
+    keycloakUser: KeycloakUserRepresentation
+  ): Promise<User> {
     const updateData: Partial<InsertUser> = {
       email: keycloakUser.email,
-      name: `${keycloakUser.firstName || ''} ${keycloakUser.lastName || ''}`.trim(),
-      plan: keycloakUser.attributes?.plan?.[0] as 'free' | 'pro' | 'enterprise' || 'free',
-      accountType: keycloakUser.attributes?.accountType?.[0] as 'individual' | 'organization' || 'individual',
+      name: `${keycloakUser.firstName || ''} ${
+        keycloakUser.lastName || ''
+      }`.trim(),
+      plan:
+        (keycloakUser.attributes?.plan?.[0] as 'free' | 'pro' | 'enterprise') ||
+        'free',
+      accountType:
+        (keycloakUser.attributes?.accountType?.[0] as
+          | 'individual'
+          | 'organization') || 'individual',
       organizationId: keycloakUser.attributes?.organizationId?.[0] || null,
       groups: keycloakUser.groups || [],
       metadata: keycloakUser.attributes || {},
     };
 
-    const updatedUser = await this.repository.update(keycloakUserId, updateData);
+    const updatedUser = await this.repository.update(
+      keycloakUserId,
+      updateData
+    );
     this.logger.log(`User updated from Keycloak: ${updatedUser.email}`);
     return updatedUser;
   }
@@ -145,12 +171,18 @@ export class UserService {
    * Create user invitation (still needed for inviting users to organizations)
    * This creates a placeholder record that will be synced when user actually registers
    */
-  async createInvitation(createUserDto: CreateUser): Promise<{ invitationId: string; inviteUrl: string }> {
-    this.logger.log(`Creating user invitation for email: ${createUserDto.email}`);
+  async createInvitation(
+    createUserDto: CreateUser
+  ): Promise<{ invitationId: string; inviteUrl: string }> {
+    this.logger.log(
+      `Creating user invitation for email: ${createUserDto.email}`
+    );
 
     try {
       // Check if user already exists
-      const existingUser = await this.repository.findByEmail(createUserDto.email);
+      const existingUser = await this.repository.findByEmail(
+        createUserDto.email
+      );
       if (existingUser) {
         throw new Error('User already exists');
       }
@@ -165,7 +197,10 @@ export class UserService {
       this.logger.log(`User invitation created: ${createUserDto.email}`);
       return { invitationId, inviteUrl };
     } catch (error) {
-      this.logger.error(`Failed to create user invitation: ${createUserDto.email}`, error);
+      this.logger.error(
+        `Failed to create user invitation: ${createUserDto.email}`,
+        error
+      );
       throw error;
     }
   }
