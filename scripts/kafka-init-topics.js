@@ -7,7 +7,7 @@
 import { Kafka } from 'kafkajs';
 import { KafkaTopics } from '@iot-hub/contracts-kafka';
 
-const KAFKA_BROKER = process.env.KAFKA_BROKER || 'localhost:9092';
+const KAFKA_BROKER = 'localhost:9093';
 
 const kafka = new Kafka({
   clientId: 'topic-creator',
@@ -22,7 +22,7 @@ async function createTopics() {
     await admin.connect();
 
     // Получаем все топики из контрактов
-    const topicsToCreate = Object.values(KafkaTopics).map((topic) => ({
+    const contractTopics = Object.values(KafkaTopics).map((topic) => ({
       topic,
       numPartitions: 3, // 3 партиции для балансировки нагрузки
       replicationFactor: 1, // 1 для development, в production должно быть 3
@@ -41,6 +41,50 @@ async function createTopics() {
         },
       ],
     }));
+
+    // Добавляем топики Keycloak (внешние топики, не из контрактов)
+    const keycloakTopics = [
+      {
+        topic: 'keycloak.user.events',
+        numPartitions: 3,
+        replicationFactor: 1,
+        configEntries: [
+          {
+            name: 'cleanup.policy',
+            value: 'delete',
+          },
+          {
+            name: 'retention.ms',
+            value: '604800000', // 7 дней
+          },
+          {
+            name: 'max.message.bytes',
+            value: '1048576', // 1MB
+          },
+        ],
+      },
+      {
+        topic: 'keycloak.admin.events',
+        numPartitions: 3,
+        replicationFactor: 1,
+        configEntries: [
+          {
+            name: 'cleanup.policy',
+            value: 'delete',
+          },
+          {
+            name: 'retention.ms',
+            value: '604800000', // 7 дней
+          },
+          {
+            name: 'max.message.bytes',
+            value: '1048576', // 1MB
+          },
+        ],
+      },
+    ];
+
+    const topicsToCreate = [...contractTopics, ...keycloakTopics];
 
     console.log(`📝 Создание ${topicsToCreate.length} топиков...`);
 

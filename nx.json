@@ -44,18 +44,8 @@
       "exclude": [
         "apps/backend-e2e/**/*",
         "apps/device-simulator-e2e/**/*",
-        "apps/user-management-e2e/**/*"
+        "apps/acm-e2e/**/*"
       ]
-    },
-    {
-      "plugin": "@nx/webpack/plugin",
-      "options": {
-        "buildTargetName": "webpack:build",
-        "serveTargetName": "webpack:serve",
-        "previewTargetName": "preview",
-        "buildDepsTargetName": "build-deps",
-        "watchDepsTargetName": "watch-deps"
-      }
     }
   ],
   "targetDefaults": {
@@ -66,6 +56,11 @@
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
+    }
+  },
+  "release": {
+    "version": {
+      "preVersionCommand": "npx nx run-many -t build"
     }
   }
 }

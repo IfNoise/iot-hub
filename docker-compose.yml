@@ -84,6 +84,8 @@ services:
     ports:
       - '9092:9092'
       - '9093:9093'
+    volumes:
+      - kafka-data:/var/lib/kafka/data
     networks:
       - iot-network
 
@@ -228,7 +230,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
     ports:
-      - '5432:5432'
+      - '5434:5432'
 
     # Resource limits
     deploy:
@@ -377,6 +379,8 @@ volumes:
   emqx-data:
     driver: local
   emqx-log:
+    driver: local
+  kafka-data:
     driver: local
   postgres-data:
     driver: local

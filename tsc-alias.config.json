@@ -11,6 +11,9 @@
     "@iot-hub/shared": "libs/shared/dist/index.js",
     "@iot-hub/users": "libs/contracts/users/dist/index.js",
     "@iot-hub/observability": "libs/observability/dist/index.js",
-    "@iot-hub/contracts-kafka": "libs/contracts-kafka/dist/index.js"
+    "@iot-hub/contracts-kafka": "libs/contracts-kafka/dist/index.js",
+    "@iot-hub/rbac": "libs/rbac/dist/index.js",
+    "@iot-hub/acm-contracts": "libs/contracts/acm-contracts/dist/index.js",
+    "@iot-hub/acm": "apps/acm/dist/index.js"
   }
 }

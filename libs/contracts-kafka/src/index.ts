@@ -15,6 +15,7 @@ export * from './shared/topics.js';
 export * from './v1/device-commands.js';
 export * from './v1/device-events.js';
 export * from './v1/user-events.js';
+export * from './v1/organization-events.js';
 export * from './v1/certificate-events.js';
 export * from './v1/integration-events.js';
 
@@ -27,6 +28,10 @@ import {
 import { DeviceEventSchemas } from './v1/device-events.js';
 import { UserCommandSchemas, UserEventSchemas } from './v1/user-events.js';
 import {
+  OrganizationCommandSchemas,
+  OrganizationEventSchemas,
+} from './v1/organization-events.js';
+import {
   CertificateCommandSchemas,
   CertificateEventSchemas,
 } from './v1/certificate-events.js';
@@ -38,6 +43,7 @@ import { IntegrationEventSchemas } from './v1/integration-events.js';
 export const AllKafkaCommandSchemas = z.discriminatedUnion('eventType', [
   ...DeviceCommandSchemas.options,
   ...UserCommandSchemas.options,
+  ...OrganizationCommandSchemas.options,
   ...CertificateCommandSchemas.options,
 ]);
 
@@ -47,6 +53,7 @@ export const AllKafkaCommandSchemas = z.discriminatedUnion('eventType', [
 export const AllKafkaEventSchemas = z.discriminatedUnion('eventType', [
   ...DeviceEventSchemas.options,
   ...UserEventSchemas.options,
+  ...OrganizationEventSchemas.options,
   ...CertificateEventSchemas.options,
   ...IntegrationEventSchemas.options,
 ]);

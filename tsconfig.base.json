@@ -10,6 +10,7 @@
     "noEmitOnError": true,
     "baseUrl": ".",
     "paths": {
+      "@iot-hub/acm-contracts": ["libs/contracts/acm-contracts/src/index.ts"],
       "@iot-hub/auth": ["libs/contracts/auth/src/index.ts"],
       "@iot-hub/contracts": ["libs/contracts/src/index.ts"],
       "@iot-hub/contracts-kafka": ["libs/contracts-kafka/src/index.ts"],
@@ -17,6 +18,7 @@
       "@iot-hub/devices": ["libs/contracts/devices/src/index.ts"],
       "@iot-hub/mqtt": ["libs/contracts/mqtt/src/index.ts"],
       "@iot-hub/observability": ["libs/observability/src/index.ts"],
+      "@iot-hub/rbac": ["libs/rbac/src/index.ts"],
       "@iot-hub/shared": ["libs/shared/src/index.ts"],
       "@iot-hub/users": ["libs/contracts/users/src/index.ts"]
     },

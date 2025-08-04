@@ -16,7 +16,6 @@
     "@iot-hub/devices": "*",
     "@iot-hub/users": "*",
     "@iot-hub/auth": "*",
-    "@iot-hub/mqtt": "*",
     "tslib": "*"
   }
 }

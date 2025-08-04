@@ -1,0 +1,43 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "types": ["node"],
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "es2021",
+    "module": "esnext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "eslint.config.js",
+    "eslint.config.cjs",
+    "eslint.config.mjs",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/demo-observability.ts"
+  ],
+  "references": [
+    {
+      "path": "../../libs/contracts/acm-contracts/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/rbac/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/contracts-kafka/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/contracts/auth/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/contracts/users/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/observability/tsconfig.lib.json"
+    }
+  ]
+}

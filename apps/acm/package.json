@@ -1,0 +1,62 @@
+{
+  "name": "@iot-hub/acm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nx build @iot-hub/acm",
+    "serve": "nx serve @iot-hub/acm",
+    "dev": "nx run @iot-hub/acm:serve:development",
+    "test": "nx test @iot-hub/acm"
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "options": {
+          "outputPath": "dist/apps/acm",
+          "main": "apps/acm/src/main.ts",
+          "tsConfig": "apps/acm/tsconfig.app.json"
+        }
+      },
+      "serve": {
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "options": {
+          "buildTarget": "@iot-hub/acm:build",
+          "watch": true
+        },
+        "configurations": {
+          "development": {
+            "watch": true,
+            "buildTarget": "@iot-hub/acm:build"
+          },
+          "production": {
+            "watch": false,
+            "buildTarget": "@iot-hub/acm:build"
+          }
+        }
+      },
+      "test": {
+        "executor": "@nx/jest:jest",
+        "options": {
+          "jestConfig": "apps/acm/jest.config.cjs",
+          "passWithNoTests": true
+        },
+        "outputs": [
+          "{workspaceRoot}/coverage/{projectRoot}"
+        ]
+      }
+    }
+  },
+  "dependencies": {
+    "drizzle-zod": "^0.8.2",
+    "@iot-hub/observability": "*",
+    "@iot-hub/users": "*",
+    "@iot-hub/auth": "*",
+    "@iot-hub/contracts-kafka": "*",
+    "@iot-hub/acm-contracts": "*",
+    "@iot-hub/rbac": "*",
+    "@ts-rest/nest": "^3.30.0"
+  }
+}

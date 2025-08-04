@@ -5,7 +5,7 @@
   "scripts": {
     "postbuild": "tsc-alias",
     "build:backend": "nx build @iot-hub/backend && tsc-alias -p apps/backend/tsconfig.app.json",
-    "build:libs": "nx run-many --target=build --projects=contracts,auth,devices,users,shared && find libs -name 'dist' -type d -exec tsc-alias -p {}/../tsconfig.json \\;",
+    "build:libs": "nx run-many --target=build --projects=contracts,auth,devices,users,shared,acm-contracts,rbac,contracts-kafka && find libs -name 'dist' -type d -exec tsc-alias -p {}/../tsconfig.json \\;",
     "fix-aliases": "tsc-alias"
   },
   "devDependencies": {
@@ -50,8 +50,7 @@
     "tslib": "^2.3.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.19.0",
-    "webpack": "^5.99.9",
-    "webpack-cli": "^5.1.4"
+    "verdaccio": "^6.0.5"
   },
   "workspaces": [
     "apps/*",
@@ -68,7 +67,9 @@
     "@iot-hub/shared": "libs/shared/dist",
     "@iot-hub/observability": "libs/observability/dist",
     "@iot-hub/contracts-kafka": "libs/contracts-kafka/dist",
-    "@iot-hub/mqtt": "libs/contracts/mqtt/dist"
+    "@iot-hub/mqtt": "libs/contracts/mqtt/dist",
+    "@iot-hub/rbac": "libs/rbac/dist",
+    "@iot-hub/acm-contracts": "libs/contracts/acm-contracts/dist"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.0",

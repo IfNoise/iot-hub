@@ -37,13 +37,19 @@
       "path": "./libs/contracts-kafka"
     },
     {
-      "path": "./apps/user-management-e2e"
-    },
-    {
-      "path": "./apps/user-management"
-    },
-    {
       "path": "./libs/observability"
+    },
+    {
+      "path": "./libs/rbac"
+    },
+    {
+      "path": "./libs/contracts/acm-contracts"
+    },
+    {
+      "path": "./apps/acm-e2e"
+    },
+    {
+      "path": "./apps/acm"
     }
   ]
 }

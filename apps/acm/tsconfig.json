@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../../libs/contracts/acm-contracts"
+    },
+    {
+      "path": "../../libs/rbac"
+    },
+    {
+      "path": "../../libs/contracts-kafka"
+    },
+    {
+      "path": "../../libs/contracts/auth"
+    },
+    {
+      "path": "../../libs/contracts/users"
+    },
+    {
+      "path": "../../libs/observability"
+    },
+    {
+      "path": "./tsconfig.app.json"
+    }
+  ]
+}
