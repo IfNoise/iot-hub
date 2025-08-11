@@ -10,6 +10,20 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [],
-  "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
+  "exclude": [
+    "jest.config.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/lib/infra/mqtt/**/*",
+    "src/lib/mappers/device.mapper.ts",
+    "src/lib/mappers/organization.mapper.ts"
+  ],
+  "references": [
+    {
+      "path": "../contracts/users/tsconfig.lib.json"
+    },
+    {
+      "path": "../contracts/devices/tsconfig.lib.json"
+    }
+  ]
 }

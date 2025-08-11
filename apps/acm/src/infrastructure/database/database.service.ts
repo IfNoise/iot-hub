@@ -1,13 +1,18 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, type Sql } from '@iot-hub/shared';
 import { ConfigService } from '../../config/config.service.js';
-import postgres, { Sql } from 'postgres';
-import * as schema from './schema.js';
+import postgres from 'postgres';
+import { usersTable, organizationsTable, groupsTable } from '@iot-hub/shared';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private client: Sql;
-  public db: ReturnType<typeof drizzle<typeof schema>>;
+  public db: ReturnType<typeof drizzle>;
+  public schema: {
+    usersTable: typeof usersTable;
+    organizationsTable: typeof organizationsTable;
+    groupsTable: typeof groupsTable;
+  };
 
   constructor(private readonly configService: ConfigService) {
     const databaseConfig = this.configService.getDatabaseConfig();
@@ -17,8 +22,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       debug: databaseConfig.debug,
     });
 
+    // Используем shared схемы с namespace 'acm'
+    this.schema = {
+      usersTable: usersTable,
+      organizationsTable: organizationsTable,
+      groupsTable: groupsTable,
+    };
+
     this.db = drizzle(this.client, {
-      schema,
+      schema: this.schema,
       logger: databaseConfig.logging,
     });
   }

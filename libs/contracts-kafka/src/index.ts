@@ -18,6 +18,7 @@ export * from './v1/user-events.js';
 export * from './v1/organization-events.js';
 export * from './v1/certificate-events.js';
 export * from './v1/integration-events.js';
+export * from './v1/keycloak-events.js';
 
 // Utility types for discriminated unions
 import { z } from 'zod';

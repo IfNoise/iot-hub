@@ -11,6 +11,11 @@ export class KafkaConfigService {
       brokers: env.KAFKA_BROKERS,
       clientId: env.KAFKA_CLIENT_ID,
       groupId: env.KAFKA_GROUP_ID,
+      // Keycloak topics configuration
+      keycloakTopics: {
+        userEvents: env.KAFKA_KEYCLOAK_USER_EVENTS_TOPIC,
+        adminEvents: env.KAFKA_KEYCLOAK_ADMIN_EVENTS_TOPIC,
+      },
       // Остальные параметры используют значения по умолчанию из схемы
     });
   }
@@ -51,9 +56,17 @@ export class KafkaConfigService {
     };
   }
 
+  // Keycloak topics configuration
+  getKeycloakTopics() {
+    return {
+      userEvents: this.config.keycloakTopics.userEvents,
+      adminEvents: this.config.keycloakTopics.adminEvents,
+    };
+  }
+
   // Parse brokers string to array
   getBrokers(): string[] {
-    return this.config.brokers.split(',').map((broker) => broker.trim());
+    return this.config.brokers;
   }
 
   // Feature checks

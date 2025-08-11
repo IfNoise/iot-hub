@@ -79,13 +79,8 @@ export const UpdateGroupMemberRoleSchema = z.object({
  * Схема для запроса списка групп
  */
 export const GroupQuerySchema = z.object({
-  page: z.number().min(1).default(1).describe('Номер страницы'),
-  limit: z
-    .number()
-    .min(1)
-    .max(100)
-    .default(10)
-    .describe('Количество элементов на странице'),
+  page: z.string().optional().describe('Номер страницы'),
+  limit: z.string().optional().describe('Количество элементов на странице'),
   organizationId: z
     .string()
     .uuid()

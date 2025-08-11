@@ -7,7 +7,8 @@
     "build": "nx build @iot-hub/acm",
     "serve": "nx serve @iot-hub/acm",
     "dev": "nx run @iot-hub/acm:serve:development",
-    "test": "nx test @iot-hub/acm"
+    "test": "nx test @iot-hub/acm",
+    "migrate": "tsx scripts/migrate.ts"
   },
   "nx": {
     "targets": {
@@ -50,8 +51,8 @@
     }
   },
   "dependencies": {
-    "drizzle-zod": "^0.8.2",
     "@iot-hub/observability": "*",
+    "@iot-hub/shared": "*",
     "@iot-hub/users": "*",
     "@iot-hub/auth": "*",
     "@iot-hub/contracts-kafka": "*",

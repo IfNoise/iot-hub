@@ -9,5 +9,17 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "options": {
+          "outputPath": "dist/libs/contracts/acm-contracts",
+          "main": "libs/contracts/acm-contracts/src/index.ts",
+          "tsConfig": "libs/contracts/acm-contracts/tsconfig.lib.json"
+        }
+      }
+    }
   }
 }

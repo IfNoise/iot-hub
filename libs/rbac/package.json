@@ -10,5 +10,17 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "options": {
+          "outputPath": "dist/libs/rbac",
+          "main": "libs/rbac/src/index.ts",
+          "tsConfig": "libs/rbac/tsconfig.lib.json"
+        }
+      }
+    }
   }
 }

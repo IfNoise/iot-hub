@@ -13,7 +13,6 @@ import { AppModule } from './app/app.module.js';
 import { generateOpenApi } from '@ts-rest/open-api';
 import { contracts } from '@iot-hub/contracts';
 import * as swaggerUi from 'swagger-ui-express';
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 

@@ -3,7 +3,14 @@ import { z } from 'zod';
 export const kafkaConfigSchema = z.object({
   // Kafka Core
   enabled: z.coerce.boolean().default(true),
-  brokers: z.string().default('localhost:9093'),
+  brokers: z
+    .union([
+      z
+        .string()
+        .transform((str) => str.split(',').map((broker) => broker.trim())),
+      z.array(z.string()),
+    ])
+    .default(['localhost:9093']),
   clientId: z.string().default('acm'),
   groupId: z.string().default('acm-group'),
 
@@ -62,6 +69,17 @@ export const kafkaConfigSchema = z.object({
       maxInFlightRequests: 1,
       idempotent: false,
       transactionTimeout: 30000,
+    }),
+
+  // Keycloak Topics Configuration
+  keycloakTopics: z
+    .object({
+      userEvents: z.string().default('auth.events.v1'),
+      adminEvents: z.string().default('auth.events.v1'),
+    })
+    .default({
+      userEvents: 'auth.events.v1',
+      adminEvents: 'auth.events.v1',
     }),
 });
 

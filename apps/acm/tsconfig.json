@@ -4,10 +4,16 @@
   "include": [],
   "references": [
     {
-      "path": "../../libs/contracts/acm-contracts"
+      "path": "../../libs/contracts"
+    },
+    {
+      "path": "../../libs/shared"
     },
     {
       "path": "../../libs/rbac"
+    },
+    {
+      "path": "../../libs/contracts/acm-contracts"
     },
     {
       "path": "../../libs/contracts-kafka"

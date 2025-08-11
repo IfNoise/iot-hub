@@ -4,13 +4,16 @@
   "include": [],
   "references": [
     {
+      "path": "acm-contracts"
+    },
+    {
+      "path": "auth"
+    },
+    {
       "path": "users"
     },
     {
       "path": "devices"
-    },
-    {
-      "path": "auth"
     },
     {
       "path": "./tsconfig.lib.json"

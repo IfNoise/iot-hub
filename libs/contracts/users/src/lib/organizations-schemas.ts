@@ -10,20 +10,6 @@ export const OrganizationSchema = z
     description: z.string().optional().describe('Описание организации'),
     logo: z.string().url().optional().describe('URL логотипа'),
     domain: z.string().optional().describe('Домен организации'),
-    plan: z
-      .enum(['enterprise', 'business'])
-      .default('business')
-      .describe('Тариф организации'),
-    maxUsers: z
-      .number()
-      .positive()
-      .default(100)
-      .describe('Максимальное количество пользователей'),
-    maxDevices: z
-      .number()
-      .positive()
-      .default(1000)
-      .describe('Максимальное количество устройств'),
     isActive: z.boolean().default(true).describe('Статус активности'),
     createdAt: z
       .preprocess((v) => new Date(v as string), z.date())
@@ -93,23 +79,23 @@ export const UpdateGroupSchema = CreateGroupSchema.partial();
  * Схема для запроса списка организаций
  */
 export const OrganizationQuerySchema = z.object({
-  page: z.number().min(1).default(1).describe('Номер страницы'),
-  limit: z
+  page: z.coerce.number().min(1).default(1).describe('Номер страницы'),
+  limit: z.coerce
     .number()
     .min(1)
     .max(100)
     .default(10)
     .describe('Количество элементов'),
   search: z.string().optional().describe('Поиск по названию'),
-  isActive: z.boolean().optional().describe('Фильтр по активности'),
+  isActive: z.coerce.boolean().optional().describe('Фильтр по активности'),
 });
 
 /**
  * Схема для запроса списка групп
  */
 export const GroupQuerySchema = z.object({
-  page: z.number().min(1).default(1).describe('Номер страницы'),
-  limit: z
+  page: z.coerce.number().min(1).default(1).describe('Номер страницы'),
+  limit: z.coerce
     .number()
     .min(1)
     .max(100)
@@ -123,7 +109,7 @@ export const GroupQuerySchema = z.object({
     .optional()
     .describe('ID родительской группы'),
   search: z.string().optional().describe('Поиск по названию'),
-  isActive: z.boolean().optional().describe('Фильтр по активности'),
+  isActive: z.coerce.boolean().optional().describe('Фильтр по активности'),
 });
 
 /**

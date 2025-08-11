@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, isAxiosError } from 'axios';
 import { ConfigService } from '../../config/config.service.js';
 
 // Используем типы Keycloak API без самописных интерфейсов
@@ -17,6 +17,20 @@ export interface KeycloakUserRepresentation {
   createdTimestamp?: number;
 }
 
+export interface KeycloakOrganizationRepresentation {
+  id: string;
+  name: string;
+  displayName?: string;
+  description?: string;
+  url?: string;
+  enabled: boolean;
+  attributes?: Record<string, string[]>;
+  domains?: Array<{
+    name: string;
+    verified: boolean;
+  }>;
+}
+
 export interface KeycloakGroupRepresentation {
   id: string;
   name: string;
@@ -31,7 +45,7 @@ export class KeycloakIntegrationService {
   private readonly logger = new Logger(KeycloakIntegrationService.name);
   private axiosInstance: AxiosInstance;
   private accessToken: string | null = null;
-  private tokenExpiresAt = 0;
+  private tokenExpiresAt = 0; // Принудительно сбрасываем кэш
 
   constructor(private readonly configService: ConfigService) {
     const keycloakConfig = this.configService.auth.keycloak;
@@ -136,15 +150,28 @@ export class KeycloakIntegrationService {
         throw new Error('Keycloak is not configured');
       }
 
-      const response = await axios.get(
-        `/admin/realms/${keycloakConfig.realm}/users/${keycloakId}`
-      );
+      const url = `/admin/realms/${keycloakConfig.realm}/users/${keycloakId}`;
+      this.logger.debug(`Getting user by ID from URL: ${url}`);
+
+      const response = await axios.get(url);
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        this.logger.warn(
+          `User ${keycloakId} not found in realm ${this.configService.auth.keycloak?.realm}`
+        );
         return null;
       }
-      this.logger.error(`Failed to get user ${keycloakId}`, error);
+      this.logger.error(
+        `Failed to get user ${keycloakId}`,
+        error instanceof Error ? error.message : error
+      );
+      if (isAxiosError(error)) {
+        this.logger.error(
+          `HTTP status: ${error.response?.status}, data:`,
+          error.response?.data
+        );
+      }
       throw error;
     }
   }
@@ -179,11 +206,11 @@ export class KeycloakIntegrationService {
   }
 
   /**
-   * Get organization (group) by ID (только чтение)
+   * Get organization by ID using Organizations API (Keycloak 26+)
    */
   async getOrganizationById(
     keycloakId: string
-  ): Promise<KeycloakGroupRepresentation | null> {
+  ): Promise<KeycloakOrganizationRepresentation | null> {
     try {
       const axios = await this.getAuthenticatedAxios();
       const keycloakConfig = this.configService.auth.keycloak;
@@ -192,15 +219,31 @@ export class KeycloakIntegrationService {
         throw new Error('Keycloak is not configured');
       }
 
-      const response = await axios.get(
-        `/admin/realms/${keycloakConfig.realm}/groups/${keycloakId}`
-      );
+      const url = `/admin/realms/${keycloakConfig.realm}/organizations/${keycloakId}`;
+      this.logger.debug(`Getting organization: ${url}`);
+
+      const response = await axios.get(url);
+      this.logger.debug(`Successfully got organization: ${keycloakId}`);
       return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        return null;
+    } catch (error: unknown) {
+      if (isAxiosError(error)) {
+        this.logger.error(`Failed to get organization ${keycloakId}`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+          message: error.message,
+        });
+
+        if (error.response?.status === 404) {
+          this.logger.warn(`Organization not found: ${keycloakId}`);
+          return null;
+        }
+      } else {
+        this.logger.error(`Failed to get organization ${keycloakId}`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
-      this.logger.error(`Failed to get organization ${keycloakId}`, error);
       throw error;
     }
   }
@@ -233,9 +276,9 @@ export class KeycloakIntegrationService {
   }
 
   /**
-   * Get all organizations (groups) - для админских задач (только чтение)
+   * Get all organizations - для админских задач (Keycloak 26+)
    */
-  async getAllOrganizations(): Promise<KeycloakGroupRepresentation[]> {
+  async getAllOrganizations(): Promise<KeycloakOrganizationRepresentation[]> {
     try {
       const axios = await this.getAuthenticatedAxios();
       const keycloakConfig = this.configService.auth.keycloak;
@@ -244,13 +287,26 @@ export class KeycloakIntegrationService {
         throw new Error('Keycloak is not configured');
       }
 
-      const response = await axios.get(
-        `/admin/realms/${keycloakConfig.realm}/groups`
-      );
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to get organizations', error);
-      throw error;
+      const url = `/admin/realms/${keycloakConfig.realm}/organizations`;
+      this.logger.debug(`Getting all organizations: ${url}`);
+
+      const response = await axios.get(url);
+      return response.data || [];
+    } catch (error: unknown) {
+      if (isAxiosError(error)) {
+        this.logger.error('Failed to get organizations', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+          message: error.message,
+        });
+      } else {
+        this.logger.error('Failed to get organizations', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return [];
     }
   }
 }

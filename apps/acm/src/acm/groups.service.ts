@@ -6,28 +6,54 @@ import {
   type UpdateGroup,
   type GroupQuery,
 } from '@iot-hub/acm-contracts';
+import { DatabaseService } from '../infrastructure/database/database.service.js';
+import { groupsTable } from '@iot-hub/shared';
+import { eq, and, like, desc, count } from 'drizzle-orm';
 
 @Injectable()
 export class GroupsService {
+  constructor(private readonly databaseService: DatabaseService) {}
+
   /**
    * Создание новой группы
    */
   async create(createRequest: CreateGroup, createdBy: string): Promise<Group> {
-    // TODO: Реализовать создание группы в базе данных
+    try {
+      // Вставляем группу в базу данных
+      const [newGroup] = await this.databaseService.db
+        .insert(groupsTable as any)
+        .values({
+          keycloakId: `keycloak-group-${Date.now()}`, // Временное значение для Keycloak ID
+          organizationId: createRequest.organizationId,
+          name: createRequest.name,
+          description: createRequest.description || null,
+          createdBy: createRequest.createdBy,
+          isActive: createRequest.isActive ?? true,
+          parentGroupId: createRequest.parentGroupId || null,
+          metadata: createRequest.metadata || {},
+        })
+        .returning();
 
-    const newGroup: Group = {
-      id: `group-${Date.now()}`,
-      ...createRequest,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy,
-      metadata: {},
-    };
+      const result: Group = {
+        id: (newGroup as any).id,
+        name: (newGroup as any).name,
+        description: (newGroup as any).description || '',
+        organizationId: (newGroup as any).organizationId,
+        isActive: true, // По умолчанию активная группа
+        createdAt: (newGroup as any).createdAt,
+        updatedAt: (newGroup as any).updatedAt,
+        createdBy,
+        metadata: {},
+      };
 
-    console.log('Creating new group:', newGroup);
-
-    return newGroup;
+      console.log('Created new group in database:', result);
+      return result;
+    } catch (error) {
+      console.error('Error creating group:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to create group: ${errorMessage}`);
+    }
   }
 
   /**
@@ -36,40 +62,74 @@ export class GroupsService {
   async findAll(
     query: GroupQuery
   ): Promise<{ groups: Group[]; total: number; page: number; limit: number }> {
-    // TODO: Реализовать получение групп из базы данных
-    const groups: Group[] = [
-      {
-        id: 'group-1',
-        name: 'Administrators',
-        description: 'System administrators group',
-        organizationId: query.organizationId || 'default-org',
-        parentGroupId: null,
-        isActive: true,
-        createdAt: new Date(Date.now() - 86400000),
-        updatedAt: new Date(),
-        createdBy: 'system',
-        metadata: {},
-      },
-      {
-        id: 'group-2',
-        name: 'Users',
-        description: 'Regular users group',
-        organizationId: query.organizationId || 'default-org',
-        parentGroupId: null,
-        isActive: true,
-        createdAt: new Date(Date.now() - 172800000),
-        updatedAt: new Date(Date.now() - 3600000),
-        createdBy: 'admin',
-        metadata: {},
-      },
-    ];
+    try {
+      const page =
+        typeof query.page === 'number'
+          ? query.page
+          : parseInt(query.page || '1', 10);
+      const limit =
+        typeof query.limit === 'number'
+          ? query.limit
+          : parseInt(query.limit || '10', 10);
+      const offset = (page - 1) * limit;
 
-    return {
-      groups,
-      total: groups.length,
-      page: query.page || 1,
-      limit: query.limit || 10,
-    };
+      // Строим WHERE условия
+      const whereConditions = [];
+
+      if (query.organizationId) {
+        whereConditions.push(
+          eq((groupsTable as any).organizationId, query.organizationId)
+        );
+      }
+
+      if (query.search) {
+        whereConditions.push(
+          like((groupsTable as any).name, `%${query.search}%`)
+        );
+      }
+
+      // Получаем группы с пагинацией
+      const dbGroups = await this.databaseService.db
+        .select()
+        .from(groupsTable as any)
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc((groupsTable as any).createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Получаем общее количество записей
+      const [{ totalCount }] = await this.databaseService.db
+        .select({ totalCount: count() })
+        .from(groupsTable as any)
+        .where(
+          whereConditions.length > 0 ? and(...whereConditions) : undefined
+        );
+
+      // Преобразуем результаты в формат контракта
+      const result: Group[] = dbGroups.map((group: any) => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || '',
+        organizationId: group.organizationId,
+        isActive: true, // Пока что всегда true
+        createdAt: group.createdAt,
+        updatedAt: group.updatedAt,
+        createdBy: 'current-user-id', // TODO: Сохранять в БД
+        metadata: {},
+      }));
+
+      return {
+        groups: result,
+        total: totalCount,
+        page,
+        limit,
+      };
+    } catch (error) {
+      console.error('Error fetching groupsTable:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to fetch groupsTable: ${errorMessage}`);
+    }
   }
 
   /**
@@ -82,7 +142,6 @@ export class GroupsService {
       name: 'Sample Group',
       description: 'This is a sample group',
       organizationId: 'default-org',
-      parentGroupId: null,
       isActive: true,
       createdAt: new Date(Date.now() - 86400000),
       updatedAt: new Date(),
@@ -103,7 +162,6 @@ export class GroupsService {
       name: updateRequest.name || 'Updated Group',
       description: updateRequest.description || 'Updated description',
       organizationId: 'default-org',
-      parentGroupId: updateRequest.parentGroupId || null,
       isActive: updateRequest.isActive ?? true,
       createdAt: new Date(Date.now() - 86400000),
       updatedAt: new Date(),

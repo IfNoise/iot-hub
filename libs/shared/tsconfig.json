@@ -4,6 +4,12 @@
   "include": [],
   "references": [
     {
+      "path": "../contracts/users"
+    },
+    {
+      "path": "../contracts/devices"
+    },
+    {
       "path": "./tsconfig.lib.json"
     },
     {

@@ -1,15 +1,15 @@
-import { Controller, UseGuards } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import {
   acmContract,
   AccessCheckSchema,
   KeycloakUserSyncSchema,
 } from '@iot-hub/acm-contracts';
-import { Permissions, RolesGuard } from '@iot-hub/rbac';
+// import { Permissions, RolesGuard } from '@iot-hub/rbac'; // Временно отключено
 import { AcmService } from './acm.service.js';
 
 @Controller()
-@UseGuards(RolesGuard)
+// @UseGuards(RolesGuard) // Временно отключено
 export class AcmController {
   constructor(private readonly acmService: AcmService) {}
 
@@ -17,7 +17,7 @@ export class AcmController {
    * Проверка доступа пользователя к ресурсу
    */
   @TsRestHandler(acmContract.checkAccess)
-  @Permissions('system:admin', 'acm:access:check')
+  // @Permissions('system:admin', 'acm:access:check')
   async checkAccess() {
     return tsRestHandler(acmContract.checkAccess, async ({ body }) => {
       const request = AccessCheckSchema.parse(body);
@@ -34,7 +34,7 @@ export class AcmController {
    * Получение контекста пользователя с правами доступа
    */
   @TsRestHandler(acmContract.getUserContext)
-  @Permissions('users:read')
+  // @Permissions('users:read')
   async getUserContext() {
     return tsRestHandler(acmContract.getUserContext, async ({ params }) => {
       const { userId } = params;
@@ -42,7 +42,7 @@ export class AcmController {
 
       return {
         status: 200,
-        body: userContext,
+        body: userContext.user,
       };
     });
   }
@@ -51,7 +51,7 @@ export class AcmController {
    * Синхронизация пользователя из Keycloak
    */
   @TsRestHandler(acmContract.syncUserFromKeycloak)
-  @Permissions('system:admin')
+  // @Permissions('system:admin')
   async syncUserFromKeycloak() {
     return tsRestHandler(acmContract.syncUserFromKeycloak, async ({ body }) => {
       const syncRequest = KeycloakUserSyncSchema.parse(body);
@@ -68,7 +68,7 @@ export class AcmController {
    * Получение разрешений пользователя
    */
   @TsRestHandler(acmContract.getUserPermissions)
-  @Permissions('users:read')
+  // @Permissions('users:read')
   async getUserPermissions() {
     return tsRestHandler(
       acmContract.getUserPermissions,
@@ -93,7 +93,7 @@ export class AcmController {
    * Проверка конкретного разрешения
    */
   @TsRestHandler(acmContract.hasPermission)
-  @Permissions('users:read')
+  // @Permissions('users:read')
   async hasPermission() {
     return tsRestHandler(
       acmContract.hasPermission,

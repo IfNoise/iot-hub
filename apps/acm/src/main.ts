@@ -10,7 +10,9 @@ import './instrumentation.js';
 import 'dotenv/config';
 import { Logger } from 'nestjs-pino';
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { generateOpenApi } from '@ts-rest/open-api';
+import { acmServiceContract as contracts } from '@iot-hub/contracts';
+import * as swaggerUi from 'swagger-ui-express';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app/app.module.js';
 
@@ -27,18 +29,66 @@ async function bootstrap() {
   // Global validation pipe with Zod
   app.useGlobalPipes(new ZodValidationPipe());
 
-  // Swagger setup
-  const config = new DocumentBuilder()
-    .setTitle('User Management Service')
-    .setDescription('Microservice for user and organization management')
-    .setVersion('1.0')
-    .addTag('users')
-    .addTag('organizations')
-    .addTag('health')
-    .build();
+  // Generate OpenAPI documentation from TS-REST contracts
+  const document = generateOpenApi(contracts, {
+    info: {
+      title: 'IoT Hub API',
+      version: '1.0.0',
+      description: 'API для IoT Hub системы',
+    },
+    servers: [
+      {
+        url: `http://localhost:${process.env.PORT || 3000}/${globalPrefix}`,
+        description: 'Local development server',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        keycloakAuth: {
+          type: 'oauth2',
+          flows: {
+            password: {
+              tokenUrl:
+                'http://localhost:8080/realms/iot-hub/protocol/openid-connect/token',
+              scopes: {
+                openid: 'Basic identity',
+                profile: 'User profile',
+                email: 'User email',
+              },
+            },
+          },
+        },
+      },
+    },
+    security: [{ keycloakAuth: ['openid'] }],
+  });
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${globalPrefix}/docs`, app, document);
+  // Setup Swagger UI with correct path
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'none',
+        displayRequestDuration: true,
+        tryItOutEnabled: true,
+        // Enable the "Authorize" button
+        authAction: {
+          bearerAuth: {
+            name: 'bearerAuth',
+            schema: {
+              type: 'http',
+              in: 'header',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
+            value: 'Bearer ',
+          },
+        },
+      },
+    })
+  );
 
   const port = process.env.PORT || 3001;
   await app.listen(port);

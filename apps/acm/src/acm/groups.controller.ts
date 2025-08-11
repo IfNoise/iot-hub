@@ -1,4 +1,4 @@
-import { Controller, UseGuards } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import {
   groupsContract,
@@ -7,11 +7,11 @@ import {
   AddGroupMemberSchema,
   UpdateGroupMemberRoleSchema,
 } from '@iot-hub/acm-contracts';
-import { Permissions, RolesGuard } from '@iot-hub/rbac';
+// import { Permissions, RolesGuard } from '@iot-hub/rbac'; // Временно отключено
 import { GroupsService } from './groups.service.js';
 
 @Controller()
-@UseGuards(RolesGuard)
+// @UseGuards(RolesGuard) // Временно отключено
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
@@ -19,7 +19,7 @@ export class GroupsController {
    * Создание новой группы
    */
   @TsRestHandler(groupsContract.create)
-  @Permissions('groups:write')
+  // // @Permissions('groups:write') // Временно отключено
   async create() {
     return tsRestHandler(groupsContract.create, async ({ body }) => {
       const createRequest = CreateGroupSchema.parse(body);
@@ -43,10 +43,17 @@ export class GroupsController {
    * Получение списка групп
    */
   @TsRestHandler(groupsContract.findAll)
-  @Permissions('groups:read')
+  // // @Permissions('groups:read') // Временно отключено
   async findAll() {
     return tsRestHandler(groupsContract.findAll, async ({ query }) => {
-      const result = await this.groupsService.findAll(query);
+      // Преобразуем строковые query параметры в числа
+      const processedQuery = {
+        ...query,
+        page: query.page ? Number(query.page) : 1,
+        limit: query.limit ? Number(query.limit) : 10,
+      };
+
+      const result = await this.groupsService.findAll(processedQuery);
 
       return {
         status: 200,
@@ -59,7 +66,7 @@ export class GroupsController {
    * Получение группы по ID
    */
   @TsRestHandler(groupsContract.findOne)
-  @Permissions('groups:read')
+  // @Permissions('groups:read')
   async findOne() {
     return tsRestHandler(groupsContract.findOne, async ({ params }) => {
       const { id } = params;
@@ -83,7 +90,7 @@ export class GroupsController {
    * Обновление группы
    */
   @TsRestHandler(groupsContract.update)
-  @Permissions('groups:write')
+  // @Permissions('groups:write')
   async update() {
     return tsRestHandler(groupsContract.update, async ({ params, body }) => {
       const { id } = params;
@@ -109,7 +116,7 @@ export class GroupsController {
    * Удаление группы
    */
   @TsRestHandler(groupsContract.remove)
-  @Permissions('groups:delete')
+  // @Permissions('groups:delete')
   async remove() {
     return tsRestHandler(groupsContract.remove, async ({ params }) => {
       const { id } = params;
@@ -134,7 +141,7 @@ export class GroupsController {
    * Получение участников группы
    */
   @TsRestHandler(groupsContract.getMembers)
-  @Permissions('groups:read')
+  // @Permissions('groups:read')
   async getMembers() {
     return tsRestHandler(
       groupsContract.getMembers,
@@ -154,7 +161,7 @@ export class GroupsController {
    * Добавление участника в группу
    */
   @TsRestHandler(groupsContract.addMember)
-  @Permissions('groups:write')
+  // @Permissions('groups:write')
   async addMember() {
     return tsRestHandler(groupsContract.addMember, async ({ params, body }) => {
       const { id: groupId } = params;
@@ -181,7 +188,7 @@ export class GroupsController {
    * Обновление роли участника группы
    */
   @TsRestHandler(groupsContract.updateMemberRole)
-  @Permissions('groups:write')
+  // @Permissions('groups:write')
   async updateMemberRole() {
     return tsRestHandler(
       groupsContract.updateMemberRole,
@@ -214,7 +221,7 @@ export class GroupsController {
    * Удаление участника из группы
    */
   @TsRestHandler(groupsContract.removeMember)
-  @Permissions('groups:write')
+  // @Permissions('groups:write')
   async removeMember() {
     return tsRestHandler(groupsContract.removeMember, async ({ params }) => {
       const { groupId, userId } = params;

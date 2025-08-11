@@ -25,6 +25,9 @@
   ],
   "references": [
     {
+      "path": "../../libs/shared/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/contracts-kafka/tsconfig.lib.json"
     },
     {

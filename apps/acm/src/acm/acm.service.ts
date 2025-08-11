@@ -1,62 +1,90 @@
 import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import { eq } from 'drizzle-orm';
+import { DatabaseService } from '../infrastructure/database/database.service.js';
+import { usersTable, type DatabaseUser } from '@iot-hub/shared';
 import {
   type AccessCheck,
   type AccessResult,
   type UserContext,
   type KeycloakUserSync,
-  SystemRoleEnum,
   PermissionEnum,
 } from '@iot-hub/acm-contracts';
 
 @Injectable()
 export class AcmService {
+  constructor(
+    private readonly database: DatabaseService,
+    @InjectPinoLogger(AcmService.name) private readonly logger: PinoLogger
+  ) {}
+
   /**
    * Проверка доступа пользователя к ресурсу
    */
   async checkAccess(request: AccessCheck): Promise<AccessResult> {
-    // TODO: Реализовать проверку доступа на основе:
-    // 1. Получить контекст пользователя из базы данных
-    // 2. Проверить разрешения на ресурс и действие
-    // 3. Учесть контекст организации/группы
+    try {
+      // Получаем контекст пользователя из базы данных
+      const { user: userContext } = await this.getUserContext(request.userId);
 
-    // Временная заглушка
-    const hasAccess = await this.evaluateAccess(
-      request.userId,
-      request.resource,
-      request.resourceId,
-      request.action,
-      request.context
-    );
+      // Проверяем разрешения пользователя для данного ресурса и действия
+      const hasAccess = await this.evaluateAccess(
+        userContext,
+        request.resource,
+        request.resourceId,
+        request.action,
+        request.context
+      );
 
-    return {
-      allowed: hasAccess,
-      reason: hasAccess ? undefined : 'Insufficient permissions',
-      requiredPermissions: hasAccess ? undefined : ['users:read'],
-    };
+      return {
+        allowed: hasAccess.allowed,
+        reason: hasAccess.reason,
+        requiredPermissions: hasAccess.requiredPermissions,
+      };
+    } catch (error) {
+      console.error('Error checking access:', error);
+      return {
+        allowed: false,
+        reason: 'Internal error during access check',
+        requiredPermissions: [],
+      };
+    }
   }
 
   /**
    * Получение контекста пользователя
    */
-  async getUserContext(userId: string): Promise<UserContext> {
-    // TODO: Реализовать получение из базы данных:
-    // 1. Основные данные пользователя
-    // 2. Роли пользователя
-    // 3. Разрешения пользователя
-    // 4. Принадлежность к организации и группам
+  async getUserContext(userId: string): Promise<{ user: UserContext }> {
+    this.logger.info('Getting user context', { userId });
 
-    // Временная заглушка
+    const user = await this.database.db
+      .select()
+      .from(usersTable as any)
+      .where(eq(usersTable.userId as any, userId))
+      .limit(1);
+
+    if (!user.length) {
+      throw new Error('User not found');
+    }
+
+    const userData = user[0] as DatabaseUser;
     return {
-      userId,
-      email: 'user@example.com',
-      name: 'Test User',
-      roles: [SystemRoleEnum.enum['personal-user']],
-      organizationId: null,
-      groupIds: [],
-      permissions: [
-        PermissionEnum.enum['users:read'],
-        PermissionEnum.enum['devices:read'],
-      ],
+      user: {
+        userId: userData.userId,
+        email: userData.email,
+        name: userData.name,
+        roles: (userData.roles || []) as Array<
+          | 'admin'
+          | 'personal-user'
+          | 'organization-user'
+          | 'group-user'
+          | 'organization-admin'
+          | 'group-admin'
+          | 'organization-owner'
+        >,
+        permissions: [], // TODO: вычислить permissions из ролей
+        organizationId: userData.organizationId || undefined,
+        groupIds: userData.groups || [],
+      },
     };
   }
 
@@ -67,20 +95,56 @@ export class AcmService {
     request: KeycloakUserSync
   ): Promise<{ message: string; user: UserContext }> {
     try {
-      // TODO: Реализовать синхронизацию:
-      // 1. Найти или создать пользователя
-      // 2. Обновить основные данные
-      // 3. Синхронизировать роли и разрешения
-      // 4. Обновить принадлежность к группам
+      // Ищем пользователя в базе
+      const existingUser = await this.database.db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.userId, request.keycloakUserId))
+        .limit(1);
 
-      console.log('Syncing user from Keycloak:', {
-        keycloakUserId: request.keycloakUserId,
-        email: request.email,
-        enabled: request.enabled,
-      });
+      let user: UserContext;
 
-      // Создаем/обновляем пользователя
-      const user = await this.createOrUpdateUser(request);
+      if (existingUser.length > 0) {
+        // Обновляем существующего пользователя
+        const userData = existingUser[0];
+        const updatedData = {
+          email: request.email,
+          name:
+            `${request.firstName || ''} ${request.lastName || ''}`.trim() ||
+            request.username ||
+            userData.name,
+          updatedAt: new Date(),
+        };
+
+        await this.database.db
+          .update(usersTable)
+          .set(updatedData)
+          .where(eq(usersTable.userId, request.keycloakUserId));
+
+        const { user: userResult } = await this.getUserContext(
+          request.keycloakUserId
+        );
+        user = userResult;
+      } else {
+        // Создаем нового пользователя
+        const newUser = {
+          userId: request.keycloakUserId,
+          email: request.email,
+          name:
+            `${request.firstName || ''} ${request.lastName || ''}`.trim() ||
+            request.username ||
+            'Unknown User',
+          plan: 'free' as const,
+          accountType: 'individual' as const,
+        };
+
+        await this.database.db.insert(usersTable).values(newUser);
+
+        const userContextResult = await this.getUserContext(
+          request.keycloakUserId
+        );
+        user = userContextResult.user;
+      }
 
       return {
         message: 'User synchronized successfully',
@@ -152,52 +216,91 @@ export class AcmService {
    * Приватный метод для оценки доступа
    */
   private async evaluateAccess(
-    userId: string,
+    userContext: UserContext,
     resource: string,
     resourceId: string,
     action: string,
-    context?: Record<string, unknown>
-  ): Promise<boolean> {
-    // TODO: Реализовать логику оценки доступа
-    console.log('Evaluating access:', {
-      userId,
-      resource,
-      resourceId,
-      action,
-      context,
-    });
+    _context?: Record<string, unknown>
+  ): Promise<AccessResult> {
+    try {
+      // Определяем необходимые разрешения для данного действия
+      const requiredPermissions = this.getRequiredPermissions(resource, action);
 
-    // Временная заглушка - всегда разрешаем доступ
-    return true;
+      // Проверяем, есть ли у пользователя необходимые разрешения
+      const hasRequiredPermissions = requiredPermissions.some((permission) =>
+        userContext.permissions.includes(permission)
+      );
+
+      if (hasRequiredPermissions) {
+        return {
+          allowed: true,
+        };
+      }
+
+      return {
+        allowed: false,
+        reason: `Insufficient permissions for ${action} on ${resource}`,
+        requiredPermissions,
+      };
+    } catch (error) {
+      console.error('Error evaluating access:', error);
+      return {
+        allowed: false,
+        reason: 'Internal error during access evaluation',
+        requiredPermissions: [],
+      };
+    }
   }
 
   /**
-   * Приватный метод для создания/обновления пользователя из Keycloak
+   * Получение необходимых разрешений для ресурса и действия
    */
-  private async createOrUpdateUser(
-    request: KeycloakUserSync
-  ): Promise<UserContext> {
-    // TODO: Реализовать создание/обновление в базе данных
-
-    const user: UserContext = {
-      userId: request.keycloakUserId,
-      email: request.email,
-      name:
-        `${request.firstName || ''} ${request.lastName || ''}`.trim() ||
-        request.username ||
-        'Unknown User',
-      roles: [SystemRoleEnum.enum['personal-user']],
-      organizationId: null,
-      groupIds: [],
-      permissions: [
-        PermissionEnum.enum['users:read'],
-        PermissionEnum.enum['devices:read'],
-      ],
+  private getRequiredPermissions(
+    resource: string,
+    action: string
+  ): Array<typeof PermissionEnum._type> {
+    const permissionMap: Record<
+      string,
+      Record<string, Array<typeof PermissionEnum._type>>
+    > = {
+      user: {
+        read: [PermissionEnum.enum['users:read']],
+        write: [PermissionEnum.enum['users:write']],
+        delete: [PermissionEnum.enum['users:delete']],
+        manage: [PermissionEnum.enum['users:manage']],
+      },
+      device: {
+        read: [PermissionEnum.enum['devices:read']],
+        write: [PermissionEnum.enum['devices:write']],
+        delete: [PermissionEnum.enum['devices:delete']],
+        manage: [PermissionEnum.enum['devices:manage']],
+        bind: [PermissionEnum.enum['devices:bind']],
+      },
+      organization: {
+        read: [PermissionEnum.enum['organizations:read']],
+        write: [PermissionEnum.enum['organizations:write']],
+        delete: [PermissionEnum.enum['organizations:delete']],
+        manage: [PermissionEnum.enum['organizations:manage']],
+        invite: [PermissionEnum.enum['organizations:invite']],
+      },
+      group: {
+        read: [PermissionEnum.enum['groups:read']],
+        write: [PermissionEnum.enum['groups:write']],
+        delete: [PermissionEnum.enum['groups:delete']],
+        manage: [PermissionEnum.enum['groups:manage']],
+        invite: [PermissionEnum.enum['groups:invite']],
+      },
     };
 
-    // Симуляция работы с базой данных
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    const resourcePermissions = permissionMap[resource.toLowerCase()];
+    if (!resourcePermissions) {
+      return [];
+    }
 
-    return user;
+    return resourcePermissions[action.toLowerCase()] || [];
   }
+
+  /**
+   * Удаляем старый метод createOrUpdateUser (заменен на логику в syncUserFromKeycloak)
+   */
 }

@@ -3,9 +3,15 @@ import { ConfigService } from '../../config/config.service.js';
 import { KafkaProducer } from './kafka.producer.js';
 import { KeycloakEventConsumer } from './keycloak-event.consumer.js';
 import { UserModule } from '../../user/user.module.js';
+import { AcmModule } from '../../acm/acm.module.js';
+import { KeycloakModule } from '../keycloak/keycloak.module.js';
 
 @Module({
-  imports: [forwardRef(() => UserModule)],
+  imports: [
+    forwardRef(() => UserModule),
+    forwardRef(() => AcmModule),
+    KeycloakModule,
+  ],
   providers: [
     {
       provide: KafkaProducer,

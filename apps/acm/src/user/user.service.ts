@@ -8,11 +8,16 @@ import { DatabaseService } from '../infrastructure/database/database.service.js'
 import { KeycloakIntegrationService } from '../infrastructure/keycloak/keycloak-integration.service.js';
 import { KafkaProducer } from '../infrastructure/kafka/kafka.producer.js';
 import {
-  users,
-  type InsertUser,
-  type SelectUser,
-} from '../infrastructure/database/schema.js';
-import { and, eq, like, count, isNull, or } from 'drizzle-orm';
+  usersTable,
+  type DatabaseUser,
+  type DatabaseInsertUser,
+  and,
+  eq,
+  like,
+  count,
+  isNull,
+  or,
+} from '@iot-hub/shared';
 import { KeycloakUserRepresentation } from '../infrastructure/keycloak/keycloak-integration.service.js';
 import { randomUUID } from 'crypto';
 
@@ -22,48 +27,109 @@ export class UserService {
   private readonly repository = {
     findByUserId: async (userId: string): Promise<User | null> => {
       const [user] = await this.databaseService.db
-        .select()
-        .from(users)
-        .where(and(eq(users.userId, userId), isNull(users.deletedAt)))
+        .select({
+          id: usersTable.id,
+          userId: usersTable.userId,
+          email: usersTable.email,
+          name: usersTable.name,
+          avatar: usersTable.avatar,
+          roles: usersTable.roles,
+          balance: usersTable.balance,
+          plan: usersTable.plan,
+          planExpiresAt: usersTable.planExpiresAt,
+          accountType: usersTable.accountType,
+          organizationId: usersTable.organizationId,
+          groups: usersTable.groups,
+          metadata: usersTable.metadata,
+          createdAt: usersTable.createdAt,
+          updatedAt: usersTable.updatedAt,
+          deletedAt: usersTable.deletedAt,
+        })
+        .from(usersTable)
+        .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)))
         .limit(1);
 
-      return user ? this.mapDbUserToContract(user, []) : null;
+      return user ? this.mapDbUserToContract(user, ['personal-user']) : null;
+    },
+
+    findByInternalId: async (internalId: string): Promise<User | null> => {
+      const [user] = await this.databaseService.db
+        .select({
+          id: usersTable.id,
+          userId: usersTable.userId,
+          email: usersTable.email,
+          name: usersTable.name,
+          avatar: usersTable.avatar,
+          roles: usersTable.roles,
+          balance: usersTable.balance,
+          plan: usersTable.plan,
+          planExpiresAt: usersTable.planExpiresAt,
+          accountType: usersTable.accountType,
+          organizationId: usersTable.organizationId,
+          groups: usersTable.groups,
+          metadata: usersTable.metadata,
+          createdAt: usersTable.createdAt,
+          updatedAt: usersTable.updatedAt,
+          deletedAt: usersTable.deletedAt,
+        })
+        .from(usersTable)
+        .where(and(eq(usersTable.id, internalId), isNull(usersTable.deletedAt)))
+        .limit(1);
+
+      return user ? this.mapDbUserToContract(user, ['personal-user']) : null;
     },
 
     findByEmail: async (email: string): Promise<User | null> => {
       const [user] = await this.databaseService.db
-        .select()
-        .from(users)
-        .where(and(eq(users.email, email), isNull(users.deletedAt)))
+        .select({
+          id: usersTable.id,
+          userId: usersTable.userId,
+          email: usersTable.email,
+          name: usersTable.name,
+          avatar: usersTable.avatar,
+          roles: usersTable.roles,
+          balance: usersTable.balance,
+          plan: usersTable.plan,
+          planExpiresAt: usersTable.planExpiresAt,
+          accountType: usersTable.accountType,
+          organizationId: usersTable.organizationId,
+          groups: usersTable.groups,
+          metadata: usersTable.metadata,
+          createdAt: usersTable.createdAt,
+          updatedAt: usersTable.updatedAt,
+          deletedAt: usersTable.deletedAt,
+        })
+        .from(usersTable)
+        .where(and(eq(usersTable.email, email), isNull(usersTable.deletedAt)))
         .limit(1);
 
-      return user ? this.mapDbUserToContract(user, []) : null;
+      return user ? this.mapDbUserToContract(user, ['personal-user']) : null;
     },
 
-    create: async (userData: InsertUser): Promise<User> => {
+    create: async (userData: DatabaseInsertUser): Promise<User> => {
       const [insertedUser] = await this.databaseService.db
-        .insert(users)
+        .insert(usersTable)
         .values(userData)
         .returning();
 
-      return this.mapDbUserToContract(insertedUser, []);
+      return this.mapDbUserToContract(insertedUser, ['personal-user']);
     },
 
     update: async (
       userId: string,
-      updateData: Partial<InsertUser>
+      updateData: Partial<DatabaseInsertUser>
     ): Promise<User> => {
       const [updatedUser] = await this.databaseService.db
-        .update(users)
+        .update(usersTable)
         .set(updateData)
-        .where(and(eq(users.userId, userId), isNull(users.deletedAt)))
+        .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)))
         .returning();
 
       if (!updatedUser) {
         throw new NotFoundException('User not found');
       }
 
-      return this.mapDbUserToContract(updatedUser, []);
+      return this.mapDbUserToContract(updatedUser, ['personal-user']);
     },
   };
 
@@ -77,7 +143,7 @@ export class UserService {
    * Sync user from Keycloak to local database
    * This is called when we receive Keycloak events via Kafka
    */
-  async syncFromKeycloak(keycloakUserId: string): Promise<User> {
+  async syncFromKeycloak(keycloakUserId: string): Promise<User | null> {
     this.logger.log(`Syncing user from Keycloak: ${keycloakUserId}`);
 
     try {
@@ -87,7 +153,22 @@ export class UserService {
       );
 
       if (!keycloakUser) {
-        throw new Error(`User ${keycloakUserId} not found in Keycloak`);
+        this.logger.warn(
+          `User ${keycloakUserId} not found in Keycloak, skipping sync`
+        );
+
+        // Проверяем, существует ли пользователь в локальной БД
+        const existingLocalUser = await this.repository.findByUserId(
+          keycloakUserId
+        );
+        if (existingLocalUser) {
+          this.logger.log(
+            `User ${keycloakUserId} exists in local DB but not in Keycloak`
+          );
+          return existingLocalUser;
+        }
+
+        return null; // Возвращаем null вместо ошибки
       }
 
       // 2. Check if user already exists in local database
@@ -99,7 +180,7 @@ export class UserService {
       }
 
       // 3. Create new user in local database
-      const dbUser: InsertUser = {
+      const dbUser: DatabaseInsertUser = {
         userId: keycloakUser.id,
         email: keycloakUser.email,
         name: `${keycloakUser.firstName || ''} ${
@@ -129,8 +210,11 @@ export class UserService {
     } catch (error) {
       this.logger.error(
         `Failed to sync user from Keycloak: ${keycloakUserId}`,
-        error
+        error instanceof Error ? error.message : error
       );
+      if (error instanceof Error) {
+        this.logger.error(`Stack trace:`, error.stack);
+      }
       throw error;
     }
   }
@@ -142,7 +226,7 @@ export class UserService {
     keycloakUserId: string,
     keycloakUser: KeycloakUserRepresentation
   ): Promise<User> {
-    const updateData: Partial<InsertUser> = {
+    const updateData: Partial<DatabaseInsertUser> = {
       email: keycloakUser.email,
       name: `${keycloakUser.firstName || ''} ${
         keycloakUser.lastName || ''
@@ -168,7 +252,7 @@ export class UserService {
   }
 
   /**
-   * Create user invitation (still needed for inviting users to organizations)
+   * Create user invitation (still needed for inviting usersTable to organizations)
    * This creates a placeholder record that will be synced when user actually registers
    */
   async createInvitation(
@@ -214,7 +298,20 @@ export class UserService {
   }
 
   /**
-   * Get users with pagination and filtering
+   * Get internal database ID by Keycloak user ID
+   */
+  async getInternalIdByUserId(userId: string): Promise<string | null> {
+    const [user] = await this.databaseService.db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)))
+      .limit(1);
+
+    return user?.id || null;
+  }
+
+  /**
+   * Get usersTable with pagination and filtering
    */
   async findAll(options: {
     page: number;
@@ -222,17 +319,22 @@ export class UserService {
     search?: string;
     organizationId?: string;
     plan?: string;
-  }): Promise<{ users: User[]; total: number; page: number; limit: number }> {
+  }): Promise<{
+    users: User[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const { page, limit, search, organizationId, plan } = options;
     const offset = (page - 1) * limit;
 
     // Build WHERE conditions
-    const conditions = [isNull(users.deletedAt)];
+    const conditions = [isNull(usersTable.deletedAt)];
 
     if (search) {
       const searchCondition = or(
-        like(users.email, `%${search}%`),
-        like(users.name, `%${search}%`)
+        like(usersTable.email, `%${search}%`),
+        like(usersTable.name, `%${search}%`)
       );
       if (searchCondition) {
         conditions.push(searchCondition);
@@ -240,11 +342,11 @@ export class UserService {
     }
 
     if (organizationId) {
-      conditions.push(eq(users.organizationId, organizationId));
+      conditions.push(eq(usersTable.organizationId, organizationId));
     }
 
     if (plan) {
-      conditions.push(eq(users.plan, plan));
+      conditions.push(eq(usersTable.plan, plan));
     }
 
     const whereCondition =
@@ -257,7 +359,7 @@ export class UserService {
     // Get total count
     const totalCountQuery = this.databaseService.db
       .select({ count: count() })
-      .from(users);
+      .from(usersTable);
 
     if (whereCondition) {
       totalCountQuery.where(whereCondition);
@@ -265,13 +367,30 @@ export class UserService {
 
     const [{ count: totalCount }] = await totalCountQuery;
 
-    // Get users with pagination
+    // Get usersTable with pagination
     const usersQuery = this.databaseService.db
-      .select()
-      .from(users)
+      .select({
+        id: usersTable.id,
+        userId: usersTable.userId,
+        email: usersTable.email,
+        name: usersTable.name,
+        avatar: usersTable.avatar,
+        roles: usersTable.roles,
+        balance: usersTable.balance,
+        plan: usersTable.plan,
+        planExpiresAt: usersTable.planExpiresAt,
+        accountType: usersTable.accountType,
+        organizationId: usersTable.organizationId,
+        groups: usersTable.groups,
+        metadata: usersTable.metadata,
+        createdAt: usersTable.createdAt,
+        updatedAt: usersTable.updatedAt,
+        deletedAt: usersTable.deletedAt,
+      })
+      .from(usersTable)
       .limit(limit)
       .offset(offset)
-      .orderBy(users.createdAt);
+      .orderBy(usersTable.createdAt);
 
     if (whereCondition) {
       usersQuery.where(whereCondition);
@@ -312,9 +431,26 @@ export class UserService {
     this.logger.log(`Finding user by ID: ${userId}`);
 
     const [dbUser] = await this.databaseService.db
-      .select()
-      .from(users)
-      .where(and(eq(users.userId, userId), isNull(users.deletedAt)))
+      .select({
+        id: usersTable.id,
+        userId: usersTable.userId,
+        email: usersTable.email,
+        name: usersTable.name,
+        avatar: usersTable.avatar,
+        roles: usersTable.roles,
+        balance: usersTable.balance,
+        plan: usersTable.plan,
+        planExpiresAt: usersTable.planExpiresAt,
+        accountType: usersTable.accountType,
+        organizationId: usersTable.organizationId,
+        groups: usersTable.groups,
+        metadata: usersTable.metadata,
+        createdAt: usersTable.createdAt,
+        updatedAt: usersTable.updatedAt,
+        deletedAt: usersTable.deletedAt,
+      })
+      .from(usersTable)
+      .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)))
       .limit(1);
 
     if (!dbUser) {
@@ -343,9 +479,26 @@ export class UserService {
     this.logger.log(`Finding user by email: ${email}`);
 
     const [dbUser] = await this.databaseService.db
-      .select()
-      .from(users)
-      .where(and(eq(users.email, email), isNull(users.deletedAt)))
+      .select({
+        id: usersTable.id,
+        userId: usersTable.userId,
+        email: usersTable.email,
+        name: usersTable.name,
+        avatar: usersTable.avatar,
+        roles: usersTable.roles,
+        balance: usersTable.balance,
+        plan: usersTable.plan,
+        planExpiresAt: usersTable.planExpiresAt,
+        accountType: usersTable.accountType,
+        organizationId: usersTable.organizationId,
+        groups: usersTable.groups,
+        metadata: usersTable.metadata,
+        createdAt: usersTable.createdAt,
+        updatedAt: usersTable.updatedAt,
+        deletedAt: usersTable.deletedAt,
+      })
+      .from(usersTable)
+      .where(and(eq(usersTable.email, email), isNull(usersTable.deletedAt)))
       .limit(1);
 
     if (!dbUser) {
@@ -371,7 +524,7 @@ export class UserService {
     await this.findOne(userId);
 
     // Update in local database
-    const updateData: Partial<InsertUser> = {};
+    const updateData: Partial<DatabaseInsertUser> = {};
 
     if (updateUserDto.name !== undefined) updateData.name = updateUserDto.name;
     if (updateUserDto.avatar !== undefined)
@@ -380,7 +533,6 @@ export class UserService {
       updateData.balance = updateUserDto.balance.toString();
     if (updateUserDto.plan !== undefined) {
       updateData.plan = updateUserDto.plan;
-      updateData.deviceLimit = this.getDeviceLimitByPlan(updateUserDto.plan);
     }
     if (updateUserDto.planExpiresAt !== undefined)
       updateData.planExpiresAt = updateUserDto.planExpiresAt;
@@ -396,9 +548,9 @@ export class UserService {
     updateData.updatedAt = new Date();
 
     const [updatedUser] = await this.databaseService.db
-      .update(users)
+      .update(usersTable)
       .set(updateData)
-      .where(and(eq(users.userId, userId), isNull(users.deletedAt)))
+      .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)))
       .returning();
 
     if (!updatedUser) {
@@ -437,12 +589,12 @@ export class UserService {
 
     // Soft delete in database
     const [deletedUser] = await this.databaseService.db
-      .update(users)
+      .update(usersTable)
       .set({
         deletedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(and(eq(users.userId, userId), isNull(users.deletedAt)))
+      .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)))
       .returning();
 
     if (!deletedUser) {
@@ -460,7 +612,7 @@ export class UserService {
         deletedUser.deletedAt?.toISOString() ?? new Date().toISOString(),
       deletedBy: 'system', // Could be passed as parameter
       hardDelete: false,
-      devicesCount: deletedUser.currentDeviceCount || 0,
+      devicesCount: 0, // TODO: подсчитать реальное количество устройств
       reason: 'User requested deletion',
     });
   }
@@ -478,42 +630,27 @@ export class UserService {
     );
 
     await this.databaseService.db
-      .update(users)
+      .update(usersTable)
       .set({
-        currentDeviceCount: deviceCount,
-        monthlyDataUsage: dataUsageMB.toString(),
         updatedAt: new Date(),
       })
-      .where(and(eq(users.userId, userId), isNull(users.deletedAt)));
-  }
-
-  /**
-   * Get device limit based on plan
-   */
-  private getDeviceLimitByPlan(plan: string): number {
-    switch (plan) {
-      case 'free':
-        return 5;
-      case 'pro':
-        return 50;
-      case 'enterprise':
-        return 1000;
-      default:
-        return 5;
-    }
+      .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)));
   }
 
   /**
    * Map database user to contract format
    */
-  private mapDbUserToContract(dbUser: SelectUser, roles: string[]): User {
+  private mapDbUserToContract(
+    dbUser: DatabaseUser,
+    additionalRoles: string[] = []
+  ): User {
     return {
       id: dbUser.userId, // Use userId as id for contract
       userId: dbUser.userId,
       email: dbUser.email,
       name: dbUser.name,
       avatar: dbUser.avatar || undefined,
-      roles: roles as Array<
+      roles: [...(dbUser.roles || []), ...additionalRoles] as Array<
         | 'admin'
         | 'personal-user'
         | 'organization-user'
@@ -532,5 +669,122 @@ export class UserService {
       createdAt: dbUser.createdAt,
       updatedAt: dbUser.updatedAt,
     };
+  }
+
+  /**
+   * Получает пользователя по внутреннему ID базы данных
+   */
+  async findByInternalId(internalId: string): Promise<User | null> {
+    try {
+      const user = await this.repository.findByInternalId(internalId);
+      return user;
+    } catch (error) {
+      this.logger.error(
+        `Failed to find user by internal ID ${internalId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Обновляет пользователя как владельца организации
+   */
+  async updateAsOrganizationOwner(
+    userId: string,
+    organizationId: string
+  ): Promise<User | null> {
+    try {
+      this.logger.log(`Updating user ${userId} as organization owner`);
+
+      const updateData: Partial<DatabaseInsertUser> = {
+        accountType: 'business',
+        plan: 'business',
+        organizationId: organizationId,
+      };
+
+      const updatedUser = await this.repository.update(userId, updateData);
+
+      this.logger.log(
+        `Successfully updated user ${userId} as organization owner`
+      );
+
+      return updatedUser;
+    } catch (error) {
+      this.logger.error(
+        `Failed to update user ${userId} as organization owner: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Создает пользователя из данных REGISTER события
+   */
+  async createUserFromEventData(userData: {
+    userId: string;
+    email?: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<User | null> {
+    try {
+      this.logger.log(`Creating user from event data: ${userData.userId}`);
+
+      // Проверяем обязательные поля
+      if (!userData.email || !userData.username) {
+        this.logger.error(
+          `Missing required fields for user ${userData.userId}: email=${userData.email}, username=${userData.username}`
+        );
+        return null;
+      }
+
+      // Проверяем, не существует ли уже такой пользователь
+      const existingUser = await this.repository.findByUserId(userData.userId);
+
+      if (existingUser) {
+        this.logger.log(
+          `User ${userData.userId} already exists, returning existing user`
+        );
+        return existingUser;
+      }
+
+      // Создаем нового пользователя
+      const dbUser: DatabaseInsertUser = {
+        userId: userData.userId,
+        email: userData.email,
+        name:
+          `${userData.firstName || ''} ${userData.lastName || ''}`.trim() ||
+          userData.username,
+        metadata: {
+          source: 'register_event',
+          username: userData.username,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+        },
+      };
+
+      this.logger.debug(
+        `Creating user in database with data: ${JSON.stringify(dbUser)}`
+      );
+
+      const createdUser = await this.repository.create(dbUser);
+
+      this.logger.log(
+        `Successfully created user ${userData.userId} from event data`
+      );
+
+      return createdUser;
+    } catch (error) {
+      this.logger.error(
+        `Failed to create user ${userData.userId} from event data: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
   }
 }
