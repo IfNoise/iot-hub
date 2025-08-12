@@ -1,8 +1,8 @@
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  schema: './src/infrastructure/database/schema.ts',
-  out: './drizzle',
+  schema: './src/infrastructure/database/acm-schema.ts',
+  out: './drizzle/migrations',
   dialect: 'postgresql',
   dbCredentials: {
     host: process.env.DATABASE_HOST || 'localhost',
@@ -12,6 +12,7 @@ export default defineConfig({
     database: process.env.DATABASE_NAME || 'iot_hub',
     ssl: process.env.DATABASE_SSL === 'true',
   },
+  schemaFilter: ['public'],
   verbose: true,
   strict: true,
 });

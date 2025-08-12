@@ -8,6 +8,8 @@
     "serve": "nx serve @iot-hub/acm",
     "dev": "nx run @iot-hub/acm:serve:development",
     "test": "nx test @iot-hub/acm",
+    "db:generate": "node scripts/generate-migrations.cjs",
+    "db:migrate": "node scripts/migrate.cjs",
     "migrate": "tsx scripts/migrate.ts"
   },
   "nx": {
