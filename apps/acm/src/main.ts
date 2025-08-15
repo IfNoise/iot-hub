@@ -94,7 +94,7 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(
-    `🚀 UserManagement Service is running on: http://localhost:${port}/${globalPrefix}`
+    `🚀 ACM Service is running on: http://localhost:${port}/${globalPrefix}`
   );
   logger.log(
     `📚 Swagger docs available at: http://localhost:${port}/${globalPrefix}/docs`

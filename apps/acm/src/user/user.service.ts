@@ -746,6 +746,47 @@ export class UserService {
   }
 
   /**
+   * Обновляет пользователя как участника организации
+   */
+  async updateAsOrganizationMember(
+    userId: string,
+    organizationId: string
+  ): Promise<User | null> {
+    try {
+      this.logger.log(`Updating user ${userId} as organization member`);
+      const existingUser = await this.repository.findByUserId(userId);
+      if (!existingUser) {
+        this.logger.warn(`User ${userId} not found`);
+        return null;
+      }
+
+      const updateData: Partial<DatabaseInsertUser> = {
+        accountType: 'organization',
+        plan: 'pro', // или другой план для участников
+        organizationId: organizationId,
+        roles: ['organization-user'], // роль участника, не владельца
+      };
+      const updatedUser = await this.repository.update(
+        existingUser.id,
+        updateData
+      );
+
+      this.logger.log(
+        `Successfully updated user ${userId} as organization member`
+      );
+
+      return updatedUser;
+    } catch (error) {
+      this.logger.error(
+        `Failed to update user ${userId} as organization member: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+  }
+
+  /**
    * Создает пользователя из данных REGISTER события
    */
   async createUserFromEventData(userData: {
@@ -766,7 +807,7 @@ export class UserService {
         return null;
       }
 
-      // Проверяем, не существует ли уже такой пользователь
+      // Проверяем, не существует ли уже такой пользователь по userId
       const existingUser = await this.repository.findByUserId(userData.userId);
 
       if (existingUser) {
@@ -784,6 +825,9 @@ export class UserService {
           `${userData.firstName || ''} ${userData.lastName || ''}`.trim() ||
           userData.username,
         roles: ['organization-user'],
+        balance: '0.00', // Обязательное поле
+        plan: 'free', // Обязательное поле  
+        accountType: 'individual', // Обязательное поле
         metadata: {
           source: 'register_event',
           username: userData.username,

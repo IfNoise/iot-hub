@@ -34,6 +34,7 @@ export interface KeycloakUserEvent {
     first_name?: string;
     last_name?: string;
     organizationId?: string;
+    registrationType?: 'organization_creator' | 'invited_user';
     auth_method?: string;
     auth_type?: string;
     register_method?: string;
@@ -285,7 +286,8 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
               `User ${event.userId} successfully created from REGISTER event`
             );
 
-            // 4. Если есть organizationId, создаем/синхронизируем организацию
+            // 4. Обрабатываем организационную логику в зависимости от типа регистрации
+            // Новая логика: различаем создателей организаций и приглашенных пользователей
             if (event.details.organizationId) {
               // Получаем внутренний ID пользователя из базы данных
               const internalUserId =
@@ -299,15 +301,33 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
                 );
               }
 
-              await this.syncOrganizationFromRegisterEvent(
-                event.details.organizationId,
-                internalUserId // Используем внутренний ID из базы данных
-              );
-              //4. Делаем пользователя владельцем организации
-              await this.userService.updateAsOrganizationOwner(
-                internalUserId,
-                event.details.organizationId
-              );
+              // Проверяем тип регистрации из Keycloak Event Provider
+              const registrationType = event.details.registrationType;
+              
+              if (registrationType === 'invited_user') {
+                // Пользователь приглашен в существующую организацию
+                await this.handleInvitedUserRegistration(
+                  event.details.organizationId,
+                  internalUserId,
+                  event.userId
+                );
+              } else if (registrationType === 'organization_creator') {
+                // Пользователь создает новую организацию
+                await this.handleOrganizationCreatorRegistration(
+                  event.details.organizationId,
+                  internalUserId,
+                  event.userId
+                );
+              } else {
+                // Fallback: старая логика для обратной совместимости
+                this.logger.warn(
+                  `Unknown registration type '${registrationType}' for user ${event.userId}, using legacy logic`
+                );
+                await this.handleLegacyOrganizationRegistration(
+                  event.details.organizationId,
+                  internalUserId
+                );
+              }
             }
 
             // 5. Затем публикуем событие в Kafka для других сервисов
@@ -366,23 +386,24 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
     //this.logger.debug('Handling auth event:', event);
 
     // Логируем полную структуру события для диагностики
-    // this.logger.info(
-    //   `Full event structure received from Keycloak: ${JSON.stringify(
-    //     {
-    //       eventKeys: Object.keys(event),
-    //       eventType: event.type,
-    //       eventTime: event.time,
-    //       eventDetails: event.details,
-    //       eventOperationType: event.operationType,
-    //       eventResourceType: event.resourceType,
-    //       eventUserId: event.userId,
-    //       representation: event.representation,
-    //       fullEvent: event,
-    //     },
-    //     null,
-    //     2
-    //   )}`
-    // );
+    this.logger.info(
+      `Full event structure received from Keycloak: ${JSON.stringify(
+        {
+          eventKeys: Object.keys(event),
+          eventType: event.type,
+          eventTime: event.time,
+          eventDetails: event.details,
+          eventOperationType: event.operationType,
+          eventResourceType: event.resourceType,
+          eventUserId: event.userId,
+          representation: event.representation,
+          registrationType: (event.details as Record<string, unknown>)?.registrationType,
+          fullEvent: event,
+        },
+        null,
+        2
+      )}`
+    );
 
     try {
       // Определяем тип события по структуре
@@ -509,6 +530,155 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
       // например, изменения в ролях, группах, настройках и т.д.
     } catch (error) {
       this.logger.error('Error handling admin event:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Обработка регистрации приглашенного пользователя
+   */
+  private async handleInvitedUserRegistration(
+    organizationId: string,
+    internalUserId: string,
+    keycloakUserId: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing invited user registration: user ${keycloakUserId} joining organization ${organizationId}`
+    );
+
+    try {
+      // 1. Ищем организацию в локальной базе по Keycloak ID
+      const existingOrgs = await this.organizationsService.findAll({ 
+        search: organizationId 
+      });
+      
+      const existingOrganization = existingOrgs.organizations.find(
+        org => org.id === organizationId
+      );
+      
+      if (!existingOrganization) {
+        this.logger.warn(
+          `Organization ${organizationId} not found in local database for invited user ${keycloakUserId}`
+        );
+        // Попробуем синхронизировать организацию из Keycloak
+        await this.syncOrganizationFromKeycloak(organizationId);
+      }
+
+      // 2. Обновляем пользователя как участника организации (не владельца)
+      await this.userService.updateAsOrganizationMember(keycloakUserId, organizationId);
+      
+      this.logger.info(
+        `Adding invited user ${keycloakUserId} to organization ${organizationId} as member`
+      );
+
+      this.logger.info(
+        `Successfully added invited user ${keycloakUserId} to organization ${organizationId} as member`
+      );
+
+    } catch (error) {
+      this.logger.error(
+        `Failed to process invited user registration for ${keycloakUserId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Обработка регистрации создателя организации
+   */
+  private async handleOrganizationCreatorRegistration(
+    organizationId: string,
+    internalUserId: string,
+    keycloakUserId: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing organization creator registration: user ${keycloakUserId} creating organization ${organizationId}`
+    );
+
+    try {
+      // 1. Синхронизируем/создаем организацию из Keycloak
+      await this.syncOrganizationFromRegisterEvent(organizationId, internalUserId);
+      
+      // 2. Делаем пользователя владельцем организации
+      await this.userService.updateAsOrganizationOwner(
+        internalUserId,
+        organizationId
+      );
+
+      this.logger.info(
+        `Successfully created organization ${organizationId} with owner ${keycloakUserId}`
+      );
+
+    } catch (error) {
+      this.logger.error(
+        `Failed to process organization creator registration for ${keycloakUserId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Fallback: обработка регистрации по старой логике (для обратной совместимости)
+   */
+  private async handleLegacyOrganizationRegistration(
+    organizationId: string,
+    internalUserId: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing legacy organization registration for organization ${organizationId}`
+    );
+
+    try {
+      // Используем старую логику: создаем организацию и делаем пользователя владельцем
+      await this.syncOrganizationFromRegisterEvent(organizationId, internalUserId);
+      await this.userService.updateAsOrganizationOwner(
+        internalUserId,
+        organizationId
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process legacy organization registration:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Синхронизация организации из Keycloak без создания
+   */
+  private async syncOrganizationFromKeycloak(
+    organizationId: string
+  ): Promise<void> {
+    try {
+      const keycloakOrganization =
+        await this.keycloakIntegrationService.getOrganizationById(organizationId);
+
+      if (!keycloakOrganization) {
+        this.logger.warn(`Organization not found in Keycloak: ${organizationId}`);
+        return;
+      }
+
+      // Создаем организацию используя существующий метод синхронизации
+      await this.organizationsService.syncFromKeycloakEvent({
+        organizationId,
+        name: keycloakOrganization.name,
+        displayName: keycloakOrganization.name,
+        domain: undefined,
+        ownerId: undefined, // Не указываем владельца при синхронизации
+        createdAt: new Date().toISOString(),
+        isEnabled: true,
+        keycloakId: organizationId,
+      });
+
+      this.logger.info(`Synced organization from Keycloak: ${organizationId}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to sync organization ${organizationId} from Keycloak:`,
+        error
+      );
       throw error;
     }
   }
