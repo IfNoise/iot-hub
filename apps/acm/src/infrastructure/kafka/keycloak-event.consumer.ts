@@ -258,8 +258,16 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
                 `Could not extract user data from REGISTER event`
               );
             }
+            // 2. Проверяем, существует ли пользователь в базе данных
+            const existingUser = await this.userService.findByUserId(
+              event.userId
+            );
+            if (existingUser) {
+              this.logger.warn(`User ${event.userId} already exists`);
+              return;
+            }
 
-            // 2. Создаем пользователя в локальной базе данных
+            // 3. Создаем пользователя в локальной базе данных
             const syncedUser = await this.userService.createUserFromEventData(
               userData
             );
@@ -277,7 +285,7 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
               `User ${event.userId} successfully created from REGISTER event`
             );
 
-            // 3. Если есть organizationId, создаем/синхронизируем организацию
+            // 4. Если есть organizationId, создаем/синхронизируем организацию
             if (event.details.organizationId) {
               // Получаем внутренний ID пользователя из базы данных
               const internalUserId =
@@ -295,9 +303,14 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
                 event.details.organizationId,
                 internalUserId // Используем внутренний ID из базы данных
               );
+              //4. Делаем пользователя владельцем организации
+              await this.userService.updateAsOrganizationOwner(
+                internalUserId,
+                event.details.organizationId
+              );
             }
 
-            // 4. Затем публикуем событие в Kafka для других сервисов
+            // 5. Затем публикуем событие в Kafka для других сервисов
             await this.publishUserCreatedEvent(event);
           } catch (syncError) {
             this.logger.error(
@@ -350,26 +363,26 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
    * Этот метод парсит события Keycloak и определяет их тип
    */
   private async handleAuthEvent(event: Record<string, unknown>): Promise<void> {
-    this.logger.debug('Handling auth event:', event);
+    //this.logger.debug('Handling auth event:', event);
 
     // Логируем полную структуру события для диагностики
-    this.logger.info(
-      `Full event structure received from Keycloak: ${JSON.stringify(
-        {
-          eventKeys: Object.keys(event),
-          eventType: event.type,
-          eventTime: event.time,
-          eventDetails: event.details,
-          eventOperationType: event.operationType,
-          eventResourceType: event.resourceType,
-          eventUserId: event.userId,
-          representation: event.representation,
-          fullEvent: event,
-        },
-        null,
-        2
-      )}`
-    );
+    // this.logger.info(
+    //   `Full event structure received from Keycloak: ${JSON.stringify(
+    //     {
+    //       eventKeys: Object.keys(event),
+    //       eventType: event.type,
+    //       eventTime: event.time,
+    //       eventDetails: event.details,
+    //       eventOperationType: event.operationType,
+    //       eventResourceType: event.resourceType,
+    //       eventUserId: event.userId,
+    //       representation: event.representation,
+    //       fullEvent: event,
+    //     },
+    //     null,
+    //     2
+    //   )}`
+    // );
 
     try {
       // Определяем тип события по структуре
@@ -545,7 +558,7 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
 
         if (ownerUser) {
           await this.userService.updateAsOrganizationOwner(
-            ownerUser.userId, // Keycloak ID для поиска в методе update
+            ownerUser.id, // Keycloak ID для поиска в методе update
             createdOrganization.id.toString() // ID созданной организации
           );
 

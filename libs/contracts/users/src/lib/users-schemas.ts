@@ -12,7 +12,7 @@ export const UserRoleEnum = z.enum([
   'group-admin',
   'organization-owner',
 ]);
-export const PlanTypeEnum = z.enum(['free', 'pro', 'enterprise']);
+export const PlanTypeEnum = z.enum(['free', 'pro', 'enterprise', 'business']);
 export const UserTypeEnum = z.enum(['individual', 'organization']);
 
 /**

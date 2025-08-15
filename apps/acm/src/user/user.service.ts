@@ -660,7 +660,7 @@ export class UserService {
         | 'organization-owner'
       >,
       balance: parseFloat(dbUser.balance || '0'),
-      plan: dbUser.plan as 'free' | 'pro' | 'enterprise',
+      plan: dbUser.plan as 'free' | 'pro' | 'enterprise' | 'business',
       planExpiresAt: dbUser.planExpiresAt || undefined,
       accountType: dbUser.accountType as 'individual' | 'organization',
       organizationId: dbUser.organizationId || null,
@@ -687,6 +687,22 @@ export class UserService {
       return null;
     }
   }
+  /**
+   * Получает пользователя по Keycloak ID
+   */
+  async findByUserId(userId: string): Promise<User | null> {
+    try {
+      const user = await this.repository.findByUserId(userId);
+      return user;
+    } catch (error) {
+      this.logger.error(
+        `Failed to find user by Keycloak ID ${userId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+  }
 
   /**
    * Обновляет пользователя как владельца организации
@@ -697,14 +713,22 @@ export class UserService {
   ): Promise<User | null> {
     try {
       this.logger.log(`Updating user ${userId} as organization owner`);
+      const existingUser = await this.repository.findByUserId(userId);
+      if (!existingUser) {
+        this.logger.warn(`User ${userId} not found`);
+        return null;
+      }
 
       const updateData: Partial<DatabaseInsertUser> = {
-        accountType: 'business',
+        accountType: 'enterprise',
         plan: 'business',
         organizationId: organizationId,
+        roles: ['organization-owner'],
       };
-
-      const updatedUser = await this.repository.update(userId, updateData);
+      const updatedUser = await this.repository.update(
+        existingUser.id,
+        updateData
+      );
 
       this.logger.log(
         `Successfully updated user ${userId} as organization owner`
@@ -759,6 +783,7 @@ export class UserService {
         name:
           `${userData.firstName || ''} ${userData.lastName || ''}`.trim() ||
           userData.username,
+        roles: ['organization-user'],
         metadata: {
           source: 'register_event',
           username: userData.username,
