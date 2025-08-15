@@ -303,7 +303,7 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
 
               // Проверяем тип регистрации из Keycloak Event Provider
               const registrationType = event.details.registrationType;
-              
+
               if (registrationType === 'invited_user') {
                 // Пользователь приглашен в существующую организацию
                 await this.handleInvitedUserRegistration(
@@ -397,7 +397,8 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
           eventResourceType: event.resourceType,
           eventUserId: event.userId,
           representation: event.representation,
-          registrationType: (event.details as Record<string, unknown>)?.registrationType,
+          registrationType: (event.details as Record<string, unknown>)
+            ?.registrationType,
           fullEvent: event,
         },
         null,
@@ -548,14 +549,14 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
 
     try {
       // 1. Ищем организацию в локальной базе по Keycloak ID
-      const existingOrgs = await this.organizationsService.findAll({ 
-        search: organizationId 
+      const existingOrgs = await this.organizationsService.findAll({
+        search: organizationId,
       });
-      
+
       const existingOrganization = existingOrgs.organizations.find(
-        org => org.id === organizationId
+        (org) => org.id === organizationId
       );
-      
+
       if (!existingOrganization) {
         this.logger.warn(
           `Organization ${organizationId} not found in local database for invited user ${keycloakUserId}`
@@ -565,8 +566,11 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
       }
 
       // 2. Обновляем пользователя как участника организации (не владельца)
-      await this.userService.updateAsOrganizationMember(keycloakUserId, organizationId);
-      
+      await this.userService.updateAsOrganizationMember(
+        keycloakUserId,
+        organizationId
+      );
+
       this.logger.info(
         `Adding invited user ${keycloakUserId} to organization ${organizationId} as member`
       );
@@ -574,7 +578,6 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
       this.logger.info(
         `Successfully added invited user ${keycloakUserId} to organization ${organizationId} as member`
       );
-
     } catch (error) {
       this.logger.error(
         `Failed to process invited user registration for ${keycloakUserId}:`,
@@ -598,8 +601,11 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
 
     try {
       // 1. Синхронизируем/создаем организацию из Keycloak
-      await this.syncOrganizationFromRegisterEvent(organizationId, internalUserId);
-      
+      await this.syncOrganizationFromRegisterEvent(
+        organizationId,
+        internalUserId
+      );
+
       // 2. Делаем пользователя владельцем организации
       await this.userService.updateAsOrganizationOwner(
         internalUserId,
@@ -609,7 +615,6 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
       this.logger.info(
         `Successfully created organization ${organizationId} with owner ${keycloakUserId}`
       );
-
     } catch (error) {
       this.logger.error(
         `Failed to process organization creator registration for ${keycloakUserId}:`,
@@ -632,7 +637,10 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
 
     try {
       // Используем старую логику: создаем организацию и делаем пользователя владельцем
-      await this.syncOrganizationFromRegisterEvent(organizationId, internalUserId);
+      await this.syncOrganizationFromRegisterEvent(
+        organizationId,
+        internalUserId
+      );
       await this.userService.updateAsOrganizationOwner(
         internalUserId,
         organizationId
@@ -654,10 +662,14 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
   ): Promise<void> {
     try {
       const keycloakOrganization =
-        await this.keycloakIntegrationService.getOrganizationById(organizationId);
+        await this.keycloakIntegrationService.getOrganizationById(
+          organizationId
+        );
 
       if (!keycloakOrganization) {
-        this.logger.warn(`Organization not found in Keycloak: ${organizationId}`);
+        this.logger.warn(
+          `Organization not found in Keycloak: ${organizationId}`
+        );
         return;
       }
 

@@ -826,7 +826,7 @@ export class UserService {
           userData.username,
         roles: ['organization-user'],
         balance: '0.00', // Обязательное поле
-        plan: 'free', // Обязательное поле  
+        plan: 'free', // Обязательное поле
         accountType: 'individual', // Обязательное поле
         metadata: {
           source: 'register_event',
