@@ -1,7 +1,10 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { ACMClientService } from '../services/acm-client.service.js';
-import { AuthenticatedUserSchema, type AuthMiddlewareConfig } from '../schemas/index.js';
+import {
+  AuthenticatedUserSchema,
+  type AuthMiddlewareConfig,
+} from '../schemas/index.js';
 
 @Injectable()
 export class RbacMiddleware implements NestMiddleware {
@@ -43,14 +46,14 @@ export class RbacMiddleware implements NestMiddleware {
         ...req.user,
         permissions: [],
       };
-      
+
       try {
         req.user = AuthenticatedUserSchema.parse(userWithEmptyPermissions);
       } catch (validationError) {
         console.error('User validation failed:', validationError);
         req.user = { ...req.user, permissions: [] };
       }
-      
+
       next();
     }
   }

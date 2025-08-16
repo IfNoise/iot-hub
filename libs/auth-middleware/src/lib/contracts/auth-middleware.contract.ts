@@ -26,7 +26,7 @@ export const authMiddlewareContract = c.router({
     }),
     responses: {
       200: BaseUserSchema,
-      401: z.object({ 
+      401: z.object({
         message: z.string(),
         error: z.string().optional(),
       }),
@@ -44,7 +44,7 @@ export const authMiddlewareContract = c.router({
     }),
     responses: {
       200: AuthenticatedUserSchema,
-      400: z.object({ 
+      400: z.object({
         message: z.string(),
         error: z.string().optional(),
       }),
@@ -59,11 +59,11 @@ export const authMiddlewareContract = c.router({
     body: GetPermissionsRequestSchema,
     responses: {
       200: GetPermissionsResponseSchema,
-      400: z.object({ 
+      400: z.object({
         message: z.string(),
         error: z.string().optional(),
       }),
-      404: z.object({ 
+      404: z.object({
         message: z.string(),
       }),
     },

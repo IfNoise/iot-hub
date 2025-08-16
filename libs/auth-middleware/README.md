@@ -30,7 +30,8 @@ import { AuthMiddlewareModule } from '@iot-hub/auth-middleware';
     AuthMiddlewareModule.forRoot({
       jwt: {
         issuer: 'https://keycloak.example.com/realms/iot-hub',
-        jwksUri: 'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
+        jwksUri:
+          'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
         audience: 'iot-hub-backend',
       },
       acm: {

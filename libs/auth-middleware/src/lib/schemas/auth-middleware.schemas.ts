@@ -12,13 +12,26 @@ export const AuthMiddlewareConfigSchema = z.object({
   }),
   acm: z.object({
     baseUrl: z.string().url().describe('ACM service base URL'),
-    timeout: z.number().positive().default(5000).describe('Request timeout in ms'),
-    retryAttempts: z.number().min(1).max(5).default(3).describe('Retry attempts'),
+    timeout: z
+      .number()
+      .positive()
+      .default(5000)
+      .describe('Request timeout in ms'),
+    retryAttempts: z
+      .number()
+      .min(1)
+      .max(5)
+      .default(3)
+      .describe('Retry attempts'),
   }),
   cache: z
     .object({
       enabled: z.boolean().default(true).describe('Enable permissions caching'),
-      ttl: z.number().positive().default(300).describe('Cache TTL in seconds (default: 5 minutes)'),
+      ttl: z
+        .number()
+        .positive()
+        .default(300)
+        .describe('Cache TTL in seconds (default: 5 minutes)'),
     })
     .optional(),
   development: z

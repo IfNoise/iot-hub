@@ -59,4 +59,6 @@ export type PermissionCheck = z.infer<typeof PermissionCheckSchema>;
 export type RoleCheck = z.infer<typeof RoleCheckSchema>;
 export type ACMContext = z.infer<typeof ACMContextSchema>;
 export type GetPermissionsRequest = z.infer<typeof GetPermissionsRequestSchema>;
-export type GetPermissionsResponse = z.infer<typeof GetPermissionsResponseSchema>;
+export type GetPermissionsResponse = z.infer<
+  typeof GetPermissionsResponseSchema
+>;

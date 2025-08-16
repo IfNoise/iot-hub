@@ -5,7 +5,10 @@ import { JwtAuthMiddleware } from './middleware/jwt-auth.middleware.js';
 import { RbacMiddleware } from './middleware/rbac.middleware.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
 import { RolesGuard } from './guards/roles.guard.js';
-import { AuthMiddlewareConfigSchema, type AuthMiddlewareConfig } from './schemas/index.js';
+import {
+  AuthMiddlewareConfigSchema,
+  type AuthMiddlewareConfig,
+} from './schemas/index.js';
 
 @Module({})
 export class AuthMiddlewareModule {

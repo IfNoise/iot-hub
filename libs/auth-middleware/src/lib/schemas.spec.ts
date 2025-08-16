@@ -1,8 +1,8 @@
-import { 
-  AuthenticatedUserSchema, 
-  BaseUserSchema, 
+import {
+  AuthenticatedUserSchema,
+  BaseUserSchema,
   JWTConfigSchema,
-  AuthMiddlewareConfigSchema 
+  AuthMiddlewareConfigSchema,
 } from '../lib/schemas/index.js';
 
 describe('Auth Middleware Schemas', () => {
@@ -10,7 +10,8 @@ describe('Auth Middleware Schemas', () => {
     it('should validate valid JWT config', () => {
       const validConfig = {
         issuer: 'https://keycloak.example.com/realms/iot-hub',
-        jwksUri: 'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
+        jwksUri:
+          'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
         audience: 'iot-hub-backend',
       };
 
@@ -21,7 +22,8 @@ describe('Auth Middleware Schemas', () => {
     it('should reject invalid URLs', () => {
       const invalidConfig = {
         issuer: 'not-a-url',
-        jwksUri: 'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
+        jwksUri:
+          'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
       };
 
       expect(() => JWTConfigSchema.parse(invalidConfig)).toThrow();
@@ -80,7 +82,8 @@ describe('Auth Middleware Schemas', () => {
       const validConfig = {
         jwt: {
           issuer: 'https://keycloak.example.com/realms/iot-hub',
-          jwksUri: 'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
+          jwksUri:
+            'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
         },
         acm: {
           baseUrl: 'http://localhost:3001',
@@ -102,7 +105,8 @@ describe('Auth Middleware Schemas', () => {
       const minimalConfig = {
         jwt: {
           issuer: 'https://keycloak.example.com/realms/iot-hub',
-          jwksUri: 'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
+          jwksUri:
+            'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
         },
         acm: {
           baseUrl: 'http://localhost:3001',

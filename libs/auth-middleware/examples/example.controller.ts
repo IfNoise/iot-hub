@@ -70,7 +70,7 @@ export class ExampleController {
     return {
       message: 'Admin only data',
       admin: user.name,
-      adminRoles: user.roles.filter(role => 
+      adminRoles: user.roles.filter((role) =>
         ['admin', 'organization-admin', 'organization-owner'].includes(role)
       ),
     };
@@ -86,7 +86,9 @@ export class ExampleController {
     return {
       message: 'Super admin area',
       user: user.name,
-      systemPermissions: user.permissions.filter(p => p.startsWith('system:')),
+      systemPermissions: user.permissions.filter((p) =>
+        p.startsWith('system:')
+      ),
     };
   }
 
@@ -122,7 +124,7 @@ export class ExampleController {
       tokenExp,
       sessionId,
       expiresAt: new Date(tokenExp * 1000).toISOString(),
-      isExpiringSoon: tokenExp < (Date.now() / 1000) + 300, // expires in 5 minutes
+      isExpiringSoon: tokenExp < Date.now() / 1000 + 300, // expires in 5 minutes
     };
   }
 }

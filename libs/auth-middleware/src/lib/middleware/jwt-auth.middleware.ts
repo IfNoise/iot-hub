@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { JwtService } from '../services/jwt.service.js';
-import { AuthenticatedUserSchema, BaseUserSchema, type AuthMiddlewareConfig } from '../schemas/index.js';
+import {
+  AuthenticatedUserSchema,
+  BaseUserSchema,
+  type AuthMiddlewareConfig,
+} from '../schemas/index.js';
 
 @Injectable()
 export class JwtAuthMiddleware implements NestMiddleware {
@@ -18,8 +22,13 @@ export class JwtAuthMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     try {
       // Development mode - использовать mock пользователя
-      if (this.config.development?.enabled && this.config.development.mockUser) {
-        const mockUser = AuthenticatedUserSchema.parse(this.config.development.mockUser);
+      if (
+        this.config.development?.enabled &&
+        this.config.development.mockUser
+      ) {
+        const mockUser = AuthenticatedUserSchema.parse(
+          this.config.development.mockUser
+        );
         req.user = mockUser;
         return next();
       }
@@ -47,7 +56,8 @@ export class JwtAuthMiddleware implements NestMiddleware {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new UnauthorizedException(`Authentication failed: ${errorMessage}`);
     }
   }
@@ -58,7 +68,7 @@ export class JwtAuthMiddleware implements NestMiddleware {
   private extractBearerToken(req: Request): string | null {
     const auth = req.headers['authorization'];
     if (!auth) return null;
-    
+
     const [type, token] = auth.split(' ');
     return type === 'Bearer' && token ? token : null;
   }

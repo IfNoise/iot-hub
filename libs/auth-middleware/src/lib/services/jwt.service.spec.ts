@@ -11,7 +11,8 @@ describe('JwtService', () => {
   let service: JwtService;
   const mockConfig = {
     issuer: 'https://keycloak.example.com/realms/iot-hub',
-    jwksUri: 'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
+    jwksUri:
+      'https://keycloak.example.com/realms/iot-hub/protocol/openid-connect/certs',
     audience: 'iot-hub-backend',
   };
 
@@ -33,7 +34,7 @@ describe('JwtService', () => {
       };
 
       const user = service.extractUserFromPayload(payload);
-      
+
       expect(user.userId).toBe(payload.sub);
       expect(user.email).toBe(payload.email);
       expect(user.name).toBe(payload.preferred_username);
@@ -50,7 +51,7 @@ describe('JwtService', () => {
       };
 
       const user = service.extractUserFromPayload(payload);
-      
+
       expect(user.name).toBe(payload.email); // fallback to email
       expect(user.roles).toEqual(['personal-user']); // default role
     });
@@ -69,7 +70,7 @@ describe('JwtService', () => {
       };
 
       const user = service.extractUserFromPayload(payload);
-      
+
       expect(user.organizationId).toBe('456e7890-e89b-12d3-a456-426614174001');
     });
 
@@ -79,7 +80,9 @@ describe('JwtService', () => {
         email: 'not-an-email',
       };
 
-      expect(() => service.extractUserFromPayload(invalidPayload)).toThrow(UnauthorizedException);
+      expect(() => service.extractUserFromPayload(invalidPayload)).toThrow(
+        UnauthorizedException
+      );
     });
   });
 

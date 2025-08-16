@@ -5,20 +5,17 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import {
-  RoleCheckSchema,
-  AuthenticatedUserSchema,
-} from '../schemas/index.js';
+import { RoleCheckSchema, AuthenticatedUserSchema } from '../schemas/index.js';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
-      'roles',
-      [context.getHandler(), context.getClass()]
-    );
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>('roles', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!requiredRoles?.length) {
       return true;
@@ -46,7 +43,7 @@ export class RolesGuard implements CanActivate {
     }
 
     // Проверка ролей (OR логика - достаточно одной из требуемых ролей)
-    const userRoleStrings = user.roles.map(role => role.toString());
+    const userRoleStrings = user.roles.map((role) => role.toString());
     const hasRole = requiredRoles.some((role) =>
       userRoleStrings.includes(role)
     );

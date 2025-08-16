@@ -1,8 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose';
-import { 
-  TokenPayloadSchema, 
-  BaseUserSchema, 
+import {
+  TokenPayloadSchema,
+  BaseUserSchema,
   type JWTConfig,
   type BaseUser,
 } from '../schemas/index.js';
@@ -29,7 +29,8 @@ export class JwtService {
 
       return payload;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new UnauthorizedException(`Invalid JWT token: ${errorMessage}`);
     }
   }
@@ -43,9 +44,8 @@ export class JwtService {
       const validatedPayload = TokenPayloadSchema.parse(payload);
 
       // Извлекаем роли из realm_access или role поля
-      const roles = validatedPayload.realm_access?.roles || 
-                   validatedPayload.role || 
-                   ['personal-user']; // default role
+      const roles = validatedPayload.realm_access?.roles ||
+        validatedPayload.role || ['personal-user']; // default role
 
       // Извлекаем organizationId из объекта organization
       let organizationId: string | undefined;
@@ -78,7 +78,8 @@ export class JwtService {
       // Валидация через Zod схему
       return BaseUserSchema.parse(baseUser);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new UnauthorizedException(`Invalid token payload: ${errorMessage}`);
     }
   }

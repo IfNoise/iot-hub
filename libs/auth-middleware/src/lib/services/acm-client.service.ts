@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { 
-  ACMContext, 
-  AccessCheck, 
+import type {
+  ACMContext,
+  AccessCheck,
   AccessResult,
-  AuthMiddlewareConfig 
+  AuthMiddlewareConfig,
 } from '../schemas/index.js';
 
 @Injectable()
@@ -11,7 +11,9 @@ export class ACMClientService {
   constructor(private readonly config: AuthMiddlewareConfig) {
     // Конфигурация будет использована при реализации реальных вызовов к ACM
     if (this.config.acm.baseUrl) {
-      console.log(`ACM Client initialized with base URL: ${this.config.acm.baseUrl}`);
+      console.log(
+        `ACM Client initialized with base URL: ${this.config.acm.baseUrl}`
+      );
     }
   }
 
@@ -26,11 +28,14 @@ export class ACMClientService {
       // Здесь должен быть реальный вызов к ACM API
       // Временно возвращаем пустой массив
       // TODO: реализовать вызов к ACM когда API будет готов
-      
-      console.log(`Getting permissions for user ${userId} with context:`, context);
-      
+
+      console.log(
+        `Getting permissions for user ${userId} with context:`,
+        context
+      );
+
       const permissions: string[] = [];
-      
+
       // Логика получения permissions из ACM
       // const response = await this.client.getUserPermissions({
       //   params: { userId },
@@ -39,11 +44,11 @@ export class ACMClientService {
       //     groupId: context?.groupId,
       //   },
       // });
-      
+
       // if (response.status === 200) {
       //   return response.body.permissions;
       // }
-      
+
       return permissions;
     } catch (error) {
       console.error('Failed to get user permissions from ACM:', error);
@@ -60,9 +65,9 @@ export class ACMClientService {
       // Здесь должен быть реальный вызов к ACM API
       // Временно возвращаем отказ в доступе
       // TODO: реализовать вызов к ACM когда API будет готов
-      
+
       console.log('Checking access for request:', request);
-      
+
       // const response = await this.client.checkAccess({
       //   body: request,
       // });
