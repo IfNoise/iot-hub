@@ -8,8 +8,6 @@
             <#-- Hidden fields for invitation handling -->
             <#if org??>
                 <input type="hidden" name="user.attributes.organization_id" value="${org.id!''}" />
-                <input type="hidden" name="user.attributes.organization_name" value="${org.name!''}" />
-                <input type="hidden" name="user.attributes.organization_domain" value="${org.domain!''}" />
                 <input type="hidden" name="user.attributes.invited_via_organization" value="true" />
             </#if>
             

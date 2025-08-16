@@ -7,7 +7,11 @@ import {
   type UserUpdatedEvent,
   type UserDeletedEvent,
   type OrganizationCreatedEvent,
-  //type OrganizationMemberAddedEvent,
+  type OrganizationUpdatedEvent,
+  type OrganizationDeletedEvent,
+  type OrganizationMemberAddedEvent,
+  type OrganizationMemberRemovedEvent,
+  type OrganizationMemberRoleChangedEvent,
   KafkaTopics,
 } from '@iot-hub/contracts-kafka';
 import { ConfigService } from '../../config/config.service.js';
@@ -346,20 +350,48 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
           try {
             // 1. Синхронизируем обновления пользователя
             await this.userService.syncFromKeycloak(event.userId);
-            // 2. Публикуем событие обновления
-            await this.publishUserUpdatedEvent(event);
+            this.logger.info(
+              `✅ User ${event.userId} synced successfully during UPDATE_PROFILE`
+            );
           } catch (syncError) {
             this.logger.error(
-              `Failed to sync user ${event.userId} during UPDATE_PROFILE event:`,
+              `❌ Failed to sync user ${event.userId} during UPDATE_PROFILE event:`,
               syncError
             );
-            // Не выбрасываем ошибку, чтобы не прерывать обработку других сообщений
+            // Продолжаем работу - синхронизация может не удаться, но событие нужно опубликовать
+          }
+
+          try {
+            // 2. Всегда публикуем событие обновления (независимо от результата синхронизации)
+            await this.publishUserUpdatedEvent(event);
+            this.logger.info(
+              `✅ Published UPDATE_PROFILE event for ${event.userId}`
+            );
+          } catch (publishError) {
+            this.logger.error(
+              `❌ Failed to publish UPDATE_PROFILE event for ${event.userId}:`,
+              publishError
+            );
+            // Это критичная ошибка - eventual consistency нарушена
+            throw publishError;
           }
           break;
         case 'DELETE_ACCOUNT':
           this.logger.info(`Processing account deletion for ${event.userId}`);
-          // Публикуем событие удаления (локальное удаление может быть обработано другим способом)
-          await this.publishUserDeletedEvent(event);
+          try {
+            // Публикуем событие удаления (локальное удаление может быть обработано другим способом)
+            await this.publishUserDeletedEvent(event);
+            this.logger.info(
+              `✅ Published DELETE_ACCOUNT event for ${event.userId}`
+            );
+          } catch (publishError) {
+            this.logger.error(
+              `❌ Failed to publish DELETE_ACCOUNT event for ${event.userId}:`,
+              publishError
+            );
+            // Это критичная ошибка - eventual consistency нарушена
+            throw publishError;
+          }
           break;
         case 'LOGIN':
           // Возможно, в будущем добавим события логина
@@ -477,9 +509,8 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
     this.logger.debug('Handling admin event:', event);
 
     try {
-      // Обрабатываем создание пользователей через Admin API
+      // ======== USER EVENTS ========
       if (
-        event.operationType === 'CREATE' &&
         event.resourceType === 'USER' &&
         event.resourcePath &&
         typeof event.resourcePath === 'string'
@@ -488,50 +519,312 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
         const userIdMatch = event.resourcePath.match(/users\/([^/]+)/);
         if (userIdMatch && userIdMatch[1]) {
           const userId = userIdMatch[1];
-          this.logger.info(
-            `Processing Admin Event: CREATE USER for user ${userId}`
-          );
 
-          try {
-            // Синхронизируем пользователя с локальной базой данных
-            const syncedUser = await this.userService.syncFromKeycloak(userId);
-            if (syncedUser) {
-              this.logger.info(
-                `Successfully synced user ${userId} from Admin Event`
+          switch (event.operationType) {
+            case 'CREATE':
+              await this.handleAdminUserCreate(event, userId);
+              break;
+            case 'UPDATE':
+              await this.handleAdminUserUpdate(event, userId);
+              break;
+            case 'DELETE':
+              await this.handleAdminUserDelete(event, userId);
+              break;
+            default:
+              this.logger.debug(
+                `Unhandled USER admin operation: ${event.operationType}`
               );
-            } else {
-              this.logger.warn(
-                `User ${userId} could not be synced from Keycloak, but continuing`
-              );
-            }
-          } catch (syncError) {
-            this.logger.error(
-              `Failed to sync user ${userId} from Admin Event:`,
-              syncError
-            );
-            // Не прерываем обработку, продолжаем с публикацией события
-          }
-
-          try {
-            // Публикуем событие создания пользователя
-            await this.publishAdminUserCreatedEvent(event, userId);
-            this.logger.info(
-              `Successfully published Admin Event for user ${userId}`
-            );
-          } catch (publishError) {
-            this.logger.error(
-              `Failed to publish Admin Event for user ${userId}:`,
-              publishError
-            );
           }
         }
       }
 
-      // Здесь можно обрабатывать другие административные события
-      // например, изменения в ролях, группах, настройках и т.д.
+      // ======== ORGANIZATION EVENTS ========
+      else if (
+        event.resourceType === 'ORGANIZATION' &&
+        event.resourcePath &&
+        typeof event.resourcePath === 'string'
+      ) {
+        // Извлекаем ID организации из resourcePath (organizations/ORG_ID)
+        const orgIdMatch = event.resourcePath.match(/organizations\/([^/]+)/);
+        if (orgIdMatch && orgIdMatch[1]) {
+          const organizationId = orgIdMatch[1];
+
+          switch (event.operationType) {
+            case 'CREATE':
+              await this.handleAdminOrganizationCreate(event, organizationId);
+              break;
+            case 'UPDATE':
+              await this.handleAdminOrganizationUpdate(event, organizationId);
+              break;
+            case 'DELETE':
+              await this.handleAdminOrganizationDelete(event, organizationId);
+              break;
+            default:
+              this.logger.debug(
+                `Unhandled ORGANIZATION admin operation: ${event.operationType}`
+              );
+          }
+        }
+      }
+
+      // ======== GROUP EVENTS (для membership) ========
+      else if (
+        event.resourceType === 'GROUP' &&
+        event.resourcePath &&
+        typeof event.resourcePath === 'string'
+      ) {
+        this.logger.info(
+          `Processing GROUP admin event: ${event.operationType} at ${event.resourcePath}`
+        );
+        await this.handleAdminGroupEvent(event);
+      }
+
+      // ======== ORGANIZATION MEMBERSHIP EVENTS ========
+      else if (
+        event.resourcePath &&
+        typeof event.resourcePath === 'string' &&
+        event.resourcePath.includes('organizations') &&
+        event.resourcePath.includes('members')
+      ) {
+        this.logger.info(
+          `Processing ORGANIZATION MEMBERSHIP admin event: ${event.operationType} at ${event.resourcePath}`
+        );
+        await this.handleAdminOrganizationMembership(event);
+      }
+
+      // ======== REALM ROLE MAPPING EVENTS (Organization roles) ========
+      else if (
+        event.resourceType === 'REALM_ROLE_MAPPING' &&
+        event.resourcePath &&
+        typeof event.resourcePath === 'string'
+      ) {
+        this.logger.info(
+          `Processing REALM ROLE MAPPING admin event: ${event.operationType} at ${event.resourcePath}`
+        );
+        await this.handleAdminRealmRoleMapping(event);
+      }
+
+      // ======== OTHER EVENTS ========
+      else {
+        this.logger.debug(
+          `Unhandled admin event: ${event.operationType} ${
+            event.resourceType
+          } at ${event.resourcePath || 'unknown path'}`
+        );
+      }
     } catch (error) {
       this.logger.error('Error handling admin event:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Обработка создания пользователя через Admin API
+   */
+  private async handleAdminUserCreate(
+    event: Record<string, unknown>,
+    userId: string
+  ): Promise<void> {
+    this.logger.info(`Processing Admin Event: CREATE USER for user ${userId}`);
+
+    try {
+      // Синхронизируем пользователя с локальной базой данных
+      const syncedUser = await this.userService.syncFromKeycloak(userId);
+      if (syncedUser) {
+        this.logger.info(`Successfully synced user ${userId} from Admin Event`);
+      } else {
+        this.logger.warn(
+          `User ${userId} could not be synced from Keycloak, but continuing`
+        );
+      }
+    } catch (syncError) {
+      this.logger.error(
+        `Failed to sync user ${userId} from Admin Event:`,
+        syncError
+      );
+      // Не прерываем обработку, продолжаем с публикацией события
+    }
+
+    try {
+      // Публикуем событие создания пользователя
+      await this.publishAdminUserCreatedEvent(event, userId);
+      this.logger.info(
+        `Successfully published Admin CREATE USER event for user ${userId}`
+      );
+    } catch (publishError) {
+      this.logger.error(
+        `Failed to publish Admin CREATE USER event for user ${userId}:`,
+        publishError
+      );
+      throw publishError; // Критичная ошибка для eventual consistency
+    }
+  }
+
+  /**
+   * Обработка обновления пользователя через Admin API
+   */
+  private async handleAdminUserUpdate(
+    event: Record<string, unknown>,
+    userId: string
+  ): Promise<void> {
+    this.logger.info(`Processing Admin Event: UPDATE USER for user ${userId}`);
+
+    try {
+      // Синхронизируем обновления пользователя
+      await this.userService.syncFromKeycloak(userId);
+      this.logger.info(
+        `Successfully synced user ${userId} updates from Admin Event`
+      );
+    } catch (syncError) {
+      this.logger.error(
+        `Failed to sync user ${userId} updates from Admin Event:`,
+        syncError
+      );
+      // Продолжаем с публикацией события
+    }
+
+    try {
+      // Публикуем событие обновления пользователя
+      await this.publishAdminUserUpdatedEvent(event, userId);
+      this.logger.info(
+        `Successfully published Admin UPDATE USER event for user ${userId}`
+      );
+    } catch (publishError) {
+      this.logger.error(
+        `Failed to publish Admin UPDATE USER event for user ${userId}:`,
+        publishError
+      );
+      throw publishError; // Критичная ошибка для eventual consistency
+    }
+  }
+
+  /**
+   * Обработка удаления пользователя через Admin API
+   */
+  private async handleAdminUserDelete(
+    event: Record<string, unknown>,
+    userId: string
+  ): Promise<void> {
+    this.logger.info(`Processing Admin Event: DELETE USER for user ${userId}`);
+
+    try {
+      // Публикуем событие удаления пользователя (локальное удаление может быть отложено)
+      await this.publishAdminUserDeletedEvent(event, userId);
+      this.logger.info(
+        `Successfully published Admin DELETE USER event for user ${userId}`
+      );
+    } catch (publishError) {
+      this.logger.error(
+        `Failed to publish Admin DELETE USER event for user ${userId}:`,
+        publishError
+      );
+      throw publishError; // Критичная ошибка для eventual consistency
+    }
+  }
+
+  /**
+   * Обработка создания организации через Admin API
+   */
+  private async handleAdminOrganizationCreate(
+    event: Record<string, unknown>,
+    organizationId: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing Admin Event: CREATE ORGANIZATION for organization ${organizationId}`
+    );
+
+    try {
+      // Синхронизируем организацию из Keycloak
+      await this.syncOrganizationFromKeycloak(organizationId);
+      this.logger.info(
+        `Successfully synced organization ${organizationId} from Admin Event`
+      );
+    } catch (syncError) {
+      this.logger.error(
+        `Failed to sync organization ${organizationId} from Admin Event:`,
+        syncError
+      );
+      // Продолжаем с публикацией события
+    }
+
+    try {
+      // Публикуем событие создания организации
+      await this.publishAdminOrganizationCreatedEvent(event, organizationId);
+      this.logger.info(
+        `Successfully published Admin CREATE ORGANIZATION event for organization ${organizationId}`
+      );
+    } catch (publishError) {
+      this.logger.error(
+        `Failed to publish Admin CREATE ORGANIZATION event for organization ${organizationId}:`,
+        publishError
+      );
+      throw publishError; // Критичная ошибка для eventual consistency
+    }
+  }
+
+  /**
+   * Обработка обновления организации через Admin API
+   */
+  private async handleAdminOrganizationUpdate(
+    event: Record<string, unknown>,
+    organizationId: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing Admin Event: UPDATE ORGANIZATION for organization ${organizationId}`
+    );
+
+    try {
+      // Синхронизируем обновления организации
+      await this.syncOrganizationFromKeycloak(organizationId);
+      this.logger.info(
+        `Successfully synced organization ${organizationId} updates from Admin Event`
+      );
+    } catch (syncError) {
+      this.logger.error(
+        `Failed to sync organization ${organizationId} updates from Admin Event:`,
+        syncError
+      );
+      // Продолжаем с публикацией события
+    }
+
+    try {
+      // Публикуем событие обновления организации
+      await this.publishAdminOrganizationUpdatedEvent(event, organizationId);
+      this.logger.info(
+        `Successfully published Admin UPDATE ORGANIZATION event for organization ${organizationId}`
+      );
+    } catch (publishError) {
+      this.logger.error(
+        `Failed to publish Admin UPDATE ORGANIZATION event for organization ${organizationId}:`,
+        publishError
+      );
+      throw publishError; // Критичная ошибка для eventual consistency
+    }
+  }
+
+  /**
+   * Обработка удаления организации через Admin API
+   */
+  private async handleAdminOrganizationDelete(
+    event: Record<string, unknown>,
+    organizationId: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing Admin Event: DELETE ORGANIZATION for organization ${organizationId}`
+    );
+
+    try {
+      // Публикуем событие удаления организации
+      await this.publishAdminOrganizationDeletedEvent(event, organizationId);
+      this.logger.info(
+        `Successfully published Admin DELETE ORGANIZATION event for organization ${organizationId}`
+      );
+    } catch (publishError) {
+      this.logger.error(
+        `Failed to publish Admin DELETE ORGANIZATION event for organization ${organizationId}:`,
+        publishError
+      );
+      throw publishError; // Критичная ошибка для eventual consistency
     }
   }
 
@@ -1031,6 +1324,731 @@ export class KeycloakEventConsumer implements OnModuleInit, OnModuleDestroy {
         }`
       );
       return null;
+    }
+  }
+
+  /**
+   * Обработка административных событий для групп
+   */
+  private async handleAdminGroupEvent(
+    event: Record<string, unknown>
+  ): Promise<void> {
+    this.logger.info(
+      `Processing GROUP admin event: ${event.operationType} at ${event.resourcePath}`
+    );
+    // TODO: Реализовать обработку групп если нужно
+    this.logger.debug('Group events processing not implemented yet');
+  }
+
+  /**
+   * Обработка административных событий membership в организациях
+   */
+  private async handleAdminOrganizationMembership(
+    event: Record<string, unknown>
+  ): Promise<void> {
+    this.logger.info(
+      `Processing ORGANIZATION MEMBERSHIP admin event: ${event.operationType} at ${event.resourcePath}`
+    );
+
+    try {
+      // Парсим resourcePath для извлечения organizationId и userId
+      // Примеры путей:
+      // - organizations/{orgId}/members/{userId}
+      // - organizations/{orgId}/members
+      const resourcePath = event.resourcePath as string;
+      const membershipMatch = resourcePath.match(
+        /organizations\/([^/]+)\/members(?:\/([^/]+))?/
+      );
+
+      if (membershipMatch) {
+        const organizationId = membershipMatch[1];
+        const userId = membershipMatch[2]; // может быть undefined для bulk операций
+
+        switch (event.operationType) {
+          case 'CREATE':
+            await this.handleOrganizationMemberAdded(
+              event,
+              organizationId,
+              userId
+            );
+            break;
+          case 'DELETE':
+            await this.handleOrganizationMemberRemoved(
+              event,
+              organizationId,
+              userId
+            );
+            break;
+          case 'UPDATE':
+            await this.handleOrganizationMemberUpdated(
+              event,
+              organizationId,
+              userId
+            );
+            break;
+          default:
+            this.logger.debug(
+              `Unhandled ORGANIZATION MEMBERSHIP operation: ${event.operationType}`
+            );
+        }
+      } else {
+        this.logger.warn(
+          `Could not parse organization membership path: ${resourcePath}`
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        'Error handling organization membership admin event:',
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Обработка добавления участника в организацию
+   */
+  private async handleOrganizationMemberAdded(
+    event: Record<string, unknown>,
+    organizationId: string,
+    userId?: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing organization member added: org=${organizationId}, user=${userId}`
+    );
+
+    try {
+      // Публикуем событие добавления участника
+      await this.publishOrganizationMemberAddedEvent(
+        event,
+        organizationId,
+        userId
+      );
+    } catch (error) {
+      this.logger.error('Error handling organization member added:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Обработка удаления участника из организации
+   */
+  private async handleOrganizationMemberRemoved(
+    event: Record<string, unknown>,
+    organizationId: string,
+    userId?: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing organization member removed: org=${organizationId}, user=${userId}`
+    );
+
+    try {
+      // Публикуем событие удаления участника
+      await this.publishOrganizationMemberRemovedEvent(
+        event,
+        organizationId,
+        userId
+      );
+    } catch (error) {
+      this.logger.error('Error handling organization member removed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Обработка обновления участника организации
+   */
+  private async handleOrganizationMemberUpdated(
+    event: Record<string, unknown>,
+    organizationId: string,
+    userId?: string
+  ): Promise<void> {
+    this.logger.info(
+      `Processing organization member updated: org=${organizationId}, user=${userId}`
+    );
+
+    try {
+      // Публикуем событие обновления участника
+      await this.publishOrganizationMemberUpdatedEvent(
+        event,
+        organizationId,
+        userId
+      );
+    } catch (error) {
+      this.logger.error('Error handling organization member updated:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события обновления пользователя через Admin API
+   */
+  private async publishAdminUserUpdatedEvent(
+    event: Record<string, unknown>,
+    userId: string
+  ): Promise<void> {
+    try {
+      // Парсим представление пользователя из Admin Event
+      let userRepresentation: Record<string, unknown> = {};
+      if (event.representation && typeof event.representation === 'string') {
+        try {
+          userRepresentation = JSON.parse(event.representation) as Record<
+            string,
+            unknown
+          >;
+        } catch (parseError) {
+          this.logger.warn('Failed to parse user representation:', parseError);
+        }
+      }
+
+      const userUpdatedPayload: UserUpdatedEvent['payload'] = {
+        userId: userId,
+        previousData: {}, // TODO: получить предыдущие данные
+        newData: {
+          email: userRepresentation.email as string,
+          firstName: userRepresentation.firstName as string,
+          lastName: userRepresentation.lastName as string,
+          enabled: userRepresentation.enabled !== false,
+        },
+        updatedBy:
+          ((event.authDetails as Record<string, unknown>)?.userId as string) ||
+          'admin',
+        updatedAt: new Date(event.time as number).toISOString(),
+        changes: [], // TODO: вычислить изменения
+      };
+
+      await this.kafkaProducer.publishUserUpdated(userUpdatedPayload);
+      this.logger.info(`Published admin user updated event for user ${userId}`);
+    } catch (error) {
+      this.logger.error(`Error publishing admin user updated event:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события удаления пользователя через Admin API
+   */
+  private async publishAdminUserDeletedEvent(
+    event: Record<string, unknown>,
+    userId: string
+  ): Promise<void> {
+    try {
+      const userDeletedPayload: UserDeletedEvent['payload'] = {
+        userId: userId,
+        email: '', // TODO: получить из кэша или другого источника
+        deletedBy:
+          ((event.authDetails as Record<string, unknown>)?.userId as string) ||
+          'admin',
+        deletedAt: new Date(event.time as number).toISOString(),
+        hardDelete: true, // Admin удаление обычно hard delete
+        devicesCount: 0, // TODO: получить количество устройств
+        reason: 'Deleted via Admin API',
+      };
+
+      await this.kafkaProducer.publishUserDeleted(userDeletedPayload);
+      this.logger.info(`Published admin user deleted event for user ${userId}`);
+    } catch (error) {
+      this.logger.error(`Error publishing admin user deleted event:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события создания организации через Admin API
+   */
+  private async publishAdminOrganizationCreatedEvent(
+    event: Record<string, unknown>,
+    organizationId: string
+  ): Promise<void> {
+    try {
+      // Парсим представление организации из Admin Event
+      let orgRepresentation: Record<string, unknown> = {};
+      if (event.representation && typeof event.representation === 'string') {
+        try {
+          orgRepresentation = JSON.parse(event.representation) as Record<
+            string,
+            unknown
+          >;
+        } catch (parseError) {
+          this.logger.warn(
+            'Failed to parse organization representation:',
+            parseError
+          );
+        }
+      }
+
+      const organizationCreatedPayload: OrganizationCreatedEvent['payload'] = {
+        organizationId: organizationId,
+        name:
+          (orgRepresentation.name as string) ||
+          `Organization ${organizationId}`,
+        displayName:
+          (orgRepresentation.displayName as string) ||
+          (orgRepresentation.name as string) ||
+          `Organization ${organizationId}`,
+        domain: orgRepresentation.domain as string,
+        ownerId: '', // При создании через Admin API может не быть владельца
+        createdAt: new Date(event.time as number).toISOString(),
+        isEnabled: orgRepresentation.enabled !== false,
+        keycloakId: organizationId,
+        keycloakEventId: `admin-org-${organizationId}`,
+      };
+
+      await this.kafkaProducer.publishOrganizationCreated(
+        organizationCreatedPayload
+      );
+      this.logger.info(
+        `Published admin organization created event for organization ${organizationId}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error publishing admin organization created event:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события обновления организации через Admin API
+   */
+  private async publishAdminOrganizationUpdatedEvent(
+    event: Record<string, unknown>,
+    organizationId: string
+  ): Promise<void> {
+    try {
+      // Публикуем событие обновления организации
+      const organizationUpdatedPayload: OrganizationUpdatedEvent['payload'] = {
+        organizationId,
+        previousData: {}, // TODO: получить предыдущие данные из базы
+        newData: (event.representation as Record<string, unknown>) || {},
+        updatedBy:
+          ((event.authDetails as Record<string, unknown>)?.userId as string) ||
+          'admin',
+        updatedAt: new Date(event.time as number).toISOString(),
+        changes: [], // TODO: вычислить изменения между предыдущими и новыми данными
+      };
+
+      await this.kafkaProducer.publishOrganizationUpdated(
+        organizationUpdatedPayload
+      );
+      this.logger.info(
+        `Published admin organization updated event for organization ${organizationId}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error publishing admin organization updated event:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события удаления организации через Admin API
+   */
+  private async publishAdminOrganizationDeletedEvent(
+    event: Record<string, unknown>,
+    organizationId: string
+  ): Promise<void> {
+    try {
+      // Публикуем событие удаления организации
+      const organizationDeletedPayload: OrganizationDeletedEvent['payload'] = {
+        organizationId,
+        name: 'Unknown', // TODO: получить имя организации из базы данных перед удалением
+        deletedBy:
+          ((event.authDetails as Record<string, unknown>)?.userId as string) ||
+          'admin',
+        deletedAt: new Date(event.time as number).toISOString(),
+        reason: 'Admin deletion',
+        hardDelete: true, // Admin Events обычно означают жесткое удаление
+        preservedData:
+          (event.representation as Record<string, unknown>) || undefined,
+      };
+
+      await this.kafkaProducer.publishOrganizationDeleted(
+        organizationDeletedPayload
+      );
+      this.logger.info(
+        `Published admin organization deleted event for organization ${organizationId}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error publishing admin organization deleted event:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события добавления участника в организацию
+   */
+  private async publishOrganizationMemberAddedEvent(
+    event: Record<string, unknown>,
+    organizationId: string,
+    userId?: string
+  ): Promise<void> {
+    try {
+      if (!userId) {
+        this.logger.warn('Cannot publish member added event without userId');
+        return;
+      }
+
+      // Публикуем событие добавления участника в организацию
+      const memberAddedPayload: OrganizationMemberAddedEvent['payload'] = {
+        organizationId,
+        userId,
+        role: 'user', // TODO: извлечь реальную роль из события
+        addedBy:
+          ((event.authDetails as Record<string, unknown>)?.userId as string) ||
+          'admin',
+        addedAt: new Date(event.time as number).toISOString(),
+      };
+
+      await this.kafkaProducer.publishOrganizationMemberAdded(
+        memberAddedPayload
+      );
+      this.logger.info(
+        `Published organization member added event: org=${organizationId}, user=${userId}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error publishing organization member added event:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события удаления участника из организации
+   */
+  private async publishOrganizationMemberRemovedEvent(
+    event: Record<string, unknown>,
+    organizationId: string,
+    userId?: string
+  ): Promise<void> {
+    try {
+      if (!userId) {
+        this.logger.warn('Cannot publish member removed event without userId');
+        return;
+      }
+
+      // Публикуем событие удаления участника из организации
+      const memberRemovedPayload: OrganizationMemberRemovedEvent['payload'] = {
+        organizationId,
+        userId,
+        removedBy:
+          ((event.authDetails as Record<string, unknown>)?.userId as string) ||
+          'admin',
+        removedAt: new Date(event.time as number).toISOString(),
+        reason: 'Removed from organization via Admin Event',
+      };
+
+      await this.kafkaProducer.publishOrganizationMemberRemoved(
+        memberRemovedPayload
+      );
+      this.logger.info(
+        `Published organization member removed event: org=${organizationId}, user=${userId}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error publishing organization member removed event:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Публикация события обновления участника организации
+   */
+  private async publishOrganizationMemberUpdatedEvent(
+    event: Record<string, unknown>,
+    organizationId: string,
+    userId?: string
+  ): Promise<void> {
+    try {
+      if (!userId) {
+        this.logger.warn('Cannot publish member updated event without userId');
+        return;
+      }
+
+      // Публикуем событие изменения роли участника организации
+      // Для Admin Events трудно определить предыдущую роль, используем 'user' как базовую
+      const memberRoleChangedPayload: OrganizationMemberRoleChangedEvent['payload'] =
+        {
+          organizationId,
+          userId,
+          previousRole: 'user', // TODO: извлечь предыдущую роль из события или запросить из базы
+          newRole: 'user', // TODO: извлечь новую роль из события
+          changedBy:
+            ((event.authDetails as Record<string, unknown>)
+              ?.userId as string) || 'admin',
+          changedAt: new Date(event.time as number).toISOString(),
+        };
+
+      await this.kafkaProducer.publishOrganizationMemberRoleChanged(
+        memberRoleChangedPayload
+      );
+      this.logger.info(
+        `Published organization member role changed event: org=${organizationId}, user=${userId}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error publishing organization member updated event:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Мапит роли из Keycloak в наши User Role Enum
+   * Это единственный источник истины для маппинга ролей
+   */
+  private mapKeycloakRoleToUserRole(keycloakRoleName: string): string | null {
+    const roleMapping: Record<string, string | null> = {
+      // Organization roles
+      'organization-admin': 'organization-admin',
+      'organization-owner': 'organization-owner',
+      'organization-user': 'organization-user',
+      'organization-member': 'organization-user', // alias
+
+      // Group roles
+      'group-admin': 'group-admin',
+      'group-user': 'group-user',
+      'group-member': 'group-user', // alias
+
+      // System roles
+      admin: 'admin',
+      user: 'personal-user',
+      'personal-user': 'personal-user',
+
+      // Default Keycloak roles (ignore)
+      'default-roles-iot-hub': null,
+      offline_access: null,
+      uma_authorization: null,
+    };
+
+    return roleMapping[keycloakRoleName] ?? null;
+  }
+
+  /**
+   * Обработка событий назначения/удаления ролей пользователям
+   * REALM_ROLE_MAPPING события связаны с изменением ролей в организациях
+   */
+  private async handleAdminRealmRoleMapping(
+    event: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      // Извлекаем userId из resourcePath: users/{userId}/role-mappings/realm
+      const resourcePath = event.resourcePath as string;
+      const userIdMatch = resourcePath.match(/users\/([^/]+)\/role-mappings/);
+
+      if (!userIdMatch || !userIdMatch[1]) {
+        this.logger.warn(
+          `Cannot extract userId from resourcePath: ${resourcePath}`
+        );
+        return;
+      }
+
+      const userId = userIdMatch[1];
+
+      // Парсим representation для получения информации о ролях
+      let roles: Array<{ id: string; name: string; description?: string }> = [];
+      if (event.representation && typeof event.representation === 'string') {
+        try {
+          roles = JSON.parse(event.representation);
+        } catch (parseError) {
+          this.logger.warn(`Failed to parse role representation:`, parseError);
+        }
+      }
+
+      // Фильтруем только organization-related роли
+      const organizationRoles = roles.filter(
+        (role) =>
+          role.name.includes('organization') ||
+          role.name.includes('admin') ||
+          role.name.includes('owner')
+      );
+
+      if (organizationRoles.length === 0) {
+        this.logger.debug(
+          `No organization-related roles in event for user ${userId}`
+        );
+        return;
+      }
+
+      // Обрабатываем каждую роль
+      for (const role of organizationRoles) {
+        await this.handleOrganizationRoleChange(event, userId, role);
+      }
+    } catch (error) {
+      this.logger.error('Error handling realm role mapping event:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Обработка изменения организационной роли конкретного пользователя
+   */
+  private async handleOrganizationRoleChange(
+    event: Record<string, unknown>,
+    userId: string,
+    role: { id: string; name: string; description?: string }
+  ): Promise<void> {
+    try {
+      // Определяем операцию: назначение или удаление роли
+      const isRoleAssignment = event.operationType === 'CREATE';
+      const isRoleRemoval = event.operationType === 'DELETE';
+
+      if (!isRoleAssignment && !isRoleRemoval) {
+        this.logger.debug(`Unhandled role operation: ${event.operationType}`);
+        return;
+      }
+
+      // Мапим Keycloak роли на наши роли из User Contracts
+      const mappedRole = this.mapKeycloakRoleToUserRole(role.name);
+
+      if (!mappedRole) {
+        this.logger.debug(`Ignoring non-organization role: ${role.name}`);
+        return;
+      }
+
+      // Для organization events нам нужен другой формат ролей
+      // Конвертируем User Role в Organization Role format
+      let orgRole: 'user' | 'admin' | 'owner' = 'user';
+      if (mappedRole === 'organization-admin') {
+        orgRole = 'admin';
+      } else if (mappedRole === 'organization-owner') {
+        orgRole = 'owner';
+      } else if (mappedRole === 'organization-user') {
+        orgRole = 'user';
+      } else {
+        // Не organization роль, игнорируем
+        this.logger.debug(`Non-organization role ignored: ${mappedRole}`);
+        return;
+      }
+
+      this.logger.info(
+        `Organization role ${isRoleAssignment ? 'assigned' : 'removed'}: ` +
+          `user=${userId}, role=${role.name} (mapped to ${mappedRole} -> org role: ${orgRole})`
+      );
+
+      // TODO: Определить organizationId из контекста или запросить из базы
+      // Для демонстрации используем заглушку
+      const organizationId = 'unknown-org-from-role-event';
+
+      // ВАЖНО: Обновляем роли пользователя в локальной базе данных
+      await this.updateUserRolesInDatabase(userId, role.name, isRoleAssignment);
+
+      if (isRoleAssignment) {
+        // Публикуем событие изменения роли участника
+        const memberRoleChangedPayload: OrganizationMemberRoleChangedEvent['payload'] =
+          {
+            organizationId,
+            userId,
+            previousRole: 'user', // TODO: получить предыдущую роль из базы
+            newRole: orgRole,
+            changedBy:
+              ((event.authDetails as Record<string, unknown>)
+                ?.userId as string) || 'admin',
+            changedAt: new Date(event.time as number).toISOString(),
+          };
+
+        await this.kafkaProducer.publishOrganizationMemberRoleChanged(
+          memberRoleChangedPayload
+        );
+        this.logger.info(
+          `Published organization member role assignment event: user=${userId}, role=${mappedRole}`
+        );
+      } else {
+        // При удалении роли, также публикуем событие изменения (обычно возврат к базовой роли)
+        const memberRoleChangedPayload: OrganizationMemberRoleChangedEvent['payload'] =
+          {
+            organizationId,
+            userId,
+            previousRole: orgRole,
+            newRole: 'user', // При удалении роли обычно возвращаемся к базовой
+            changedBy:
+              ((event.authDetails as Record<string, unknown>)
+                ?.userId as string) || 'admin',
+            changedAt: new Date(event.time as number).toISOString(),
+          };
+
+        await this.kafkaProducer.publishOrganizationMemberRoleChanged(
+          memberRoleChangedPayload
+        );
+        this.logger.info(
+          `Published organization member role removal event: user=${userId}, removed role=${mappedRole}`
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error handling organization role change for user ${userId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Обновляет роли пользователя в локальной базе данных
+   * Это критически важно для синхронизации ролей между Keycloak и локальной системой
+   */
+  private async updateUserRolesInDatabase(
+    userId: string,
+    keycloakRoleName: string,
+    isRoleAssignment: boolean
+  ): Promise<void> {
+    try {
+      // Получаем пользователя из локальной базы данных
+      const user = await this.userService.findByUserId(userId);
+      if (!user) {
+        this.logger.warn(
+          `User ${userId} not found in local database, syncing from Keycloak first`
+        );
+        // Попытаемся синхронизировать пользователя из Keycloak
+        await this.userService.syncFromKeycloak(userId);
+        return;
+      }
+
+      // Мапим Keycloak роль в нашу роль
+      const mappedRole = this.mapKeycloakRoleToUserRole(keycloakRoleName);
+      if (!mappedRole) {
+        this.logger.debug(`Ignoring system role: ${keycloakRoleName}`);
+        return;
+      }
+
+      // Получаем текущие роли пользователя и приводим к строковому массиву
+      const currentRoles: string[] = (user.roles as string[]) || [
+        'personal-user',
+      ];
+      let newRoles: string[];
+
+      if (isRoleAssignment) {
+        // Добавляем роль к текущим ролям
+        newRoles = [...currentRoles, mappedRole];
+        this.logger.info(`Adding role ${mappedRole} to user ${userId}`);
+      } else {
+        // Удаляем роль из текущих ролей
+        newRoles = currentRoles.filter((role) => role !== mappedRole);
+        this.logger.info(`Removing role ${mappedRole} from user ${userId}`);
+      }
+
+      // Обновляем роли в базе данных (UserService выполнит нормализацию)
+      await this.userService.updateUserRoles(userId, newRoles);
+      this.logger.info(
+        `Successfully updated roles for user ${userId}: ${newRoles.join(', ')}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error updating user roles in database for user ${userId}:`,
+        error
+      );
+      // Не прерываем обработку события, это не критическая ошибка
     }
   }
 }

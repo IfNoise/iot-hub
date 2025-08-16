@@ -4,6 +4,7 @@
 body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+  margin: 1rem !important;
 }
 
 /* Основная карточка */
@@ -13,10 +14,9 @@ body {
   backdrop-filter: blur(10px);
   border: none !important;
   border-radius: 12px !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
   max-width: 800px; /* Увеличиваем ширину для 2 колонок */
-  margin: 2rem auto !important;
-  padding: 2rem !important;
+  margin: 1rem auto !important;
+  padding: 1rem !important;
 }
 
 /* Основная сетка формы в 2 колонки */
@@ -30,7 +30,7 @@ body {
 /* Элементы, которые должны занимать всю ширину */
 .full-width {
   grid-column: 1 / -1;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 /* На мобильных устройствах показываем в 1 колонку */
@@ -62,7 +62,7 @@ input[type='email'] {
   border: 2px solid #e2e8f0 !important;
   border-radius: 8px !important;
   padding: 12px !important;
-  font-size: 16px !important;
+  font-size: 18px !important;
   transition: all 0.3s ease !important;
 }
 
@@ -182,6 +182,29 @@ a:hover {
   .organization-fields {
     margin-top: 2rem;
   }
+}
+
+#kc-info {
+  padding: 0rem !important;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin: 1rem !important;
+}
+
+.kc-logo-text {
+  background-image: url('../img/image.png') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  width: 200px !important;
+  height: 200px !important;
+  margin: 0 auto !important;
+  padding: 0.5rem !important;
+}
+
+#kc-header-wrapper {
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* Анимация для плавного появления */

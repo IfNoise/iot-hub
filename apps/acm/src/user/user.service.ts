@@ -187,6 +187,7 @@ export class UserService {
           keycloakUser.lastName || ''
         }`.trim(),
         avatar: undefined,
+        roles: ['personal-user'], // Устанавливаем базовую роль при создании
         balance: '0.00',
         plan:
           (keycloakUser.attributes?.plan?.[0] as
@@ -855,5 +856,92 @@ export class UserService {
       );
       return null;
     }
+  }
+
+  /**
+   * Обновляет роли пользователя в базе данных
+   * Используется для синхронизации ролей из Keycloak events
+   */
+  async updateUserRoles(userId: string, roles: string[]): Promise<void> {
+    this.logger.log(`Updating roles for user ${userId}: ${roles.join(', ')}`);
+
+    try {
+      // Нормализация ролей с учетом бизнес-логики
+      const normalizedRoles = this.normalizeUserRoles(roles);
+
+      // Обновляем роли в базе данных
+      const [updatedUser] = await this.databaseService.db
+        .update(usersTable)
+        .set({
+          roles: normalizedRoles,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(usersTable.userId, userId), isNull(usersTable.deletedAt)))
+        .returning();
+
+      if (!updatedUser) {
+        throw new NotFoundException(`User ${userId} not found for role update`);
+      }
+
+      this.logger.log(
+        `Successfully updated roles for user ${userId}: ${normalizedRoles.join(
+          ', '
+        )}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to update roles for user ${userId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Нормализует роли пользователя согласно бизнес-правилам:
+   * - personal-user и organization-* роли взаимоисключающие
+   * - Убираем дубликаты
+   * - Гарантируем наличие хотя бы одной роли
+   */
+  private normalizeUserRoles(roles: string[]): string[] {
+    // Убираем дубликаты
+    const uniqueRoles = Array.from(new Set(roles));
+
+    // Разделяем роли на организационные и остальные
+    const organizationRoles = uniqueRoles.filter(
+      (role) => role.startsWith('organization-') || role.startsWith('group-')
+    );
+    const otherRoles = uniqueRoles.filter(
+      (role) =>
+        !role.startsWith('organization-') &&
+        !role.startsWith('group-') &&
+        role !== 'personal-user'
+    );
+
+    let finalRoles: string[] = [];
+
+    // Если есть организационные роли, убираем personal-user
+    if (organizationRoles.length > 0) {
+      finalRoles = [...organizationRoles, ...otherRoles];
+
+      // Если нет базовой organization-user роли, добавляем её
+      if (!organizationRoles.includes('organization-user')) {
+        finalRoles.push('organization-user');
+      }
+    } else {
+      // Если нет организационных ролей, используем personal-user
+      finalRoles = ['personal-user', ...otherRoles];
+    }
+
+    // Убираем дубликаты еще раз после обработки
+    finalRoles = Array.from(new Set(finalRoles));
+
+    // Гарантируем, что есть хотя бы одна роль
+    if (finalRoles.length === 0) {
+      finalRoles = ['personal-user'];
+    }
+
+    return finalRoles;
   }
 }

@@ -7,4 +7,4 @@ RUN /opt/keycloak/bin/kc.sh build --spi-events-listener--kafka--enabled=true
 FROM quay.io/keycloak/keycloak:latest
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 USER keycloak
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start-dev", "--spi-events-listener--kafka--enabled=true"]
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start-dev", "--spi-events-listener--kafka--enabled=true","--features=quick-theme"]

@@ -12,7 +12,11 @@ import {
   UserDeletedEvent,
   OrganizationEvent,
   OrganizationCreatedEvent,
+  OrganizationUpdatedEvent,
+  OrganizationDeletedEvent,
   OrganizationMemberAddedEvent,
+  OrganizationMemberRemovedEvent,
+  OrganizationMemberRoleChangedEvent,
   KafkaTopics,
 } from '@iot-hub/contracts-kafka';
 
@@ -126,11 +130,103 @@ export class KafkaProducer implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  async publishOrganizationUpdated(
+    payload: OrganizationUpdatedEvent['payload']
+  ): Promise<void> {
+    const event: OrganizationUpdatedEvent = {
+      eventType: 'organization.updated',
+      correlationId: this.generateCorrelationId(),
+      timestamp: new Date().toISOString(),
+      source: {
+        type: 'backend',
+        id: 'acm-service',
+        version: '1.0.0',
+      },
+      __version: 'v1',
+      payload,
+    };
+
+    await this.publishEvent(
+      KafkaTopics.OrganizationEvents,
+      event,
+      payload.organizationId
+    );
+  }
+
+  async publishOrganizationDeleted(
+    payload: OrganizationDeletedEvent['payload']
+  ): Promise<void> {
+    const event: OrganizationDeletedEvent = {
+      eventType: 'organization.deleted',
+      correlationId: this.generateCorrelationId(),
+      timestamp: new Date().toISOString(),
+      source: {
+        type: 'backend',
+        id: 'acm-service',
+        version: '1.0.0',
+      },
+      __version: 'v1',
+      payload,
+    };
+
+    await this.publishEvent(
+      KafkaTopics.OrganizationEvents,
+      event,
+      payload.organizationId
+    );
+  }
+
   async publishOrganizationMemberAdded(
     payload: OrganizationMemberAddedEvent['payload']
   ): Promise<void> {
     const event: OrganizationMemberAddedEvent = {
       eventType: 'organization.member.added',
+      correlationId: this.generateCorrelationId(),
+      timestamp: new Date().toISOString(),
+      source: {
+        type: 'backend',
+        id: 'acm-service',
+        version: '1.0.0',
+      },
+      __version: 'v1',
+      payload,
+    };
+
+    await this.publishEvent(
+      KafkaTopics.OrganizationEvents,
+      event,
+      payload.organizationId
+    );
+  }
+
+  async publishOrganizationMemberRemoved(
+    payload: OrganizationMemberRemovedEvent['payload']
+  ): Promise<void> {
+    const event: OrganizationMemberRemovedEvent = {
+      eventType: 'organization.member.removed',
+      correlationId: this.generateCorrelationId(),
+      timestamp: new Date().toISOString(),
+      source: {
+        type: 'backend',
+        id: 'acm-service',
+        version: '1.0.0',
+      },
+      __version: 'v1',
+      payload,
+    };
+
+    await this.publishEvent(
+      KafkaTopics.OrganizationEvents,
+      event,
+      payload.organizationId
+    );
+  }
+
+  async publishOrganizationMemberRoleChanged(
+    payload: OrganizationMemberRoleChangedEvent['payload']
+  ): Promise<void> {
+    const event: OrganizationMemberRoleChangedEvent = {
+      eventType: 'organization.member.role-changed',
       correlationId: this.generateCorrelationId(),
       timestamp: new Date().toISOString(),
       source: {
