@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../contracts/acm-contracts"
+    },
+    {
+      "path": "../contracts/auth"
+    },
+    {
+      "path": "../contracts/users"
+    },
+    {
+      "path": "./tsconfig.lib.json"
+    }
+  ]
+}

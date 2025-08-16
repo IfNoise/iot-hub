@@ -50,6 +50,9 @@
     },
     {
       "path": "./apps/acm"
+    },
+    {
+      "path": "./libs/auth-middleware"
     }
   ]
 }
